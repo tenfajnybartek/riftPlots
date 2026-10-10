@@ -1,0 +1,74 @@
+# ==============================================================================
+#                      riftPlots - Dzielnice Miejskie
+# ==============================================================================
+# Konfiguracja podziału administracyjnego miasta na dzielnice i strefy ekonomiczne.
+#
+# Hierarchia dziedziczenia cen i podatków:
+# 1. Wartość ustawiona bezpośrednio dla działki (/plots admin setprice/settax)
+# 2. Mnożnik dzielnicy * parametry typu nieruchomości
+# 3. Domyślne wartości globalne z config.yml
+
+districts:
+  # Ścisłe centrum miasta
+  centrum:
+    name: "Centrum Miasta"
+    description: "Reprezentacyjne centrum, najwyższy prestiż, wysokie stawki i gęsta zabudowa."
+    price-multiplier: 1.5
+    tax-multiplier: 1.25
+    allowed-types:
+      - "COMMERCIAL"
+      - "PREMIUM"
+      - "RESIDENTIAL"
+    max-plots-per-player: 2
+    sales-enabled: true
+    rental-enabled: true
+
+  # Zabytkowe Stare Miasto
+  stare_miasto:
+    name: "Stare Miasto"
+    description: "Zabytkowa strefa kamienic, kawiarni i sklepików rzemieślniczych."
+    price-multiplier: 1.2
+    tax-multiplier: 1.1
+    allowed-types:
+      - "RESIDENTIAL"
+      - "COMMERCIAL"
+    max-plots-per-player: 2
+    sales-enabled: true
+    rental-enabled: true
+
+  # Spokojne przedmieścia
+  przedmiescia:
+    name: "Przedmieścia"
+    description: "Osiedla domków jednorodzinnych, niskie podatki i swobodna przestrzeń."
+    price-multiplier: 0.8
+    tax-multiplier: 0.75
+    allowed-types:
+      - "RESIDENTIAL"
+    max-plots-per-player: 4
+    sales-enabled: true
+    rental-enabled: true
+
+  # Dzielnica targowa i handlowa
+  handlowa:
+    name: "Dzielnica Handlowa"
+    description: "Węzeł handlowy miasta, targowiska, bazary i centra handlowe."
+    price-multiplier: 1.3
+    tax-multiplier: 1.3
+    allowed-types:
+      - "COMMERCIAL"
+      - "RENTAL"
+    max-plots-per-player: 3
+    sales-enabled: true
+    rental-enabled: true
+
+  # Strefa fabryczna i przemysłowa
+  przemyslowa:
+    name: "Strefa Przemysłowa"
+    description: "Magazyny, zakłady rzemieślnicze, manufaktury i fabryki."
+    price-multiplier: 0.9
+    tax-multiplier: 0.9
+    allowed-types:
+      - "INDUSTRIAL"
+    max-plots-per-player: 5
+    sales-enabled: true
+    rental-enabled: false

@@ -1,0 +1,9 @@
+name: riftPlots
+description: $description
+version: '${version}'
+
+main: pl.tenfajnybartek.riftplots.base.PlotsPlugin
+api-version: '26.3'
+load: POSTWORLD
+
+authors: [ tenfajnybartek ]

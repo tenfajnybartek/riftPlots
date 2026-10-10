@@ -1,0 +1,73 @@
+# ==============================================================================
+#                      riftPlots - Konfiguracja Wiadomości Językowych
+# ==============================================================================
+# Wszystkie wiadomości obsługują formatowanie Adventure MiniMessage:
+# np. <gradient:#00c6ff:#0072ff>tekst</gradient>, <red>błąd</red>, <green>sukces</green>, <gold>złoto</gold>
+# Dostępny jest uniwersalny placeholder {prefix}.
+
+general:
+  no-permission: "{prefix}<red>Nie posiadasz uprawnień do wykonania tej komendy!</red>"
+  only-player: "{prefix}<red>Ta komenda może być wykonana wyłącznie przez gracza w grze.</red>"
+  invalid-arguments: "{prefix}<red>Nieprawidłowe argumenty! Użyj: <yellow>/{usage}</yellow></red>"
+  unknown-subcommand: "{prefix}<red>Nieznana podkomenda. Wpisz <yellow>/plots help</yellow>, aby zobaczyć pomoc.</red>"
+  reload-success: "{prefix}<green>Konfiguracja pluginu została pomyślnie przeładowana!</green>"
+  economy-error: "{prefix}<red>Wystąpił błąd systemu ekonomii. Skontaktuj się z administratorem.</red>"
+
+plot:
+  not-found: "{prefix}<red>Działka o identyfikatorze <yellow>{plot_id}</yellow> nie istnieje!</red>"
+  already-exists: "{prefix}<red>Działka o identyfikatorze <yellow>{plot_id}</yellow> już istnieje!</red>"
+  not-owner: "{prefix}<red>Nie jesteś właścicielem tej działki!</red>"
+  not-member: "{prefix}<red>Nie posiadasz uprawnień do tej nieruchomości.</red>"
+  not-for-sale: "{prefix}<red>Ta działka nie jest obecnie wystawiona na sprzedaż (status: <yellow>{status}</yellow>).</red>"
+  disabled: "{prefix}<red>Ta działka została wyłączona z użytku przez administratora.</red>"
+  resetting: "{prefix}<gold>Działka <yellow>{plot_id}</yellow> jest obecnie w trakcie przywracania stanu pierwotnego. Spróbuj za chwilę.</gold>"
+  cannot-afford: "{prefix}<red>Nie posiadasz wystarczających środków! Wymagane: <yellow>{price}</yellow>, posiadasz: <gold>{balance}</gold>.</red>"
+  buy-success: "{prefix}<green>Pomyślnie zakupiono działkę <yellow>{plot_id}</yellow> (<gold>{name}</gold>) za <yellow>{price}</yellow>!</green>"
+  buy-broadcast: "<yellow>Gracz <gold>{player}</gold> zakupił działkę miejską <green>{name}</green>!</yellow>"
+
+tax:
+  paid-success: "{prefix}<green>Opłacono podatek za działkę <yellow>{plot_id}</yellow> w kwocie <yellow>{amount}</yellow> (okresów: <gold>{periods}</gold>). Nowy termin: <aqua>{new_date}</aqua>.</green>"
+  not-due: "{prefix}<gray>Podatek dla tej działki został już uregulowany. Termin: <yellow>{date}</yellow>.</gray>"
+  max-advance-reached: "{prefix}<red>Osiągnięto maksymalną liczbę opłaconych z góry okresów podatkowych ({max}).</red>"
+  reminder: "{prefix}<gold>[Przypomnienie]</gold> <yellow>Termin płatności podatku za działkę <gold>{name}</gold> (<white>{plot_id}</white>) upływa za <red>{time_left}</red>! Kwota: <yellow>{tax}</yellow>. Użyj <click:run_command:'/plots pay {plot_id}'><aqua><u>/plots pay {plot_id}</u></aqua></click></yellow>"
+  grace-period-warning: "{prefix}<red><b>[OSTRZEŻENIE]</b></red> <yellow>Termin płatności za działkę <gold>{name}</gold> minął! Rozpoczął się okres karencji. Pozostało: <red>{time_left}</red> na opłacenie należności <yellow>{tax}</yellow> przed odebraniem nieruchomości!</yellow>"
+  expired-broadcast: "{prefix}<red>Działka <gold>{name}</gold> (<yellow>{plot_id}</yellow>) została odebrana graczowi <yellow>{player}</yellow> z powodu nieopłacenia podatku!</red>"
+
+members:
+  player-not-found: "{prefix}<red>Nie znaleziono gracza o nicku <yellow>{target}</yellow>.</red>"
+  already-trusted: "{prefix}<red>Gracz <yellow>{target}</yellow> jest już dodany do tej działki!</red>"
+  not-trusted: "{prefix}<red>Gracz <yellow>{target}</yellow> nie jest członkiem tej działki.</red>"
+  cannot-trust-self: "{prefix}<red>Nie możesz dodać samego siebie jako współużytkownika!</red>"
+  trust-success: "{prefix}<green>Pomyślnie dodano gracza <yellow>{target}</yellow> jako współużytkownika działki <gold>{name}</gold>!</green>"
+  untrust-success: "{prefix}<green>Usunięto gracza <yellow>{target}</yellow> z listy współużytkowników działki <gold>{name}</gold>.</green>"
+  target-trusted-notify: "{prefix}<green>Zostałeś dodany do działki <gold>{name}</gold> (<yellow>{plot_id}</yellow>) przez <yellow>{owner}</yellow>!</green>"
+  target-untrusted-notify: "{prefix}<gold>Zostałeś usunięty z działki <yellow>{name}</yellow> (<white>{plot_id}</white>).</gold>"
+
+abandon:
+  confirm-prompt: "{prefix}<yellow>Czy na pewno chcesz porzucić działkę <gold>{name}</gold>? Otrzymasz <green>{refund}</green> zwrotu. Wpisz <click:run_command:'/plots abandon {plot_id} confirm'><red><u>/plots abandon {plot_id} confirm</u></red></click> aby potwierdzić.</yellow>"
+  success: "{prefix}<gold>Porzucono działkę <yellow>{plot_id}</yellow>. Otrzymałeś zwrot w wysokości <green>{refund}</green>.</gold>"
+
+admin:
+  selection-missing: "{prefix}<red>Nie posiadasz poprawnego zaznaczenia WorldEdit! Zaznacz dwa punkty siekierką przed utworzeniem działki.</red>"
+  collision-detected: "{prefix}<red>Zaznaczony obszar koliduje z istniejącą działką: <yellow>{collision_id}</yellow>!</red>"
+  worldguard-error: "{prefix}<red>Błąd integracji z WorldGuard: <yellow>{error}</yellow></red>"
+  created: "{prefix}<green>Pomyślnie utworzono działkę <yellow>{plot_id}</yellow> o powierzchni <gold>{area} m²</gold>!</green>"
+  deleted: "{prefix}<green>Pomyślnie usunięto działkę <yellow>{plot_id}</yellow> wraz z jej regionem i tabliczkami.</green>"
+  owner-set: "{prefix}<green>Ustawiono właściciela działki <yellow>{plot_id}</yellow> na: <gold>{owner}</gold>.</green>"
+  price-set: "{prefix}<green>Ustawiono cenę działki <yellow>{plot_id}</yellow> na: <gold>{price}</gold>.</green>"
+  tax-set: "{prefix}<green>Ustawiono podatek bazowy działki <yellow>{plot_id}</yellow> na: <gold>{tax}</gold>.</green>"
+  taxmode-set: "{prefix}<green>Ustawiono tryb podatkowy działki <yellow>{plot_id}</yellow> na: <gold>{mode}</gold>.</green>"
+  period-set: "{prefix}<green>Ustawiono okres rozliczeniowy działki <yellow>{plot_id}</yellow> na: <gold>{days} dni</gold>.</green>"
+  grace-set: "{prefix}<green>Ustawiono czas karencji działki <yellow>{plot_id}</yellow> na: <gold>{hours} godz.</gold>.</green>"
+  disabled: "{prefix}<gold>Działka <yellow>{plot_id}</yellow> została wyłączona.</gold>"
+  enabled: "{prefix}<green>Działka <yellow>{plot_id}</yellow> została włączona.</green>"
+  snapshot-saved: "{prefix}<green>Pomyślnie zapisano stan pierwotny (schemat) działki <yellow>{plot_id}</yellow> do pliku: <gold>{file}</gold>.</green>"
+  restore-started: "{prefix}<gold>Rozpoczęto przywracanie stanu pierwotnego działki <yellow>{plot_id}</yellow>...</gold>"
+  restore-finished: "{prefix}<green>Zakończono przywracanie stanu pierwotnego działki <yellow>{plot_id}</yellow>!</green>"
+  sign-linked: "{prefix}<green>Pomyślnie powiązano tabliczkę z działką <yellow>{plot_id}</yellow> (typ: <gold>{type}</gold>)!</green>"
+  sign-unlinked: "{prefix}<green>Usunięto powiązanie tabliczki z działką <yellow>{plot_id}</yellow>.</green>"
+
+protection:
+  action-denied: "{prefix}<red>Nie posiadasz uprawnień do modyfikacji terenu na tej działce!</red>"
+  container-denied: "{prefix}<red>Nie posiadasz uprawnień do otwierania pojemników na tej nieruchomości!</red>"
+  interact-denied: "{prefix}<red>Nie posiadasz uprawnień do interakcji na tej nieruchomości!</red>"

@@ -1,0 +1,107 @@
+# ==============================================================================
+#                      riftPlots - Typy Nieruchomości
+# ==============================================================================
+# Konfiguracja gotowych typów nieruchomości miejskich.
+# Każdy typ określa domyślne stawki, limity współużytkowników oraz dozwolone operacje.
+
+types:
+  # Nieruchomości mieszkalne (domy, apartamenty, wille)
+  RESIDENTIAL:
+    display-name: "Działka Mieszkalna"
+    description: "Nieruchomość przeznaczona pod zabudowę mieszkaniową."
+    default-price: 25000.0
+    default-base-tax: 1500.0
+    default-tax-mode: "FIXED"
+    default-tax-multiplier: 1.0
+    default-billing-period-days: 7
+    max-members: 5
+    rental-allowed: true
+    sales-allowed: true
+    refund-percent: 50.0
+    icon-material: "OAK_DOOR"
+    flags:
+      pvp: "deny"
+
+  # Lokale użytkowe, sklepy, biura w centrum
+  COMMERCIAL:
+    display-name: "Lokal Handlowo-Usługowy"
+    description: "Sklepy, warsztaty, restauracje i punkty usługowe w strefach miejskich."
+    default-price: 45000.0
+    default-base-tax: 3000.0
+    default-tax-mode: "FIXED"
+    default-tax-multiplier: 1.25
+    default-billing-period-days: 7
+    max-members: 10
+    rental-allowed: true
+    sales-allowed: true
+    refund-percent: 40.0
+    icon-material: "EMERALD"
+    flags:
+      pvp: "deny"
+
+  # Działki przemysłowe, magazyny, fabryki
+  INDUSTRIAL:
+    display-name: "Obiekt Przemysłowy"
+    description: "Wielkopowierzchniowe hale, fabryki i magazyny."
+    default-price: 60000.0
+    default-base-tax: 4500.0
+    default-tax-mode: "PER_CHUNK"
+    default-tax-multiplier: 1.5
+    default-billing-period-days: 14
+    max-members: 15
+    rental-allowed: false
+    sales-allowed: true
+    refund-percent: 30.0
+    icon-material: "IRON_BLOCK"
+    flags:
+      pvp: "deny"
+
+  # Nieruchomości luksusowe o obniżonych podatkach
+  PREMIUM:
+    display-name: "Posiadłość Premium"
+    description: "Prestiżowa rezydencja miejska z maksymalną ochroną i długim okresem opłat."
+    default-price: 100000.0
+    default-base-tax: 2000.0
+    default-tax-mode: "FIXED"
+    default-tax-multiplier: 0.8
+    default-billing-period-days: 30
+    max-members: 20
+    rental-allowed: true
+    sales-allowed: true
+    refund-percent: 70.0
+    icon-material: "DIAMOND_BLOCK"
+    flags:
+      pvp: "deny"
+
+  # Lokale dedykowane na wynajem
+  RENTAL:
+    display-name: "Lokal na Wynajem"
+    description: "Nieruchomość miejska przygotowana specjalnie pod krótko- i długoterminowy najem."
+    default-price: 30000.0
+    default-base-tax: 1000.0
+    default-tax-mode: "FIXED"
+    default-tax-multiplier: 1.0
+    default-billing-period-days: 7
+    max-members: 3
+    rental-allowed: true
+    sales-allowed: false
+    refund-percent: 50.0
+    icon-material: "CHEST"
+    flags:
+      pvp: "deny"
+
+  # Nieruchomości niestandardowe
+  CUSTOM:
+    display-name: "Nieruchomość Specjalna"
+    description: "Indywidualny obiekt miejski (np. ratusz, ambasada, siedziba frakcji)."
+    default-price: 50000.0
+    default-base-tax: 2500.0
+    default-tax-mode: "CUSTOM"
+    default-tax-multiplier: 1.0
+    default-billing-period-days: 7
+    max-members: 25
+    rental-allowed: true
+    sales-allowed: true
+    refund-percent: 50.0
+    icon-material: "BEACON"
+    flags: {}

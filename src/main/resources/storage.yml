@@ -1,0 +1,44 @@
+# ==============================================================================
+#                      riftPlots - Konfiguracja Magazynu Danych
+# ==============================================================================
+# Obsługiwane typy baz danych:
+# - YAML: Pliki płaskie w katalogu plugins/riftPlots/data/
+# - SQLITE: Lokalna baza danych plikowa (domyślna, zalecana na mniejsze serwery)
+# - MYSQL: Baza danych MySQL / MariaDB z pulą połączeń HikariCP (sieci serwerów)
+
+storage:
+  # Wybierz backend: YAML, SQLITE lub MYSQL
+  type: "SQLITE"
+
+  # Konfiguracja dla trybu SQLITE
+  sqlite:
+    # Nazwa pliku bazy w katalogu plugins/riftPlots/data/
+    file: "riftplots.db"
+
+  # Konfiguracja dla trybu MYSQL / MARIADB
+  mysql:
+    # Adres hosta bazy danych
+    host: "localhost"
+    # Port bazy danych (domyślnie 3306)
+    port: 3306
+    # Nazwa bazy danych (musi istnieć przed startem pluginu)
+    database: "riftplots"
+    # Użytkownik bazy danych
+    username: "root"
+    # Hasło użytkownika bazy danych
+    password: ""
+    # Czy wymuszać szyfrowane połączenie SSL
+    use-ssl: false
+
+  # Konfiguracja puli połączeń HikariCP (stosowana dla SQLITE oraz MYSQL)
+  pool:
+    # Maksymalna liczba jednoczesnych połączeń w puli
+    maximum-pool-size: 10
+    # Minimalna liczba bezczynnych połączeń utrzymywanych w puli
+    minimum-idle: 2
+    # Czas w milisekundach, po którym bezczynne połączenie może zostać zwolnione
+    idle-timeout-ms: 600000
+    # Maksymalny czas w milisekundach na oczekiwanie na wolne połączenie z puli
+    connection-timeout-ms: 30000
+    # Maksymalny czas życia połączenia w milisekundach przed jego odświeżeniem
+    max-lifetime-ms: 1800000

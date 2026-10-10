@@ -1,0 +1,96 @@
+# ==============================================================================
+#                      riftPlots - Konfiguracja Główna
+# ==============================================================================
+# Zaawansowany system miejskich działek na serwer Minecraft (Paper 26.3)
+# Kompatybilny z Vault, WorldEdit oraz WorldGuard.
+
+general:
+  # Prefiks wyświetlany przed wiadomościami na czacie (format Adventure / MiniMessage)
+  prefix: "<gradient:#00c6ff:#0072ff><b>riftPlots</b></gradient> <gray>»</gray> "
+
+  # Symbol waluty używany przy wyświetlaniu cen i podatków
+  currency-symbol: "$"
+
+  # Czy symbol waluty ma być wyświetlany po kwocie (true: '100 $', false: '$100')
+  currency-symbol-suffix: true
+
+economy:
+  # Domyślna cena zakupu nowo tworzonej działki (w jednostkach waluty serwera)
+  default-price: 25000.0
+
+  # Domyślny bazowy podatek cykliczny pobierany od właściciela
+  default-base-tax: 1500.0
+
+  # Domyślny tryb naliczania podatku:
+  # - FIXED: Stała kwota bazowa za każdy okres rozliczeniowy
+  # - PER_BLOCK: Stawka mnożona przez powierzchnię poziomą działki (X * Z)
+  # - PER_CHUNK: Stawka mnożona przez liczbę chunków obejmowanych przez działkę
+  # - SIZE_TIERS: Dynamiczna stawka na podstawie progów wielkości
+  # - MULTIPLIER: Kwota bazowa mnożona przez indywidualny współczynnik działki
+  # - CUSTOM: Indywidualna stawka ustalona bezpośrednio dla danej nieruchomości
+  default-tax-mode: "FIXED"
+
+  # Domyślny mnożnik podatku dla nowej działki
+  default-tax-multiplier: 1.0
+
+  # Domyślna długość okresu rozliczeniowego w dniach (np. 7 = co tydzień)
+  default-billing-period-days: 7
+
+  # Czas karencji w godzinach po upłynięciu terminu płatności (domyślnie 6 godzin)
+  # W tym czasie działka przechodzi w stan GRACE_PERIOD, po czym zostaje odebrana i zresetowana.
+  default-grace-period-hours: 6
+
+  # Maksymalna liczba okresów rozliczeniowych, które gracz może opłacić z góry
+  max-advance-periods: 4
+
+  # Procent ceny zakupu zwracany graczowi przy dobrowolnym oddaniu działki (/plots abandon)
+  # Zakres od 0.0 (brak zwrotu) do 100.0 (pełny zwrot)
+  default-abandon-refund-percent: 50.0
+
+scheduler:
+  # Częstotliwość sprawdzania terminów płatności i okresów karencji (w sekundach)
+  check-interval-seconds: 60
+
+  # Godziny przed terminem płatności, w których wysyłane są powiadomienia przypominające
+  tax-reminder-hours:
+    - 48
+    - 24
+    - 12
+    - 2
+    - 1
+
+protection:
+  # Czy blokować przemieszczanie bloków przez tłoki z/do działki przez granicę
+  prevent-piston-border-crossing: true
+
+  # Czy blokować rozlewanie się wody i lawy przez granice działki
+  prevent-fluid-border-crossing: true
+
+  # Czy blokować niszczenie bloków przez eksplozje wewnątrz i na granicy działki
+  prevent-explosions: true
+
+  # Czy blokować rozprzestrzenianie się ognia na działkach
+  prevent-fire-spread: true
+
+  # Czy chronić stojaki na zbroje (Armor Stands) przed nieuprawnioną modyfikacją
+  protect-armor-stands: true
+
+  # Czy chronić ramki na przedmioty (Item Frames) przed obracaniem i niszczeniem
+  protect-item-frames: true
+
+reset:
+  # Czy po bezskutecznym upływie okresu karencji działka ma być automatycznie resetowana
+  auto-reset-on-expire: true
+
+  # Liczba bloków wklejanych w jednej porcji (zapobiega lagom głównego wątku przy dużych obiektach)
+  block-batch-size: 2500
+
+  # Opóźnienie między kolejnymi porcjami wklejania (w tickach serwera, 1 tick = 50ms)
+  tick-delay: 1
+
+signs:
+  # Czy obsługa interaktywnych tabliczek działek ma być aktywna
+  enabled: true
+
+  # Czy tabliczki mają być automatycznie aktualizowane przy zmianie stanu działki
+  auto-update: true
