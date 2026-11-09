@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="#szybki-start">Szybki start</a> ·
+  <a href="https://github.com/tenfajnybartek/riftPlots/wiki">Wiki</a> ·
   <a href="docs/commands.md">Komendy i uprawnienia</a> ·
   <a href="docs/operations.md">Konfiguracja i obsługa</a> ·
   <a href="docs/architecture.md">Dla programistów</a> ·
@@ -198,6 +199,7 @@ Migrację uruchamiaj w oknie serwisowym. Źródłem komendy jest aktywny magazyn
 
 | Szukasz… | Przejdź do |
 | :--- | :--- |
+| Pełnego przewodnika z rozdziałami, grafikami i diagramami | [Wiki riftPlots](docs/wiki/Home.md) |
 | Pełnej składni i uprawnień | [Komendy gracza i administratora](docs/commands.md) |
 | Stawek, magazynów, resetu i diagnozy problemów | [Konfiguracja i obsługa](docs/operations.md) |
 | Struktury kodu, zdarzeń API i uruchamiania testów | [Architektura i rozwój](docs/architecture.md) |
