@@ -30,6 +30,8 @@ public class PlotTransferService {
     private final CityBudgetService budgetService;
     private final AuditService auditService;
     private final TransactionRepository transactionRepository;
+    private final pl.riftplots.config.PluginConfiguration config;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
 
     private final Map<String, TransferOffer> activeOffers = new ConcurrentHashMap<>();
 
@@ -38,13 +40,17 @@ public class PlotTransferService {
                                NotificationService notificationService,
                                CityBudgetService budgetService,
                                AuditService auditService,
-                               TransactionRepository transactionRepository) {
+                               TransactionRepository transactionRepository,
+                               pl.riftplots.config.PluginConfiguration config,
+                               pl.riftplots.config.MessageConfiguration messageConfig) {
         this.plotManager = plotManager;
         this.vaultHook = vaultHook;
         this.notificationService = notificationService;
         this.budgetService = budgetService;
         this.auditService = auditService;
         this.transactionRepository = transactionRepository;
+        this.config = config;
+        this.messageConfig = messageConfig;
     }
 
     public synchronized Optional<TransferOffer> createOffer(Plot plot, Player seller, Player buyer, BigDecimal price, int validSeconds) {
@@ -53,28 +59,39 @@ public class PlotTransferService {
         }
 
         if (!plot.isOwner(seller.getUniqueId())) {
-            seller.sendMessage("§cNie jesteś właścicielem tej działki.");
+            seller.sendMessage(messageConfig.get("transfer.not-owner"));
             return Optional.empty();
         }
 
         if (plot.getStatus() == PlotStatus.PAYMENT_DUE || plot.getStatus() == PlotStatus.GRACE_PERIOD) {
-            seller.sendMessage("§cTa działka posiada nieuregulowane zaległości podatkowe! Opłać podatek przed sprzedażą.");
+            seller.sendMessage(messageConfig.get("transfer.has-arrears"));
             return Optional.empty();
         }
 
         if (plot.getStatus() != PlotStatus.OWNED) {
-            seller.sendMessage("§cDziałka nie jest w stanie gotowym do sprzedaży.");
+            seller.sendMessage(messageConfig.get("transfer.not-ready"));
             return Optional.empty();
         }
 
+        int duration = validSeconds > 0 ? validSeconds : config.getTransferOfferDurationSeconds();
         TransferOffer offer = TransferOffer.create(
                 plot.getId(), seller.getUniqueId(), seller.getName(),
-                buyer.getUniqueId(), buyer.getName(), price, validSeconds
+                buyer.getUniqueId(), buyer.getName(), price, duration
         );
         activeOffers.put(offer.getId(), offer);
 
-        notificationService.notifyPlayer(seller.getUniqueId(), "<green>Wysłano ofertę sprzedaży działki <gold>" + plot.getName() + "</gold> do gracza <yellow>" + buyer.getName() + "</yellow> za kwotę <gold>" + price + " $</gold>.</green>", Sound.BLOCK_NOTE_BLOCK_PLING);
-        notificationService.notifyPlayer(buyer.getUniqueId(), "<yellow>Otrzymałeś ofertę zakupu działki <gold>" + plot.getName() + "</gold> od gracza <aqua>" + seller.getName() + "</aqua> za <gold>" + price + " $</gold>! Wpisz <click:run_command:'/plots accept " + offer.getId() + "'><green><u>/plots accept " + offer.getId() + "</u></green></click> aby przyjąć.</yellow>", Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
+        notificationService.notifyPlayer(seller.getUniqueId(), messageConfig.getRaw("transfer.offer-sent", "{prefix}<green>Wyslano oferte!</green>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{name}", plot.getName())
+                .replace("{buyer}", buyer.getName())
+                .replace("{price}", config.formatMoney(price)), Sound.BLOCK_NOTE_BLOCK_PLING);
+
+        notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.offer-received", "{prefix}<yellow>Otrzymales oferte zakupu!</yellow>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{name}", plot.getName())
+                .replace("{seller}", seller.getName())
+                .replace("{price}", config.formatMoney(price))
+                .replace("{offer_id}", offer.getId()), Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
 
         auditService.log(plot.getId(), seller.getUniqueId(), seller.getName(), "OFFER_CREATED", "Cena: " + price + ", Kupujący: " + buyer.getName());
         return Optional.of(offer);
@@ -84,25 +101,25 @@ public class PlotTransferService {
         if (buyer == null || offerId == null) return false;
         TransferOffer offer = activeOffers.get(offerId);
         if (offer == null || !offer.getBuyerUuid().equals(buyer.getUniqueId())) {
-            buyer.sendMessage("§cTa oferta nie istnieje lub nie jest skierowana do Ciebie.");
+            buyer.sendMessage(messageConfig.get("transfer.offer-invalid"));
             return false;
         }
 
         if (offer.isExpired() || offer.getStatus() != TransferStatus.PENDING) {
-            buyer.sendMessage("§cTa oferta wygasła lub została anulowana.");
+            buyer.sendMessage(messageConfig.get("transfer.offer-invalid"));
             activeOffers.remove(offerId);
             return false;
         }
 
         Optional<Plot> optPlot = plotManager.getPlot(offer.getPlotId());
         if (optPlot.isEmpty()) {
-            buyer.sendMessage("§cPowiązana działka już nie istnieje.");
+            buyer.sendMessage(messageConfig.get("plot.not-found", Map.of("plot_id", offer.getPlotId())));
             return false;
         }
         Plot plot = optPlot.get();
 
         if (!plot.isOwner(offer.getSellerUuid())) {
-            buyer.sendMessage("§cSprzedający nie jest już właścicielem tej działki.");
+            buyer.sendMessage(messageConfig.get("transfer.seller-changed"));
             offer.setStatus(TransferStatus.CANCELLED);
             activeOffers.remove(offerId);
             return false;
@@ -111,14 +128,14 @@ public class PlotTransferService {
         BigDecimal price = offer.getPrice();
         if (price.compareTo(BigDecimal.ZERO) > 0) {
             if (!vaultHook.has(buyer, price)) {
-                buyer.sendMessage("§cNie masz wystarczających środków na zakup (" + price + " $).");
+                buyer.sendMessage(messageConfig.get("plot.cannot-afford", Map.of("price", config.formatMoney(price), "balance", config.formatMoney(vaultHook.getBalance(buyer)))));
                 return false;
             }
             if (!vaultHook.withdraw(buyer, price)) {
                 return false;
             }
 
-            BigDecimal feePercent = BigDecimal.valueOf(0.05);
+            BigDecimal feePercent = BigDecimal.valueOf(config.getTransferFeePercent() / 100.0);
             BigDecimal adminFee = price.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
             BigDecimal sellerPayout = price.subtract(adminFee);
 
@@ -141,8 +158,15 @@ public class PlotTransferService {
         offer.setStatus(TransferStatus.ACCEPTED);
         activeOffers.remove(offerId);
 
-        notificationService.notifyPlayer(buyer.getUniqueId(), "<green>Pomyślnie przejąłeś prawo własności do działki <gold>" + plot.getName() + "</gold>!</green>", Sound.UI_TOAST_CHALLENGE_COMPLETE);
-        notificationService.notifyPlayer(offer.getSellerUuid(), "<green>Twoja działka <gold>" + plot.getName() + "</gold> została sprzedana graczowi <yellow>" + buyer.getName() + "</yellow>!</green>", Sound.ENTITY_PLAYER_LEVELUP);
+        notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.buyer-success", "{prefix}<green>Przejales wlasnosc dzialki!</green>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{name}", plot.getName()), Sound.UI_TOAST_CHALLENGE_COMPLETE);
+
+        notificationService.notifyPlayer(offer.getSellerUuid(), messageConfig.getRaw("transfer.seller-success", "{prefix}<green>Dzialka zostala sprzedana!</green>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{name}", plot.getName())
+                .replace("{buyer}", buyer.getName())
+                .replace("{price}", config.formatMoney(price)), Sound.ENTITY_PLAYER_LEVELUP);
 
         auditService.log(plot.getId(), buyer.getUniqueId(), buyer.getName(), "TRANSFER_COMPLETED", "Sprzedający: " + offer.getSellerName() + ", Kwota: " + price);
         return true;
@@ -153,7 +177,7 @@ public class PlotTransferService {
         if (offer != null && offer.getSellerUuid().equals(seller.getUniqueId())) {
             offer.setStatus(TransferStatus.CANCELLED);
             activeOffers.remove(offerId);
-            seller.sendMessage("§aAnulowano ofertę sprzedaży.");
+            seller.sendMessage(messageConfig.get("transfer.cancelled"));
         }
     }
 

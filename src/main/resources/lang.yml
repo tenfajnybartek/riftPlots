@@ -71,3 +71,66 @@ protection:
   action-denied: "{prefix}<red>Nie posiadasz uprawnień do modyfikacji terenu na tej działce!</red>"
   container-denied: "{prefix}<red>Nie posiadasz uprawnień do otwierania pojemników na tej nieruchomości!</red>"
   interact-denied: "{prefix}<red>Nie posiadasz uprawnień do interakcji na tej nieruchomości!</red>"
+
+rental:
+  type-disallowed: "{prefix}<red>Ten typ nieruchomości nie pozwala na wynajem.</red>"
+  district-disallowed: "{prefix}<red>W tej dzielnicy wynajem jest wyłączony.</red>"
+  cannot-afford: "{prefix}<red>Nie masz wystarczających środków na wynajem! Wymagane (czynsz + kaucja): <yellow>{cost}</yellow>.</red>"
+  success: "{prefix}<green>Pomyślnie wynająłeś nieruchomość <gold>{name}</gold> (<white>{plot_id}</white>) na okres <aqua>{duration}</aqua>!</green>"
+  terminated: "{prefix}<red>Twój wynajem nieruchomości <yellow>{plot_id}</yellow> został zakończony (<white>{reason}</white>).</red>"
+  auto-renewed: "{prefix}<green>Przedłużono automatycznie wynajem działki <gold>{name}</gold> na kolejny okres.</green>"
+  not-available: "{prefix}<red>Ta nieruchomość nie jest obecnie dostępna pod wynajem.</red>"
+  already-rented: "{prefix}<red>Ta nieruchomość jest już obecnie wynajmowana.</red>"
+  offer-success: "{prefix}<green>Udostępniono działkę <yellow>{plot_id}</yellow> do wynajmu (stawka: <gold>{price}</gold>, kaucja: <yellow>{deposit}</yellow>).</green>"
+  cancel-success: "{prefix}<gold>Zakończono i wyłączono wynajem działki <yellow>{plot_id}</yellow>.</gold>"
+
+transfer:
+  not-owner: "{prefix}<red>Nie jesteś właścicielem tej działki!</red>"
+  has-arrears: "{prefix}<red>Ta działka posiada zaległości podatkowe! Opłać podatek przed jej sprzedażą.</red>"
+  not-ready: "{prefix}<red>Działka nie jest w stanie gotowym do sprzedaży.</red>"
+  cannot-sell-self: "{prefix}<red>Nie możesz wysłać oferty samemu sobie!</red>"
+  offer-sent: "{prefix}<green>Wysłano ofertę sprzedaży działki <gold>{name}</gold> do gracza <yellow>{buyer}</yellow> za kwotę <gold>{price}</gold>.</green>"
+  offer-received: "{prefix}<yellow>Otrzymałeś ofertę zakupu działki <gold>{name}</gold> od gracza <aqua>{seller}</aqua> za kwotę <gold>{price}</gold>! Wpisz <click:run_command:'/plots accept {offer_id}'><green><u>/plots accept {offer_id}</u></green></click> aby przyjąć.</yellow>"
+  offer-invalid: "{prefix}<red>Ta oferta nie istnieje lub wygasła.</red>"
+  seller-changed: "{prefix}<red>Sprzedający nie jest już właścicielem tej działki.</red>"
+  buyer-success: "{prefix}<green><b>Gratulacje!</b> Przejąłeś prawo własności do działki <gold>{name}</gold>!</green>"
+  seller-success: "{prefix}<green>Twoja działka <gold>{name}</gold> została sprzedana graczowi <yellow>{buyer}</yellow> za <gold>{price}</gold>!</green>"
+  cancelled: "{prefix}<gold>Oferta sprzedaży działki została anulowana.</gold>"
+  no-offers: "{prefix}<gray>Brak aktywnych ofert zakupu.</gray>"
+
+auction:
+  not-active: "{prefix}<red>Ta licytacja nie jest aktywna lub już się zakończyła.</red>"
+  cannot-afford: "{prefix}<red>Nie posiadasz wystarczających środków, aby złożyć tę ofertę (<yellow>{amount}</yellow>).</red>"
+  min-bid-error: "{prefix}<red>Minimalna kwota przebicia wynosi: <yellow>{min}</yellow>.</red>"
+  bid-accepted: "{prefix}<green>Twoja oferta <gold>{amount}</gold> na działkę <yellow>{plot_id}</yellow> została przyjęta!</green>"
+  won: "{prefix}<green><b>Wygrałeś licytację działki <gold>{name}</gold>!</b> Kwota: <yellow>{amount}</yellow>.</green>"
+  started: "{prefix}<green>Rozpoczęto publiczną licytację działki <yellow>{plot_id}</yellow> na czas <gold>{minutes} minut</gold>!</green>"
+  already-running: "{prefix}<red>Dla tej działki trwa już aktywna licytacja.</red>"
+
+teleport:
+  disabled: "{prefix}<red>Teleportacja do punktu domowego jest wyłączona na serwerze.</red>"
+  cooldown: "{prefix}<red>Musisz odczekać jeszcze <yellow>{seconds}s</yellow> przed kolejną teleportacją!</red>"
+  cannot-afford: "{prefix}<red>Teleportacja kosztuje <yellow>{cost}</yellow>. Brak wystarczających środków.</red>"
+  unsafe: "{prefix}<red>Nie znaleziono bezpiecznego miejsca na działce do teleportacji!</red>"
+  success: "{prefix}<green>Przeteleportowano do punktu domowego działki <gold>{name}</gold>!</green>"
+  set-success: "{prefix}<green>Pomyślnie zaktualizowano punkt domowy dla działki <gold>{name}</gold>!</green>"
+  outside-bounds: "{prefix}<red>Musisz stać wewnątrz granic działki, aby zapisać punkt domowy!</red>"
+
+budget:
+  balance: "{prefix}<gray>Aktualne saldo Skarbu Miasta: </gray><green><b>{balance}</b></green>"
+  updated: "{prefix}<green>Zaktualizowano budżet miejski. Nowe saldo: <gold>{balance}</gold>.</green>"
+  invalid-amount: "{prefix}<red>Kwota musi być większa od zera!</red>"
+
+district:
+  assigned: "{prefix}<green>Przypisano działkę <yellow>{plot_id}</yellow> do dzielnicy <gold>{district}</gold>.</green>"
+  unassigned: "{prefix}<green>Usunięto przypisanie dzielnicy z działki <yellow>{plot_id}</yellow>.</green>"
+  not-found: "{prefix}<red>Dzielnica o identyfikatorze <yellow>{district}</yellow> nie istnieje!</red>"
+
+type:
+  assigned: "{prefix}<green>Ustawiono typ działki <yellow>{plot_id}</yellow> na: <gold>{type}</gold>.</green>"
+
+migration:
+  started: "{prefix}<yellow>Rozpoczynanie migracji danych z <gold>{source}</gold> do <gold>{target}</gold>...</yellow>"
+  finished: "{prefix}<green><b>Migracja zakończona sukcesem!</b> Przeniesiono działek: <gold>{plots}</gold>, transakcji: <gold>{txs}</gold>, tabliczek: <gold>{signs}</gold>.</green>"
+  error: "{prefix}<red>Błąd podczas migracji danych: <yellow>{error}</yellow></red>"
+  same-source-target: "{prefix}<red>Źródłowy i docelowy magazyn danych nie mogą być identyczne!</red>"

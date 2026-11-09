@@ -37,6 +37,28 @@ public class PluginConfiguration {
     private boolean signsEnabled;
     private boolean signAutoUpdate;
 
+    private double transferFeePercent;
+    private int transferOfferDurationSeconds;
+
+    private double auctionCityFeePercent;
+    private int auctionAntiSnipeSeconds;
+    private BigDecimal auctionDefaultMinBidIncrement;
+    private int auctionDefaultDurationMinutes;
+
+    private boolean teleportEnabled;
+    private BigDecimal teleportCost;
+    private int teleportCooldownSeconds;
+
+    private BigDecimal cityBudgetInitialBalance;
+
+    private String signHeader;
+    private String signRenewHeader;
+    private String signForSaleAction;
+    private String signSoldAction;
+    private String signRenewAction;
+    private String signResettingAction;
+    private String signDisabledAction;
+
     public void load(FileConfiguration config) {
         this.prefix = config.getString("general.prefix", "<gradient:#00c6ff:#0072ff><b>riftPlots</b></gradient> <gray>»</gray> ");
         this.currencySymbol = config.getString("general.currency-symbol", "$");
@@ -70,6 +92,28 @@ public class PluginConfiguration {
 
         this.signsEnabled = config.getBoolean("signs.enabled", true);
         this.signAutoUpdate = config.getBoolean("signs.auto-update", true);
+
+        this.signHeader = config.getString("signs.formats.header", "<gradient:#00c6ff:#0072ff><b>[DZIAŁKA]</b></gradient>");
+        this.signRenewHeader = config.getString("signs.formats.renew-header", "<gradient:#ff9900:#ff5500><b>[OPŁAĆ PODATEK]</b></gradient>");
+        this.signForSaleAction = config.getString("signs.formats.for-sale-action", "<green><b>KUP TERAZ</b></green>");
+        this.signSoldAction = config.getString("signs.formats.sold-action", "<red><b>SPRZEDANA</b></red>");
+        this.signRenewAction = config.getString("signs.formats.renew-action", "<aqua><b>PRZEDŁUŻ</b></aqua>");
+        this.signResettingAction = config.getString("signs.formats.resetting-action", "<red><b>NIEDOSTĘPNA</b></red>");
+        this.signDisabledAction = config.getString("signs.formats.disabled-action", "<dark_red><b>BLOKADA</b></dark_red>");
+
+        this.transferFeePercent = Math.max(0.0, config.getDouble("market.transfer-fee-percent", 5.0));
+        this.transferOfferDurationSeconds = Math.max(10, config.getInt("market.transfer-offer-duration-seconds", 300));
+
+        this.auctionCityFeePercent = Math.max(0.0, config.getDouble("auction.city-fee-percent", 5.0));
+        this.auctionAntiSnipeSeconds = Math.max(0, config.getInt("auction.anti-snipe-extension-seconds", 120));
+        this.auctionDefaultMinBidIncrement = BigDecimal.valueOf(config.getDouble("auction.default-min-bid-increment", 100.0));
+        this.auctionDefaultDurationMinutes = Math.max(1, config.getInt("auction.default-duration-minutes", 30));
+
+        this.teleportEnabled = config.getBoolean("teleport.enabled", true);
+        this.teleportCost = BigDecimal.valueOf(config.getDouble("teleport.cost", 50.0));
+        this.teleportCooldownSeconds = Math.max(0, config.getInt("teleport.cooldown-seconds", 10));
+
+        this.cityBudgetInitialBalance = BigDecimal.valueOf(config.getDouble("city-budget.initial-balance", 100000.0));
     }
 
     public String getPrefix() {
@@ -178,5 +222,73 @@ public class PluginConfiguration {
 
     public boolean isSignAutoUpdate() {
         return signAutoUpdate;
+    }
+
+    public double getTransferFeePercent() {
+        return transferFeePercent;
+    }
+
+    public int getTransferOfferDurationSeconds() {
+        return transferOfferDurationSeconds;
+    }
+
+    public double getAuctionCityFeePercent() {
+        return auctionCityFeePercent;
+    }
+
+    public int getAuctionAntiSnipeSeconds() {
+        return auctionAntiSnipeSeconds;
+    }
+
+    public BigDecimal getAuctionDefaultMinBidIncrement() {
+        return auctionDefaultMinBidIncrement;
+    }
+
+    public int getAuctionDefaultDurationMinutes() {
+        return auctionDefaultDurationMinutes;
+    }
+
+    public boolean isTeleportEnabled() {
+        return teleportEnabled;
+    }
+
+    public BigDecimal getTeleportCost() {
+        return teleportCost;
+    }
+
+    public int getTeleportCooldownSeconds() {
+        return teleportCooldownSeconds;
+    }
+
+    public BigDecimal getCityBudgetInitialBalance() {
+        return cityBudgetInitialBalance;
+    }
+
+    public String getSignHeader() {
+        return signHeader;
+    }
+
+    public String getSignRenewHeader() {
+        return signRenewHeader;
+    }
+
+    public String getSignForSaleAction() {
+        return signForSaleAction;
+    }
+
+    public String getSignSoldAction() {
+        return signSoldAction;
+    }
+
+    public String getSignRenewAction() {
+        return signRenewAction;
+    }
+
+    public String getSignResettingAction() {
+        return signResettingAction;
+    }
+
+    public String getSignDisabledAction() {
+        return signDisabledAction;
     }
 }

@@ -12,9 +12,11 @@ import java.util.List;
 
 public class AcceptSubCommand implements SubCommand {
     private final PlotTransferService transferService;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
 
-    public AcceptSubCommand(PlotTransferService transferService) {
+    public AcceptSubCommand(PlotTransferService transferService, pl.riftplots.config.MessageConfiguration messageConfig) {
         this.transferService = transferService;
+        this.messageConfig = messageConfig;
     }
 
     @Override
@@ -40,7 +42,7 @@ public class AcceptSubCommand implements SubCommand {
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cTa komenda jest dostępna tylko dla graczy.");
+            sender.sendMessage(messageConfig.get("general.only-player"));
             return true;
         }
 
@@ -55,7 +57,7 @@ public class AcceptSubCommand implements SubCommand {
         }
 
         if (offerId == null) {
-            player.sendMessage("§cBrak aktywnych ofert do zaakceptowania.");
+            player.sendMessage(messageConfig.get("transfer.no-offers"));
             return true;
         }
 

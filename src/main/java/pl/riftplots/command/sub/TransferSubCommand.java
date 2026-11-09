@@ -15,10 +15,12 @@ import java.util.*;
 public class TransferSubCommand implements SubCommand {
     private final PlotManager plotManager;
     private final PlotTransferService transferService;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
 
-    public TransferSubCommand(PlotManager plotManager, PlotTransferService transferService) {
+    public TransferSubCommand(PlotManager plotManager, PlotTransferService transferService, pl.riftplots.config.MessageConfiguration messageConfig) {
         this.plotManager = plotManager;
         this.transferService = transferService;
+        this.messageConfig = messageConfig;
     }
 
     @Override
@@ -44,23 +46,23 @@ public class TransferSubCommand implements SubCommand {
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cTa komenda jest dostępna tylko dla graczy.");
+            sender.sendMessage(messageConfig.get("general.only-player"));
             return true;
         }
 
         if (args.length < 2) {
-            player.sendMessage("§cUżycie: /" + getUsage());
+            sender.sendMessage(messageConfig.get("general.invalid-arguments", Map.of("usage", getUsage())));
             return true;
         }
 
         Player buyer = Bukkit.getPlayer(args[0]);
         if (buyer == null || !buyer.isOnline()) {
-            player.sendMessage("§cPodany gracz jest offline.");
+            player.sendMessage(messageConfig.get("members.player-not-found", Map.of("target", args[0])));
             return true;
         }
 
         if (buyer.getUniqueId().equals(player.getUniqueId())) {
-            player.sendMessage("§cNie możesz sprzedać działki samemu sobie!");
+            player.sendMessage(messageConfig.get("transfer.cannot-sell-self"));
             return true;
         }
 
@@ -68,11 +70,11 @@ public class TransferSubCommand implements SubCommand {
         try {
             price = new BigDecimal(args[1]);
             if (price.compareTo(BigDecimal.ZERO) < 0) {
-                player.sendMessage("§cCena nie może być ujemna!");
+                player.sendMessage(messageConfig.get("budget.invalid-amount"));
                 return true;
             }
         } catch (NumberFormatException e) {
-            player.sendMessage("§cPodana cena jest nieprawidłowa!");
+            player.sendMessage(messageConfig.get("budget.invalid-amount"));
             return true;
         }
 

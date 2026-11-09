@@ -1,9 +1,72 @@
 name: riftPlots
-description: $description
 version: '${version}'
-
-main: pl.tenfajnybartek.riftplots.base.PlotsPlugin
+description: ${description}
+main: pl.riftplots.RiftPlotsPlugin
 api-version: '26.3'
 load: POSTWORLD
-
 authors: [ tenfajnybartek ]
+
+depend:
+  - WorldGuard
+  - WorldEdit
+  - Vault
+
+commands:
+  plots:
+    description: Główna komenda systemu miejskich działek riftPlots
+    aliases: [plot, dzialka]
+    permission: riftplots.user
+    usage: /<command> [help|list|info|buy|pay|extend|history|trust|untrust|members|abandon|gui|admin]
+
+permissions:
+  riftplots.user:
+    description: Podstawowe uprawnienie do korzystania z systemu działek
+    default: true
+    children:
+      riftplots.user.help: true
+      riftplots.user.list: true
+      riftplots.user.info: true
+      riftplots.user.buy: true
+      riftplots.user.pay: true
+      riftplots.user.extend: true
+      riftplots.user.history: true
+      riftplots.user.trust: true
+      riftplots.user.untrust: true
+      riftplots.user.members: true
+      riftplots.user.abandon: true
+      riftplots.user.gui: true
+      riftplots.rent: true
+      riftplots.sell: true
+      riftplots.auction: true
+      riftplots.home: true
+      riftplots.sethome: true
+
+  riftplots.admin:
+    description: Pełne uprawnienia administracyjne do zarządzania działkami riftPlots
+    default: op
+    children:
+      riftplots.admin.create: true
+      riftplots.admin.delete: true
+      riftplots.admin.select: true
+      riftplots.admin.info: true
+      riftplots.admin.setprice: true
+      riftplots.admin.settax: true
+      riftplots.admin.settaxmode: true
+      riftplots.admin.setperiod: true
+      riftplots.admin.setgrace: true
+      riftplots.admin.setowner: true
+      riftplots.admin.reset: true
+      riftplots.admin.snapshot: true
+      riftplots.admin.restore: true
+      riftplots.admin.sign: true
+      riftplots.admin.unsign: true
+      riftplots.admin.list: true
+      riftplots.admin.reload: true
+      riftplots.admin.audit: true
+      riftplots.admin.disable: true
+      riftplots.admin.enable: true
+      riftplots.admin.bypass: true
+      riftplots.admin.district: true
+      riftplots.admin.type: true
+      riftplots.admin.budget: true
+      riftplots.admin.migrate: true

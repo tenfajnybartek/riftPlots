@@ -35,6 +35,8 @@ public class AuctionService {
     private final NotificationService notificationService;
     private final CityBudgetService budgetService;
     private final AuditService auditService;
+    private final pl.riftplots.config.PluginConfiguration config;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
 
     private final Map<String, PlotAuction> activeAuctions = new ConcurrentHashMap<>();
 
@@ -44,7 +46,9 @@ public class AuctionService {
                           VaultHook vaultHook,
                           NotificationService notificationService,
                           CityBudgetService budgetService,
-                          AuditService auditService) {
+                          AuditService auditService,
+                          pl.riftplots.config.PluginConfiguration config,
+                          pl.riftplots.config.MessageConfiguration messageConfig) {
         this.auctionsFile = new File(dataFolder, "data/auctions.yml");
         this.databaseManager = databaseManager;
         this.plotManager = plotManager;
@@ -52,6 +56,8 @@ public class AuctionService {
         this.notificationService = notificationService;
         this.budgetService = budgetService;
         this.auditService = auditService;
+        this.config = config;
+        this.messageConfig = messageConfig;
     }
 
     public void initialize() {
@@ -202,24 +208,27 @@ public class AuctionService {
         if (bidder == null || plotId == null) return false;
         PlotAuction auction = activeAuctions.get(plotId.toLowerCase());
         if (auction == null || auction.getStatus() != AuctionStatus.ACTIVE) {
-            bidder.sendMessage("§cTa licytacja nie jest aktywna.");
+            bidder.sendMessage(messageConfig.get("auction.not-active"));
             return false;
         }
 
         if (!vaultHook.has(bidder, amount)) {
-            bidder.sendMessage("§cNie masz wystarczających środków (" + amount + " $).");
+            bidder.sendMessage(messageConfig.get("auction.cannot-afford", Map.of("amount", config.formatMoney(amount))));
             return false;
         }
 
-        boolean bidPlaced = auction.placeBid(bidder.getUniqueId(), bidder.getName(), amount, 120);
+        boolean bidPlaced = auction.placeBid(bidder.getUniqueId(), bidder.getName(), amount, config.getAuctionAntiSnipeSeconds());
         if (!bidPlaced) {
             BigDecimal minReq = auction.getCurrentBidderUuid() == null ? auction.getStartingPrice() : auction.getCurrentBid().add(auction.getMinBidIncrement());
-            bidder.sendMessage("§cMinimalna kwota przebicia wynosi: " + minReq + " $.");
+            bidder.sendMessage(messageConfig.get("auction.min-bid-error", Map.of("min", config.formatMoney(minReq))));
             return false;
         }
 
         saveAuction(auction);
-        notificationService.notifyPlayer(bidder.getUniqueId(), "<green>Twoja oferta <gold>" + amount + " $</gold> na działkę <yellow>" + plotId + "</yellow> została przyjęta!</green>", Sound.BLOCK_NOTE_BLOCK_BELL);
+        notificationService.notifyPlayer(bidder.getUniqueId(), messageConfig.getRaw("auction.bid-accepted", "{prefix}<green>Oferta zostala przyjeta!</green>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{amount}", config.formatMoney(amount))
+                .replace("{plot_id}", plotId), Sound.BLOCK_NOTE_BLOCK_BELL);
         return true;
     }
 
@@ -252,11 +261,32 @@ public class AuctionService {
         if (vaultHook.has(winner, winningBid)) {
             vaultHook.withdraw(winner, winningBid);
 
+            double feePct = config.getAuctionCityFeePercent() / 100.0;
             if (auction.getSellerUuid() != null) {
                 org.bukkit.OfflinePlayer seller = org.bukkit.Bukkit.getOfflinePlayer(auction.getSellerUuid());
-                BigDecimal sellerShare = winningBid.multiply(BigDecimal.valueOf(0.95));
+                BigDecimal sellerShare = winningBid.multiply(BigDecimal.valueOf(1.0 - feePct)).setScale(2, RoundingMode.HALF_UP);
                 vaultHook.deposit(seller, sellerShare);
                 BigDecimal cityFee = winningBid.subtract(sellerShare);
+                budgetService.recordTransaction(CityTransactionType.AUCTION_FEE, cityFee, plot.getId(), winner.getUniqueId(), "Prowizja miejska z aukcji");
+            } else {
+                budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, winningBid, plot.getId(), winner.getUniqueId(), "Wygrana w licytacji działki miejskiej");
+            }
+
+            plot.setOwnerUuid(winner.getUniqueId());
+            plot.setOwnerName(winner.getName());
+            plot.setStatus(PlotStatus.OWNED);
+            plot.setPurchaseDate(Instant.now());
+            plotManager.savePlot(plot);
+
+            notificationService.notifyPlayer(winner.getUniqueId(), messageConfig.getRaw("auction.won", "{prefix}<green>Wygrales licytacje!</green>")
+                    .replace("{prefix}", config.getPrefix())
+                    .replace("{name}", plot.getName())
+                    .replace("{amount}", config.formatMoney(winningBid)), Sound.UI_TOAST_CHALLENGE_COMPLETE);
+            auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_WON", "Kwota: " + winningBid);
+        } else {
+            plotManager.savePlot(plot);
+            auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_PAYMENT_FAILED", "Brak środków u zwycięzcy");
+        }
                 budgetService.recordTransaction(CityTransactionType.AUCTION_FEE, cityFee, plot.getId(), winner.getUniqueId(), "Prowizja miejska z aukcji");
             } else {
                 budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, winningBid, plot.getId(), winner.getUniqueId(), "Wygrana w licytacji działki miejskiej");

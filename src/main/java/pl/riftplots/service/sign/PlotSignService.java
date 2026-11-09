@@ -124,27 +124,27 @@ public class PlotSignService {
         PlotStatus status = plot.getStatus();
 
         if (sign.getType() == PlotSignType.FOR_SALE) {
-            lines.add(AdventureUtil.parse("<gradient:#00c6ff:#0072ff><b>[DZIAŁKA]</b></gradient>"));
+            lines.add(AdventureUtil.parse(config.getSignHeader()));
             lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
             if (status == PlotStatus.AVAILABLE) {
                 lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(plot.getPrice()) + "</gold>"));
-                lines.add(AdventureUtil.parse("<green><b>KUP TERAZ</b></green>"));
+                lines.add(AdventureUtil.parse(config.getSignForSaleAction()));
             } else if (status == PlotStatus.RESETTING) {
                 lines.add(AdventureUtil.parse("<gray>Resetowanie...</gray>"));
-                lines.add(AdventureUtil.parse("<red><b>NIEDOSTĘPNA</b></red>"));
+                lines.add(AdventureUtil.parse(config.getSignResettingAction()));
             } else if (status == PlotStatus.DISABLED) {
                 lines.add(AdventureUtil.parse("<dark_gray>Wyłączona</dark_gray>"));
-                lines.add(AdventureUtil.parse("<dark_red><b>BLOKADA</b></dark_red>"));
+                lines.add(AdventureUtil.parse(config.getSignDisabledAction()));
             } else {
                 lines.add(AdventureUtil.parse("<yellow>" + (plot.getOwnerName() != null ? plot.getOwnerName() : "Właściciel") + "</yellow>"));
-                lines.add(AdventureUtil.parse("<red><b>SPRZEDANA</b></red>"));
+                lines.add(AdventureUtil.parse(config.getSignSoldAction()));
             }
         } else if (sign.getType() == PlotSignType.RENEW) {
-            lines.add(AdventureUtil.parse("<gradient:#ff9900:#ff5500><b>[OPŁAĆ PODATEK]</b></gradient>"));
+            lines.add(AdventureUtil.parse(config.getSignRenewHeader()));
             lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
             BigDecimal tax = taxCalculator.calculateTax(plot);
             lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(tax) + "</gold>"));
-            lines.add(AdventureUtil.parse("<aqua><b>PRZEDŁUŻ</b></aqua>"));
+            lines.add(AdventureUtil.parse(config.getSignRenewAction()));
         } else {
             lines.add(AdventureUtil.parse("<gradient:#00c6ff:#0072ff><b>" + plot.getName() + "</b></gradient>"));
             lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));

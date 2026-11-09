@@ -37,6 +37,8 @@ public class RentalService {
     private final DistrictManager districtManager;
     private final NotificationService notificationService;
     private final CityBudgetService budgetService;
+    private final pl.riftplots.config.PluginConfiguration config;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
 
     private final Map<String, RentalAgreement> activeAgreements = new ConcurrentHashMap<>();
 
@@ -47,7 +49,9 @@ public class RentalService {
                          PropertyTypeManager typeManager,
                          DistrictManager districtManager,
                          NotificationService notificationService,
-                         CityBudgetService budgetService) {
+                         CityBudgetService budgetService,
+                         pl.riftplots.config.PluginConfiguration config,
+                         pl.riftplots.config.MessageConfiguration messageConfig) {
         this.rentalsFile = new File(dataFolder, "data/rentals.yml");
         this.databaseManager = databaseManager;
         this.plotManager = plotManager;
@@ -56,6 +60,8 @@ public class RentalService {
         this.districtManager = districtManager;
         this.notificationService = notificationService;
         this.budgetService = budgetService;
+        this.config = config;
+        this.messageConfig = messageConfig;
     }
 
     public void initialize() {
@@ -200,14 +206,14 @@ public class RentalService {
 
         PropertyType propType = typeManager.getType(plot.getPropertyType());
         if (!propType.isRentalAllowed()) {
-            tenant.sendMessage("§cTen typ nieruchomości nie pozwala na wynajem.");
+            tenant.sendMessage(messageConfig.get("rental.type-disallowed"));
             return false;
         }
 
         if (plot.getDistrictId() != null) {
             var dist = districtManager.getDistrict(plot.getDistrictId());
             if (dist.isPresent() && !dist.get().isRentalEnabled()) {
-                tenant.sendMessage("§cW tej dzielnicy wynajem jest wyłączony.");
+                tenant.sendMessage(messageConfig.get("rental.district-disallowed"));
                 return false;
             }
         }
@@ -217,7 +223,7 @@ public class RentalService {
         BigDecimal totalCost = totalRent.add(plot.getRentalDeposit());
 
         if (!vaultHook.has(tenant, totalCost)) {
-            tenant.sendMessage("§cNie masz wystarczających środków na wynajem (wymagane czynsz + kaucja: " + totalCost + " $).");
+            tenant.sendMessage(messageConfig.get("rental.cannot-afford", Map.of("cost", config.formatMoney(totalCost))));
             return false;
         }
 
@@ -245,7 +251,12 @@ public class RentalService {
         plot.addMember(tenantMember);
         plotManager.savePlot(plot);
 
-        notificationService.notifyPlayer(tenant.getUniqueId(), "<green>Pomyślnie wynająłeś nieruchomość <gold>" + plot.getName() + "</gold>!</green>", Sound.ENTITY_PLAYER_LEVELUP);
+        String durationStr = periods + " " + unit.name().toLowerCase();
+        notificationService.notifyPlayer(tenant.getUniqueId(), messageConfig.getRaw("rental.success", "{prefix}<green>Wynajeto dzialke {name}!</green>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{name}", plot.getName())
+                .replace("{plot_id}", plot.getId())
+                .replace("{duration}", durationStr), Sound.ENTITY_PLAYER_LEVELUP);
         return true;
     }
 
@@ -268,7 +279,10 @@ public class RentalService {
             vaultHook.deposit(tenant, agreement.getDeposit());
         }
 
-        notificationService.notifyPlayer(agreement.getTenantUuid(), "<red>Twój wynajem nieruchomości " + plotId + " został zakończony (" + reason + ").</red>", Sound.BLOCK_NOTE_BLOCK_BASS);
+        notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.terminated", "{prefix}<red>Wynajem dzialki {plot_id} zostal zakonczony ({reason}).</red>")
+                .replace("{prefix}", config.getPrefix())
+                .replace("{plot_id}", plotId)
+                .replace("{reason}", reason), Sound.BLOCK_NOTE_BLOCK_BASS);
     }
 
     public void checkExpiredRentals() {
@@ -281,7 +295,9 @@ public class RentalService {
                         vaultHook.withdraw(tenant, agreement.getRentPrice());
                         agreement.setEndDate(now.plus(agreement.getPeriodUnit().getDuration()));
                         saveAgreement(agreement);
-                        notificationService.notifyPlayer(agreement.getTenantUuid(), "<green>Przedłużono automatycznie wynajem działki " + agreement.getPlotId() + ".</green>", Sound.BLOCK_NOTE_BLOCK_PLING);
+                        notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.auto-renewed", "{prefix}<green>Przedluzono wynajem dzialki {name}.</green>")
+                                .replace("{prefix}", config.getPrefix())
+                                .replace("{name}", agreement.getPlotId()), Sound.BLOCK_NOTE_BLOCK_PLING);
                         continue;
                     }
                 }

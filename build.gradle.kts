@@ -7,10 +7,39 @@ plugins {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://maven.enginehub.org/repo/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.3.build.+")
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.12") {
+        exclude(group = "org.apache.logging.log4j")
+        exclude(group = "com.google.guava")
+        exclude(group = "com.google.code.gson")
+        exclude(group = "it.unimi.dsi")
+    }
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.10") {
+        exclude(group = "org.apache.logging.log4j")
+        exclude(group = "com.google.guava")
+        exclude(group = "com.google.code.gson")
+        exclude(group = "it.unimi.dsi")
+    }
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude(group = "org.bukkit")
+    }
+
+    implementation("com.zaxxer:HikariCP:6.2.1")
+    implementation("org.xerial:sqlite-jdbc:3.49.1.0")
+    implementation("com.mysql:mysql-connector-j:9.2.0")
+
+    testImplementation(platform("org.junit:junit-bom:5.12.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.mockito:mockito-core:5.16.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.16.0")
+    testImplementation("org.assertj:assertj-core:3.27.3")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.+")
 }
 
 java {
@@ -20,6 +49,17 @@ java {
 tasks {
     build {
         dependsOn(shadowJar)
+    }
+
+    shadowJar {
+        archiveClassifier.set("")
+        relocate("com.zaxxer.hikari", "pl.riftplots.libs.hikari")
+        relocate("org.sqlite", "pl.riftplots.libs.sqlite")
+        relocate("com.mysql", "pl.riftplots.libs.mysql")
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     runServer {

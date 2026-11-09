@@ -13,10 +13,12 @@ import java.util.*;
 public class RentSubCommand implements SubCommand {
     private final PlotManager plotManager;
     private final RentalService rentalService;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
 
-    public RentSubCommand(PlotManager plotManager, RentalService rentalService) {
+    public RentSubCommand(PlotManager plotManager, RentalService rentalService, pl.riftplots.config.MessageConfiguration messageConfig) {
         this.plotManager = plotManager;
         this.rentalService = rentalService;
+        this.messageConfig = messageConfig;
     }
 
     @Override
@@ -42,19 +44,19 @@ public class RentSubCommand implements SubCommand {
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cTa komenda jest dostępna tylko dla graczy.");
+            sender.sendMessage(messageConfig.get("general.only-player"));
             return true;
         }
 
         if (args.length < 1) {
-            sender.sendMessage("§cUżycie: /" + getUsage());
+            sender.sendMessage(messageConfig.get("general.invalid-arguments", Map.of("usage", getUsage())));
             return true;
         }
 
         String plotId = args[0];
         Optional<Plot> opt = plotManager.getPlot(plotId);
         if (opt.isEmpty()) {
-            player.sendMessage("§cDziałka o identyfikatorze " + plotId + " nie istnieje!");
+            player.sendMessage(messageConfig.get("plot.not-found", Map.of("plot_id", plotId)));
             return true;
         }
 

@@ -270,22 +270,25 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
         rentalService = new pl.riftplots.service.rental.RentalService(
                 getDataFolder(), dbMgr, plotManager, vaultHook,
-                typeManager, districtManager, notificationService, budgetService
+                typeManager, districtManager, notificationService, budgetService,
+                pluginConfig, messageConfig
         );
         rentalService.initialize();
 
         transferService = new pl.riftplots.service.transfer.PlotTransferService(
                 plotManager, vaultHook, notificationService, budgetService,
-                auditService, storageBackend.getTransactionRepository()
+                auditService, storageBackend.getTransactionRepository(),
+                pluginConfig, messageConfig
         );
 
         auctionService = new pl.riftplots.service.auction.AuctionService(
                 getDataFolder(), dbMgr, plotManager, vaultHook,
-                notificationService, budgetService, auditService
+                notificationService, budgetService, auditService,
+                pluginConfig, messageConfig
         );
         auctionService.initialize();
 
-        teleportService = new pl.riftplots.service.teleport.TeleportService(plotManager, vaultHook);
+        teleportService = new pl.riftplots.service.teleport.TeleportService(plotManager, vaultHook, pluginConfig, messageConfig);
 
         migrationService = new pl.riftplots.storage.migration.DataMigrationService(getDataFolder(), storageConfig);
 

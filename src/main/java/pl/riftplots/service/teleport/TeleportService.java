@@ -20,45 +20,54 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TeleportService {
     private final PlotManager plotManager;
     private final VaultHook vaultHook;
+    private final pl.riftplots.config.PluginConfiguration config;
+    private final pl.riftplots.config.MessageConfiguration messageConfig;
     private final Map<UUID, Instant> cooldowns = new ConcurrentHashMap<>();
 
-    private BigDecimal teleportCost = BigDecimal.ZERO;
-    private int cooldownSeconds = 10;
-
-    public TeleportService(PlotManager plotManager, VaultHook vaultHook) {
+    public TeleportService(PlotManager plotManager,
+                           VaultHook vaultHook,
+                           pl.riftplots.config.PluginConfiguration config,
+                           pl.riftplots.config.MessageConfiguration messageConfig) {
         this.plotManager = plotManager;
         this.vaultHook = vaultHook;
+        this.config = config;
+        this.messageConfig = messageConfig;
     }
 
     public boolean setHome(Player player, Plot plot) {
         if (player == null || plot == null) return false;
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) {
-            player.sendMessage("§cTylko właściciel może ustawić punkt domowy działki.");
+            player.sendMessage(messageConfig.get("plot.not-owner", Map.of("plot_id", plot.getId())));
             return false;
         }
 
         Location loc = player.getLocation();
         if (!plot.getBounds().contains(loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) {
-            player.sendMessage("§cMusisz stać wewnątrz granic tej działki, aby ustawić punkt teleportacji!");
+            player.sendMessage(messageConfig.get("teleport.outside-bounds"));
             return false;
         }
 
         plot.setHomeLocation(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
         plotManager.savePlot(plot);
-        player.sendMessage("§aPomyślnie ustawiono punkt domowy dla działki " + plot.getName() + ".");
+        player.sendMessage(messageConfig.get("teleport.set-success", Map.of("name", plot.getName())));
         return true;
     }
 
     public boolean teleportHome(Player player, Plot plot) {
         if (player == null || plot == null) return false;
 
+        if (!config.isTeleportEnabled() && !player.hasPermission("riftplots.admin.bypass")) {
+            player.sendMessage(messageConfig.get("teleport.disabled"));
+            return false;
+        }
+
         if (plot.getStatus() == PlotStatus.RESETTING || plot.getStatus() == PlotStatus.DISABLED) {
-            player.sendMessage("§cTa działka jest obecnie niedostępna do teleportacji.");
+            player.sendMessage(messageConfig.get("plot.disabled", Map.of("plot_id", plot.getId())));
             return false;
         }
 
         if (!plot.isOwner(player.getUniqueId()) && !plot.isMember(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) {
-            player.sendMessage("§cNie masz dostępu do punktu domowego tej działki.");
+            player.sendMessage(messageConfig.get("plot.not-member"));
             return false;
         }
 
@@ -67,8 +76,9 @@ public class TeleportService {
             Instant last = cooldowns.get(uuid);
             if (last != null) {
                 long elapsed = java.time.Duration.between(last, Instant.now()).getSeconds();
-                if (elapsed < cooldownSeconds) {
-                    player.sendMessage("§cMusisz odczekać jeszcze " + (cooldownSeconds - elapsed) + "s przed kolejną teleportacją.");
+                int cd = config.getTeleportCooldownSeconds();
+                if (elapsed < cd) {
+                    player.sendMessage(messageConfig.get("teleport.cooldown", Map.of("seconds", String.valueOf(cd - elapsed))));
                     return false;
                 }
             }
@@ -76,21 +86,22 @@ public class TeleportService {
 
         Location targetLoc = resolveSafeLocation(plot);
         if (targetLoc == null) {
-            player.sendMessage("§cNie znaleziono bezpiecznego punktu do teleportacji na tej działce!");
+            player.sendMessage(messageConfig.get("teleport.unsafe"));
             return false;
         }
 
-        if (teleportCost.compareTo(BigDecimal.ZERO) > 0 && !player.hasPermission("riftplots.admin.bypass")) {
-            if (!vaultHook.has(player, teleportCost)) {
-                player.sendMessage("§cTeleportacja kosztuje " + teleportCost + " $. Brak wystarczających środków.");
+        BigDecimal cost = config.getTeleportCost();
+        if (cost.compareTo(BigDecimal.ZERO) > 0 && !player.hasPermission("riftplots.admin.bypass")) {
+            if (!vaultHook.has(player, cost)) {
+                player.sendMessage(messageConfig.get("teleport.cannot-afford", Map.of("cost", config.formatMoney(cost))));
                 return false;
             }
-            vaultHook.withdraw(player, teleportCost);
+            vaultHook.withdraw(player, cost);
         }
 
         cooldowns.put(uuid, Instant.now());
         player.teleportAsync(targetLoc);
-        player.sendMessage("§aPomyślnie przeteleportowano na działkę " + plot.getName() + "!");
+        player.sendMessage(messageConfig.get("teleport.success", Map.of("name", plot.getName())));
         return true;
     }
 
