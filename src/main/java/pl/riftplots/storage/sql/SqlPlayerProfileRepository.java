@@ -18,6 +18,25 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
     }
 
     @Override
+    public List<PlotPlayerProfile> findAll() {
+        List<PlotPlayerProfile> profiles = new ArrayList<>();
+        try (Connection connection = databaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement("SELECT * FROM rift_player_profiles");
+             ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                String owned = result.getString("owned_plots");
+                Set<String> plotIds = owned == null || owned.isBlank() ? new HashSet<>()
+                        : new HashSet<>(Arrays.asList(owned.split(",")));
+                profiles.add(new PlotPlayerProfile(UUID.fromString(result.getString("uuid")), result.getString("last_name"),
+                        Instant.ofEpochMilli(result.getLong("first_join")), Instant.ofEpochMilli(result.getLong("last_seen")), plotIds));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Nie udało się odczytać profili graczy", e);
+        }
+        return profiles;
+    }
+
+    @Override
     public Optional<PlotPlayerProfile> findById(UUID uuid) {
         if (uuid == null) {
             return Optional.empty();
@@ -44,7 +63,7 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return Optional.empty();
     }
@@ -83,7 +102,7 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
             ps.setString(5, String.join(",", profile.getOwnedPlotIds()));
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 }

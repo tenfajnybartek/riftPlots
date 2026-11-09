@@ -20,6 +20,19 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
     }
 
     @Override
+    public List<PlotPlayerProfile> findAll() {
+        List<PlotPlayerProfile> profiles = new ArrayList<>();
+        File[] files = playersDirectory.listFiles((directory, name) -> name.endsWith(".yml"));
+        if (files != null) {
+            for (File file : files) {
+                String uuid = file.getName().substring(0, file.getName().length() - 4);
+                findById(UUID.fromString(uuid)).ifPresent(profiles::add);
+            }
+        }
+        return profiles;
+    }
+
+    @Override
     public Optional<PlotPlayerProfile> findById(UUID uuid) {
         if (uuid == null) {
             return Optional.empty();
@@ -29,7 +42,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
             return Optional.empty();
         }
         try {
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+            YamlConfiguration config = YamlDataFile.load(file);
             String lastName = config.getString("lastName", "Unknown");
             long firstJoin = config.getLong("firstJoin", System.currentTimeMillis());
             long lastSeen = config.getLong("lastSeen", System.currentTimeMillis());
@@ -38,8 +51,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
                     uuid, lastName, Instant.ofEpochMilli(firstJoin), Instant.ofEpochMilli(lastSeen), new HashSet<>(owned)
             ));
         } catch (Exception e) {
-            e.printStackTrace();
-            return Optional.empty();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -59,7 +71,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
         try {
             config.save(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 }

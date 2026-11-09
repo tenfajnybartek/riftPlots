@@ -42,7 +42,7 @@ public class SqlTransactionRepository implements TransactionRepository {
             ps.setString(9, record.getDetails());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -77,7 +77,7 @@ public class SqlTransactionRepository implements TransactionRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return list;
     }
@@ -93,7 +93,7 @@ public class SqlTransactionRepository implements TransactionRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return list;
     }

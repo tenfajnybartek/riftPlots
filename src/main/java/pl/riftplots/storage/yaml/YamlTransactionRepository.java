@@ -42,7 +42,7 @@ public class YamlTransactionRepository implements TransactionRepository {
         try {
             config.save(file);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -52,7 +52,7 @@ public class YamlTransactionRepository implements TransactionRepository {
             return Collections.emptyList();
         }
         List<TransactionRecord> result = new ArrayList<>();
-        for (TransactionRecord record : findAll(500)) {
+        for (TransactionRecord record : findAll(Integer.MAX_VALUE)) {
             if (plotId.equalsIgnoreCase(record.getPlotId())) {
                 result.add(record);
             }
@@ -66,7 +66,7 @@ public class YamlTransactionRepository implements TransactionRepository {
             return Collections.emptyList();
         }
         List<TransactionRecord> result = new ArrayList<>();
-        for (TransactionRecord record : findAll(500)) {
+        for (TransactionRecord record : findAll(Integer.MAX_VALUE)) {
             if (playerUuid.equals(record.getPlayerUuid())) {
                 result.add(record);
             }
@@ -89,7 +89,7 @@ public class YamlTransactionRepository implements TransactionRepository {
                 break;
             }
             try {
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+                YamlConfiguration config = YamlDataFile.load(file);
                 String id = config.getString("id");
                 String plotId = config.getString("plotId");
                 String uuidStr = config.getString("playerUuid");
@@ -108,7 +108,7 @@ public class YamlTransactionRepository implements TransactionRepository {
                     count++;
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                throw new IllegalStateException("Storage operation failed", e);
             }
         }
         return list;

@@ -156,7 +156,7 @@ public class YamlPlotRepository implements PlotRepository {
             try {
                 config.save(file);
             } catch (IOException ex) {
-                ex.printStackTrace();
+                throw new IllegalStateException("Storage operation failed", ex);
             }
         }
     }
@@ -184,7 +184,7 @@ public class YamlPlotRepository implements PlotRepository {
 
     private Plot loadFromFile(File file) {
         try {
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+            YamlConfiguration config = YamlDataFile.load(file);
             String id = config.getString("id");
             if (id == null) {
                 return null;
@@ -294,8 +294,7 @@ public class YamlPlotRepository implements PlotRepository {
 
             return loadedPlot;
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 }

@@ -2,6 +2,7 @@ package pl.riftplots.domain.plot;
 
 public enum PlotMemberRole {
     MEMBER,
+    TENANT,
     MANAGER;
 
     public static PlotMemberRole parse(String input) {

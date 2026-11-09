@@ -11,6 +11,7 @@ import com.sk89q.worldedit.session.ClipboardHolder;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import pl.riftplots.api.PlotResetCompleteEvent;
 import pl.riftplots.api.PlotResetStartEvent;
 import pl.riftplots.api.PlotStateChangeEvent;
@@ -25,6 +26,7 @@ import pl.riftplots.service.sign.PlotSignService;
 import java.io.File;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -35,6 +37,8 @@ public class PlotResetService {
     private final PlotSnapshotService snapshotService;
     private final WorldEditHook worldEditHook;
     private PlotSignService signService;
+    private pl.riftplots.service.rental.RentalService rentalService;
+    private pl.riftplots.service.auction.AuctionService auctionService;
     private final Set<String> activeResets = ConcurrentHashMap.newKeySet();
 
     public PlotResetService(Plugin plugin,
@@ -53,20 +57,36 @@ public class PlotResetService {
         this.signService = signService;
     }
 
+    public void setMarketServices(pl.riftplots.service.rental.RentalService rentalService,
+                                  pl.riftplots.service.auction.AuctionService auctionService) {
+        this.rentalService = rentalService;
+        this.auctionService = auctionService;
+    }
+
     public boolean isResetting(String plotId) {
         return plotId != null && activeResets.contains(plotId.toLowerCase());
     }
 
-    public void startReset(Plot plot, Consumer<Boolean> callback) {
+    public boolean startReset(Plot plot, Consumer<Boolean> callback) {
         if (plot == null) {
             if (callback != null) callback.accept(false);
-            return;
+            return false;
         }
 
         String plotId = plot.getId().toLowerCase();
         if (!activeResets.add(plotId)) {
             if (callback != null) callback.accept(false);
-            return;
+            return false;
+        }
+
+        File schematicFile = snapshotService.getSchematicFile(plot.getId());
+        if (schematicFile == null || !schematicFile.isFile() || schematicFile.length() == 0) {
+            plugin.getLogger().severe("Brak schematu działki " + plotId + ". Reset przerwany; działka została wyłączona.");
+            plot.setStatus(PlotStatus.DISABLED);
+            plotManager.savePlot(plot);
+            activeResets.remove(plotId);
+            if (callback != null) callback.accept(false);
+            return false;
         }
 
         PlotResetStartEvent startEvent = new PlotResetStartEvent(plot);
@@ -74,29 +94,23 @@ public class PlotResetService {
         if (startEvent.isCancelled()) {
             activeResets.remove(plotId);
             if (callback != null) callback.accept(false);
-            return;
+            return false;
         }
 
-        PlotStatus oldStatus = plot.getStatus();
+        if (rentalService != null && !rentalService.terminateRental(plotId, true, "Reset nieruchomości")) {
+            activeResets.remove(plotId);
+            if (callback != null) callback.accept(false);
+            return false;
+        }
+        if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plotId);
+
+        plot.clearOwnership();
         plot.setStatus(PlotStatus.RESETTING);
-        plot.setOwnerUuid(null);
-        plot.setOwnerName(null);
-        plot.clearMembers();
-        plot.setPurchaseDate(null);
-        plot.setNextTaxPayment(null);
-        plot.setGracePeriodExpiry(null);
-        plot.setAdvancePeriodsPaid(0);
 
         plotManager.savePlot(plot);
 
         if (signService != null) {
             signService.updateSignsForPlot(plot);
-        }
-
-        File schematicFile = snapshotService.getSchematicFile(plot.getId());
-        if (schematicFile == null || !schematicFile.exists()) {
-            finishReset(plot, true, callback);
-            return;
         }
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -108,42 +122,57 @@ public class PlotResetService {
                 }
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    boolean success = pasteClipboard(plot, clipboard);
-                    finishReset(plot, success, callback);
+                    pasteClipboard(plot, clipboard, callback);
                 });
             } catch (Exception e) {
                 e.printStackTrace();
                 Bukkit.getScheduler().runTask(plugin, () -> finishReset(plot, false, callback));
             }
         });
+        return true;
     }
 
-    private boolean pasteClipboard(Plot plot, Clipboard clipboard) {
+    private void pasteClipboard(Plot plot, Clipboard clipboard, Consumer<Boolean> callback) {
         PlotBounds bounds = plot.getBounds();
         World bukkitWorld = Bukkit.getWorld(bounds.getWorldName());
         if (bukkitWorld == null) {
-            return false;
+            finishReset(plot, false, callback);
+            return;
         }
 
         com.sk89q.worldedit.world.World weWorld = BukkitAdapter.adapt(bukkitWorld);
-        BlockVector3 pasteLocation = BlockVector3.at(bounds.getMinX(), bounds.getMinY(), bounds.getMinZ());
-
-        try (EditSession editSession = WorldEdit.getInstance().newEditSession(weWorld)) {
-            editSession.setSideEffectApplier(com.sk89q.worldedit.util.SideEffectSet.none());
-            Operation operation = new ClipboardHolder(clipboard)
-                    .createPaste(editSession)
-                    .to(pasteLocation)
-                    .ignoreAirBlocks(false)
-                    .copyEntities(false)
-                    .copyBiomes(false)
-                    .build();
-
-            Operations.complete(operation);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
+        var region = clipboard.getRegion();
+        if (region.getWidth() != bounds.getWidthX() || region.getHeight() != bounds.getHeightY()
+                || region.getLength() != bounds.getLengthZ()) {
+            plugin.getLogger().severe("Wymiary schematu nie pasują do granic działki " + plot.getId());
+            finishReset(plot, false, callback);
+            return;
         }
+        BlockVector3 offset = BlockVector3.at(bounds.getMinX(), bounds.getMinY(), bounds.getMinZ())
+                .subtract(region.getMinimumPoint());
+        Iterator<BlockVector3> blocks = region.iterator();
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                try (EditSession editSession = WorldEdit.getInstance().newEditSession(weWorld)) {
+                    editSession.setSideEffectApplier(com.sk89q.worldedit.util.SideEffectSet.none());
+                    int count = 0;
+                    while (blocks.hasNext() && count++ < config.getResetBlockBatchSize()) {
+                        BlockVector3 source = blocks.next();
+                        editSession.setBlock(source.add(offset), clipboard.getFullBlock(source));
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Błąd resetu działki " + plot.getId() + ": " + e.getMessage());
+                    cancel();
+                    finishReset(plot, false, callback);
+                    return;
+                }
+                if (!blocks.hasNext()) {
+                    cancel();
+                    finishReset(plot, true, callback);
+                }
+            }
+        }.runTaskTimer(plugin, 0L, config.getResetTickDelay());
     }
 
     private void finishReset(Plot plot, boolean success, Consumer<Boolean> callback) {
@@ -155,7 +184,8 @@ public class PlotResetService {
         PlotStateChangeEvent stateEvent = new PlotStateChangeEvent(plot, currentStatus, targetStatus);
         Bukkit.getPluginManager().callEvent(stateEvent);
 
-        plot.setStatus(stateEvent.getNewStatus());
+        plot.setStatus(stateEvent.isCancelled() || stateEvent.getNewStatus() == null
+                ? PlotStatus.DISABLED : stateEvent.getNewStatus());
         plotManager.savePlot(plot);
 
         if (signService != null) {

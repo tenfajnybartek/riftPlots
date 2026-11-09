@@ -84,7 +84,7 @@ public class BuySubCommand implements SubCommand {
     public List<String> tabComplete(CommandSender sender, String[] args) {
         if (args.length == 1) {
             return plotManager.getAllPlots().stream()
-                    .filter(p -> p.getStatus().canBePurchased())
+                    .filter(Plot::isAvailableForPurchase)
                     .map(Plot::getId)
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();

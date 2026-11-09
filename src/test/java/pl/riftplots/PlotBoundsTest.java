@@ -58,5 +58,7 @@ class PlotBoundsTest {
         PlotBounds touching = new PlotBounds("world", 11, 0, 0, 20, 10, 10);
         assertFalse(a.intersects(touching));
         assertTrue(BoundingBoxUtil.isAdjacentOrTouching(a, touching));
+        assertFalse(BoundingBoxUtil.isAdjacentOrTouching(a, new PlotBounds("world", 11, 0, 100, 20, 10, 110)));
+        assertFalse(BoundingBoxUtil.isAdjacentOrTouching(a, new PlotBounds("world", 11, 100, 0, 20, 110, 10)));
     }
 }

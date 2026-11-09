@@ -137,6 +137,9 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
         loadConfigurations();
 
+        if (typeManager != null) typeManager.load();
+        if (districtManager != null) districtManager.load();
+
         if (taxScheduler != null) {
             taxScheduler.start();
         }
@@ -174,17 +177,17 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
     private void loadConfigurations() {
         reloadConfig();
-        pluginConfig = new PluginConfiguration();
+        if (pluginConfig == null) pluginConfig = new PluginConfiguration();
         pluginConfig.load(getConfig());
 
         File storageFile = new File(getDataFolder(), "storage.yml");
         YamlConfiguration storageYaml = YamlConfiguration.loadConfiguration(storageFile);
-        storageConfig = new StorageConfiguration();
+        if (storageConfig == null) storageConfig = new StorageConfiguration();
         storageConfig.load(storageYaml);
 
         File langFile = new File(getDataFolder(), "lang.yml");
         YamlConfiguration langYaml = YamlConfiguration.loadConfiguration(langFile);
-        messageConfig = new MessageConfiguration(pluginConfig);
+        if (messageConfig == null) messageConfig = new MessageConfiguration(pluginConfig);
         messageConfig.load(langYaml);
     }
 
@@ -192,7 +195,8 @@ public class RiftPlotsPlugin extends JavaPlugin {
         vaultHook = new VaultHook(this);
         boolean vaultOk = vaultHook.setup();
         if (!vaultOk) {
-            getLogger().warning("Brak dostepnego providera ekonomii w Vault! Funkcje platnosci moga byc niedostepne.");
+            getLogger().severe("Brak dostepnego providera ekonomii w Vault!");
+            return false;
         }
 
         worldEditHook = new WorldEditHook(this);
@@ -238,6 +242,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
         districtManager = new pl.riftplots.service.district.DistrictManager(getDataFolder(), typeManager);
         districtManager.load();
+        plotManager.configureRules(typeManager, districtManager, storageBackend.getPlayerProfileRepository());
 
         taxCalculator = new TaxCalculator(districtManager);
         snapshotService = new PlotSnapshotService(getDataFolder(), worldEditHook);
@@ -245,25 +250,13 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
         signService = new PlotSignService(pluginConfig, storageBackend.getPlotSignRepository(), plotManager, taxCalculator);
         resetService.setSignService(signService);
+        plotManager.setUpdateListener(signService::updateSignsForPlot);
 
         notificationService = new pl.riftplots.service.notification.NotificationService();
 
-        pl.riftplots.storage.sql.DatabaseManager dbMgr = null;
-        if (storageBackend instanceof pl.riftplots.storage.sqlite.SqliteStorageBackend sqlite) {
-            try {
-                var field = pl.riftplots.storage.sqlite.SqliteStorageBackend.class.getDeclaredField("databaseManager");
-                field.setAccessible(true);
-                dbMgr = (pl.riftplots.storage.sql.DatabaseManager) field.get(sqlite);
-            } catch (Exception ignored) {}
-        } else if (storageBackend instanceof pl.riftplots.storage.mysql.MysqlStorageBackend mysql) {
-            try {
-                var field = pl.riftplots.storage.mysql.MysqlStorageBackend.class.getDeclaredField("databaseManager");
-                field.setAccessible(true);
-                dbMgr = (pl.riftplots.storage.sql.DatabaseManager) field.get(mysql);
-            } catch (Exception ignored) {}
-        }
+        pl.riftplots.storage.sql.DatabaseManager dbMgr = storageBackend.getDatabaseManager();
 
-        budgetService = new pl.riftplots.service.city.CityBudgetService(getDataFolder(), dbMgr);
+        budgetService = new pl.riftplots.service.city.CityBudgetService(getDataFolder(), dbMgr, pluginConfig.getCityBudgetInitialBalance());
         budgetService.initialize();
 
         auditService = new pl.riftplots.service.audit.AuditService(getDataFolder(), dbMgr, plotManager);
@@ -287,6 +280,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
                 pluginConfig, messageConfig
         );
         auctionService.initialize();
+        resetService.setMarketServices(rentalService, auctionService);
 
         teleportService = new pl.riftplots.service.teleport.TeleportService(plotManager, vaultHook, pluginConfig, messageConfig);
 

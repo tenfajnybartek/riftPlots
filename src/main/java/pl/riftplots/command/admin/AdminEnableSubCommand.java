@@ -57,6 +57,10 @@ public class AdminEnableSubCommand implements SubCommand {
         }
 
         Plot plot = opt.get();
+        if (plot.getStatus() != PlotStatus.DISABLED) {
+            sender.sendMessage(messageConfig.get("general.invalid-arguments", Map.of("usage", getUsage())));
+            return true;
+        }
         if (plot.getOwnerUuid() != null) {
             plot.setStatus(PlotStatus.OWNED);
         } else {
@@ -65,7 +69,7 @@ public class AdminEnableSubCommand implements SubCommand {
         plotManager.savePlot(plot);
         signService.updateSignsForPlot(plot);
 
-        sender.sendMessage(messageConfig.get("admin.enable", Map.of("plot_id", id)));
+        sender.sendMessage(messageConfig.get("admin.enabled", Map.of("plot_id", id)));
         return true;
     }
 

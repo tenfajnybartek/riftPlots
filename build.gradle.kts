@@ -36,14 +36,18 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.12.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.mockito:mockito-core:5.16.0")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.16.0")
+    testImplementation("org.mockito:mockito-core:5.20.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.20.0")
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("io.papermc.paper:paper-api:26.3.build.+")
 }
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+configurations.named("testImplementation") {
+    extendsFrom(configurations.compileOnly.get())
 }
 
 tasks {
@@ -54,12 +58,18 @@ tasks {
     shadowJar {
         archiveClassifier.set("")
         relocate("com.zaxxer.hikari", "pl.riftplots.libs.hikari")
-        relocate("org.sqlite", "pl.riftplots.libs.sqlite")
+        // SQLite JNI resolves org.sqlite.core.NativeDB by its original name.
         relocate("com.mysql", "pl.riftplots.libs.mysql")
+        mergeServiceFiles()
+        filesMatching("META-INF/services/**") {
+            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        }
     }
 
     test {
         useJUnitPlatform()
+        dependsOn(shadowJar)
+        systemProperty("riftplots.shadedJar", shadowJar.get().archiveFile.get().asFile.absolutePath)
     }
 
     runServer {

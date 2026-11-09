@@ -65,7 +65,7 @@ public class PlotListGUI {
             if (slot >= 45) {
                 break;
             }
-            if (plot.getStatus().canBePurchased()) {
+            if (plot.isAvailableForPurchase()) {
                 inv.setItem(slot++, createAvailablePlotItem(plot));
             }
         }

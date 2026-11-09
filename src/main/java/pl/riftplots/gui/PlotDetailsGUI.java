@@ -81,7 +81,7 @@ public class PlotDetailsGUI {
         abLore.add(AdventureUtil.parse("<gray>Zwrot środków: </gray><green>" + config.formatMoney(refund) + "</green>"));
         abLore.add(AdventureUtil.parse("<red>Utracisz prawo własności do tej działki!</red>"));
         abLore.add(Component.empty());
-        abLore.add(AdventureUtil.parse("<red>Kliknij, aby oddać działkę miastu.</red>"));
+        abLore.add(AdventureUtil.parse("<red>Kliknij, aby przejść do potwierdzenia na czacie.</red>"));
         abMeta.lore(abLore);
         abandonItem.setItemMeta(abMeta);
         inv.setItem(31, abandonItem);

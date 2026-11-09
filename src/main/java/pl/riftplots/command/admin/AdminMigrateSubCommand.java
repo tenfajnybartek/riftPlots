@@ -46,8 +46,8 @@ public class AdminMigrateSubCommand implements SubCommand {
         StorageType src;
         StorageType dst;
         try {
-            src = StorageType.parse(args[0]);
-            dst = StorageType.parse(args[1]);
+            src = StorageType.valueOf(args[0].toUpperCase(Locale.ROOT));
+            dst = StorageType.valueOf(args[1].toUpperCase(Locale.ROOT));
         } catch (Exception e) {
             sender.sendMessage("§cNieprawidłowy typ magazynu danych (YAML, SQLITE, MYSQL).");
             return true;
@@ -57,22 +57,25 @@ public class AdminMigrateSubCommand implements SubCommand {
             sender.sendMessage("§cMagazyn źródłowy i docelowy nie mogą być takie same!");
             return true;
         }
+        if (src != migrationService.getActiveStorageType()) {
+            sender.sendMessage("§cŹródłem musi być aktualnie używany magazyn: " + migrationService.getActiveStorageType());
+            return true;
+        }
 
         AdventureUtil.sendMessage(sender, "<yellow>Rozpoczynanie migracji danych z <gold>" + src + "</gold> do <gold>" + dst + "</gold>...</yellow>");
 
-        org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(pl.riftplots.RiftPlotsPlugin.getInstance(), () -> {
-            try {
-                DataMigrationService.MigrationReport report = migrationService.migrate(src, dst);
-                AdventureUtil.sendMessage(sender, "<green><b>Migracja zakończona sukcesem!</b></green>");
-                AdventureUtil.sendMessage(sender, "<gray>Przeniesiono działek: </gray><yellow>" + report.plotsMigrated() + "</yellow>");
-                AdventureUtil.sendMessage(sender, "<gray>Przeniesiono transakcji: </gray><yellow>" + report.transactionsMigrated() + "</yellow>");
-                AdventureUtil.sendMessage(sender, "<gray>Przeniesiono tabliczek: </gray><yellow>" + report.signsMigrated() + "</yellow>");
-                AdventureUtil.sendMessage(sender, "<gold>Aby zacząć korzystać z nowej bazy, zmień storage.type w storage.yml i zrestartuj serwer.</gold>");
-            } catch (Exception e) {
-                AdventureUtil.sendMessage(sender, "<red>Błąd podczas migracji danych: " + e.getMessage() + "</red>");
-                e.printStackTrace();
-            }
-        });
+        // Run on the server thread so no command or tax tick can change the source mid-copy.
+        try {
+            DataMigrationService.MigrationReport report = migrationService.migrate(src, dst);
+            AdventureUtil.sendMessage(sender, "<green><b>Migracja zakończona sukcesem!</b></green>");
+            AdventureUtil.sendMessage(sender, "<gray>Przeniesiono działek: </gray><yellow>" + report.plotsMigrated() + "</yellow>");
+            AdventureUtil.sendMessage(sender, "<gray>Przeniesiono transakcji: </gray><yellow>" + report.transactionsMigrated() + "</yellow>");
+            AdventureUtil.sendMessage(sender, "<gray>Przeniesiono tabliczek: </gray><yellow>" + report.signsMigrated() + "</yellow>");
+            AdventureUtil.sendMessage(sender, "<gold>Aby zacząć korzystać z nowej bazy, zmień storage.type w storage.yml i zrestartuj serwer.</gold>");
+        } catch (Exception e) {
+            AdventureUtil.sendMessage(sender, "<red>Błąd podczas migracji danych: " + e.getMessage() + "</red>");
+            e.printStackTrace();
+        }
 
         return true;
     }

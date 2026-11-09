@@ -58,7 +58,12 @@ public class DatabaseManager {
         }
 
         this.dataSource = new HikariDataSource(hikariConfig);
+        try {
         createTables();
+        } catch (SQLException e) {
+            shutdown();
+            throw e;
+        }
     }
 
     private void createTables() throws SQLException {
@@ -268,11 +273,11 @@ public class DatabaseManager {
         }
     }
 
-    private void tryAddColumn(Statement stmt, String table, String column, String definition) {
-        try {
-            stmt.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
-        } catch (SQLException ignored) {
+    private void tryAddColumn(Statement stmt, String table, String column, String definition) throws SQLException {
+        try (var columns = stmt.getConnection().getMetaData().getColumns(null, null, table, column)) {
+            if (columns.next()) return;
         }
+            stmt.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
     }
 
     public Connection getConnection() throws SQLException {

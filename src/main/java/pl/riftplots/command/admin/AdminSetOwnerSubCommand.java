@@ -65,9 +65,14 @@ public class AdminSetOwnerSubCommand implements SubCommand {
         }
 
         Plot plot = opt.get();
+        if (plot.getStatus() == PlotStatus.RESETTING || plot.isAuctionActive() || plot.isRented()) {
+            sender.sendMessage(messageConfig.get("transfer.not-ready"));
+            return true;
+        }
         String targetName = args[1];
 
         if ("none".equalsIgnoreCase(targetName) || "null".equalsIgnoreCase(targetName)) {
+            plot.clearOwnership();
             plot.setStatus(PlotStatus.AVAILABLE);
             plot.setOwnerUuid(null);
             plot.setOwnerName(null);
@@ -94,6 +99,9 @@ public class AdminSetOwnerSubCommand implements SubCommand {
         plot.setStatus(PlotStatus.OWNED);
         plot.setOwnerUuid(target.getUniqueId());
         plot.setOwnerName(target.getName());
+        plot.clearMembers();
+        plot.clearHomeLocation();
+        plot.setAdvancePeriodsPaid(0);
         Instant now = Instant.now();
         plot.setPurchaseDate(now);
         plot.setNextTaxPayment(now.plus(Duration.ofDays(plot.getBillingPeriodDays())));

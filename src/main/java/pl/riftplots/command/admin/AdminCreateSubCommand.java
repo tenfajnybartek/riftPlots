@@ -93,16 +93,20 @@ public class AdminCreateSubCommand implements SubCommand {
                 now, now
         );
 
+        try {
+            if (!snapshotService.createSnapshot(plot)) {
+                player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Nie udało się zapisać schematu działki")));
+                return true;
+            }
+        } catch (Exception e) {
+            player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Błąd zapisu snapshotu: " + e.getMessage())));
+            return true;
+        }
+
         boolean registered = plotManager.registerPlot(plot);
         if (!registered) {
             player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Nie udało się utworzyć regionu WorldGuard")));
             return true;
-        }
-
-        try {
-            snapshotService.createSnapshot(plot);
-        } catch (Exception e) {
-            player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Błąd zapisu snapshotu: " + e.getMessage())));
         }
 
         player.sendMessage(messageConfig.get("admin.created", Map.of(

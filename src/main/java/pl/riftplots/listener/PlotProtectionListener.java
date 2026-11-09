@@ -118,6 +118,7 @@ public class PlotProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         Entity target = event.getEntity();
+        if (!protectionService.isPlotLocation(target.getLocation())) return;
         if ((target instanceof ItemFrame && config.isProtectItemFrames())
                 || (target instanceof ArmorStand && config.isProtectArmorStands())) {
             if (event.getDamager() instanceof Player player) {
@@ -133,6 +134,7 @@ public class PlotProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onHangingBreak(HangingBreakByEntityEvent event) {
+        if (!protectionService.isPlotLocation(event.getEntity().getLocation())) return;
         if (!config.isProtectItemFrames()) {
             return;
         }

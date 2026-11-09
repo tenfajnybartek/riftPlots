@@ -111,7 +111,7 @@ public class PlotTaxScheduler implements Runnable {
 
         if (nextTax.isBefore(now)) {
             plot.setStatus(PlotStatus.GRACE_PERIOD);
-            Instant expiry = now.plus(Duration.ofHours(plot.getGracePeriodHours()));
+            Instant expiry = nextTax.plus(Duration.ofHours(plot.getGracePeriodHours()));
             plot.setGracePeriodExpiry(expiry);
             plotManager.savePlot(plot);
 
@@ -120,6 +120,7 @@ public class PlotTaxScheduler implements Runnable {
             }
 
             notifyGracePeriod(plot, expiry);
+            if (!expiry.isAfter(now)) expirePlot(plot);
         } else {
             checkReminders(plot, now, nextTax);
         }
@@ -165,14 +166,6 @@ public class PlotTaxScheduler implements Runnable {
         UUID ownerUuid = plot.getOwnerUuid();
         String ownerName = plot.getOwnerName();
 
-        if (ownerUuid != null) {
-            Optional<PlotPlayerProfile> optProfile = profileRepository.findById(ownerUuid);
-            optProfile.ifPresent(profile -> {
-                profile.removeOwnedPlot(plot.getId());
-                profileRepository.save(profile);
-            });
-        }
-
         AdventureUtil.sendMessage(Bukkit.getConsoleSender(), messageConfig.getRaw("tax.expired-broadcast", "{prefix}<red>Dzialka {plot_id} wygasla!</red>")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
@@ -194,13 +187,11 @@ public class PlotTaxScheduler implements Runnable {
                 }
             });
         } else {
+            if (rentalService != null && !rentalService.terminateRental(plot.getId(), true, "Wygaśnięcie nieruchomości"))
+                return;
+            if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plot.getId());
+            plot.clearOwnership();
             plot.setStatus(PlotStatus.AVAILABLE);
-            plot.setOwnerUuid(null);
-            plot.setOwnerName(null);
-            plot.clearMembers();
-            plot.setPurchaseDate(null);
-            plot.setNextTaxPayment(null);
-            plot.setGracePeriodExpiry(null);
             plotManager.savePlot(plot);
 
             if (signService != null) {

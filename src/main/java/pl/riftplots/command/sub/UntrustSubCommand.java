@@ -106,6 +106,10 @@ public class UntrustSubCommand implements SubCommand {
             return true;
         }
 
+        if (targetPlot.getMember(memberUuid).getRole() == pl.riftplots.domain.plot.PlotMemberRole.TENANT) {
+            AdventureUtil.sendMessage(player, "<red>Aktywny najem należy zakończyć przez /plots admin rent cancel.</red>");
+            return true;
+        }
         targetPlot.removeMember(memberUuid);
         plotManager.savePlot(targetPlot);
 

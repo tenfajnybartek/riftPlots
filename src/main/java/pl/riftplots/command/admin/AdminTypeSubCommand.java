@@ -57,6 +57,10 @@ public class AdminTypeSubCommand implements SubCommand {
             }
             String plotId = args[1].toLowerCase();
             String typeId = args[2].toUpperCase();
+            if (!typeManager.exists(typeId)) {
+                sender.sendMessage("§cNieznany typ nieruchomości: " + typeId);
+                return true;
+            }
 
             Optional<Plot> opt = plotManager.getPlot(plotId);
             if (opt.isEmpty()) {
@@ -79,6 +83,10 @@ public class AdminTypeSubCommand implements SubCommand {
                 return true;
             }
             String typeId = args[1].toUpperCase();
+            if (!typeManager.exists(typeId)) {
+                sender.sendMessage("§cNieznany typ nieruchomości: " + typeId);
+                return true;
+            }
             PropertyType t = typeManager.getType(typeId);
             AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== INFORMACJE O TYPIE: " + t.getDisplayName() + " ===</b></gradient>");
             AdventureUtil.sendMessage(sender, "<gray>ID: </gray><white>" + t.getId() + "</white>");

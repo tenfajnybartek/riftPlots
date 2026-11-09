@@ -17,6 +17,11 @@ public class PlotProtectionService {
         this.plotManager = plotManager;
     }
 
+    public boolean isPlotLocation(Location location) {
+        return location != null && location.getWorld() != null && plotManager.getPlotAt(location.getWorld().getName(),
+                location.getBlockX(), location.getBlockY(), location.getBlockZ()).isPresent();
+    }
+
     public boolean canInteract(Player player, Location location, PlotPermission requiredPermission) {
         if (location == null || location.getWorld() == null) {
             return true;
@@ -47,7 +52,7 @@ public class PlotProtectionService {
             return false;
         }
 
-        if (plot.getStatus() == PlotStatus.AVAILABLE) {
+        if (plot.getStatus() == PlotStatus.AVAILABLE && !plot.isRented()) {
             return false;
         }
 

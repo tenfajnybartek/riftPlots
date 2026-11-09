@@ -24,7 +24,7 @@ public class YamlPlotSignRepository implements PlotSignRepository {
         if (!signsFile.exists()) {
             return;
         }
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(signsFile);
+        YamlConfiguration config = YamlDataFile.load(signsFile);
         ConfigurationSection section = config.getConfigurationSection("signs");
         if (section == null) {
             return;
@@ -62,7 +62,7 @@ public class YamlPlotSignRepository implements PlotSignRepository {
             }
             config.save(signsFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 

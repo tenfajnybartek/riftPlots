@@ -5,6 +5,9 @@ import pl.riftplots.integration.worldedit.WorldEditHook;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.util.Objects;
 
 public class PlotSnapshotService {
@@ -36,10 +39,18 @@ public class PlotSnapshotService {
             return false;
         }
         File targetFile = getSchematicFile(plot.getId());
-        boolean success = worldEditHook.saveSnapshot(plot.getBounds(), targetFile);
-        if (success) {
+        File temporaryFile = new File(schematicsDirectory, plot.getId() + ".schem.tmp");
+        try {
+            if (!worldEditHook.saveSnapshot(plot.getBounds(), temporaryFile)) return false;
+            try {
+                Files.move(temporaryFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporaryFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
             plot.setSchematicFile(targetFile.getName());
+            return true;
+        } finally {
+            Files.deleteIfExists(temporaryFile.toPath());
         }
-        return success;
     }
 }

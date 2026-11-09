@@ -34,11 +34,18 @@ public class PlotPistonFluidListener implements Listener {
         String worldName = piston.getWorld().getName();
         Optional<Plot> pistonPlot = plotManager.getPlotAt(worldName, piston.getX(), piston.getY(), piston.getZ());
 
+        Block head = piston.getRelative(event.getDirection());
+        if (!plotsMatch(pistonPlot, plotManager.getPlotAt(worldName, head.getX(), head.getY(), head.getZ()))) {
+            event.setCancelled(true);
+            return;
+        }
+
         for (Block movedBlock : event.getBlocks()) {
+            Optional<Plot> sourcePlot = plotManager.getPlotAt(worldName, movedBlock.getX(), movedBlock.getY(), movedBlock.getZ());
             Location targetLoc = movedBlock.getLocation().add(event.getDirection().getDirection());
             Optional<Plot> targetPlot = plotManager.getPlotAt(worldName, targetLoc.getBlockX(), targetLoc.getBlockY(), targetLoc.getBlockZ());
 
-            if (!plotsMatch(pistonPlot, targetPlot)) {
+            if (!plotsMatch(pistonPlot, sourcePlot) || !plotsMatch(pistonPlot, targetPlot)) {
                 event.setCancelled(true);
                 return;
             }
@@ -57,7 +64,10 @@ public class PlotPistonFluidListener implements Listener {
 
         for (Block movedBlock : event.getBlocks()) {
             Optional<Plot> movedPlot = plotManager.getPlotAt(worldName, movedBlock.getX(), movedBlock.getY(), movedBlock.getZ());
-            if (!plotsMatch(pistonPlot, movedPlot)) {
+            var facing = ((org.bukkit.block.data.Directional) piston.getBlockData()).getFacing();
+            Block target = movedBlock.getRelative(facing.getOppositeFace());
+            Optional<Plot> targetPlot = plotManager.getPlotAt(worldName, target.getX(), target.getY(), target.getZ());
+            if (!plotsMatch(pistonPlot, movedPlot) || !plotsMatch(pistonPlot, targetPlot)) {
                 event.setCancelled(true);
                 return;
             }

@@ -13,6 +13,10 @@ public class NotificationService {
     private final Map<UUID, List<String>> offlineQueue = new ConcurrentHashMap<>();
 
     public void notifyPlayer(UUID playerUuid, String message, Sound sound) {
+        notifyPlayer(playerUuid, message, sound != null ? org.bukkit.Registry.SOUND_EVENT.getKey(sound).asString() : (String) null);
+    }
+
+    public void notifyPlayer(UUID playerUuid, String message, String sound) {
         if (playerUuid == null || message == null || message.isBlank()) {
             return;
         }

@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 import pl.riftplots.domain.plot.Plot;
 import pl.riftplots.domain.plot.PlotMember;
@@ -45,12 +46,14 @@ public class PlotGUIListener implements Listener {
         }
 
         event.setCancelled(true);
+        if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !player.hasPermission("riftplots.user") || !player.hasPermission("riftplots.user.gui")) return;
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) {
             return;
         }
 
-        Player player = (Player) event.getWhoClicked();
         String type = holder.getGuiType();
 
         switch (type) {
@@ -59,6 +62,14 @@ public class PlotGUIListener implements Listener {
             case "PLOT_DETAILS" -> handleDetailsClick(player, holder.getPlotId(), event.getSlot(), clicked);
             case "PLOT_CONFIRM_BUY" -> handleConfirmBuyClick(player, holder.getPlotId(), event.getSlot(), clicked);
             case "PLOT_MEMBERS" -> handleMembersClick(player, holder.getPlotId(), event.getSlot(), clicked);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getView().getTopInventory().getHolder() instanceof PlotGUIHolder
+                && event.getRawSlots().stream().anyMatch(slot -> slot < event.getView().getTopInventory().getSize())) {
+            event.setCancelled(true);
         }
     }
 
@@ -97,15 +108,19 @@ public class PlotGUIListener implements Listener {
             return;
         }
         Plot plot = optPlot.get();
+        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) {
+            player.closeInventory();
+            return;
+        }
 
-        if (slot == 13) {
+        if (slot == 13 && player.hasPermission("riftplots.user.pay")) {
             paymentService.payTax(player, plot, 1);
             detailsGUI.open(player, plot);
-        } else if (slot == 15) {
+        } else if (slot == 15 && player.hasPermission("riftplots.user.members")) {
             membersGUI.open(player, plot);
-        } else if (slot == 31) {
+        } else if (slot == 31 && player.hasPermission("riftplots.user.abandon")) {
             player.closeInventory();
-            paymentService.abandonPlot(player, plot);
+            player.performCommand("plots abandon " + plot.getId());
         } else if (slot == 36) {
             listGUI.open(player);
         }
@@ -119,7 +134,7 @@ public class PlotGUIListener implements Listener {
         }
         Plot plot = optPlot.get();
 
-        if (slot == 11 && clicked.getType() == Material.LIME_WOOL) {
+        if (slot == 11 && clicked.getType() == Material.LIME_WOOL && player.hasPermission("riftplots.user.buy")) {
             player.closeInventory();
             paymentService.buyPlot(player, plot);
         } else if (slot == 15 && clicked.getType() == Material.RED_WOOL) {
@@ -134,6 +149,8 @@ public class PlotGUIListener implements Listener {
             return;
         }
         Plot plot = optPlot.get();
+        if ((!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass"))
+                || !player.hasPermission("riftplots.user.untrust")) return;
 
         if (slot == 40 && clicked.getType() == Material.ARROW) {
             detailsGUI.open(player, plot);
@@ -146,6 +163,10 @@ public class PlotGUIListener implements Listener {
                 UUID toRemove = null;
                 for (PlotMember member : plot.getMembers().values()) {
                     if (member.getPlayerName().equalsIgnoreCase(memberName)) {
+                        if (member.getRole() == pl.riftplots.domain.plot.PlotMemberRole.TENANT) {
+                            AdventureUtil.sendMessage(player, "<red>Aktywny najem należy zakończyć przez /plots admin rent cancel.</red>");
+                            return;
+                        }
                         toRemove = member.getPlayerUuid();
                         break;
                     }

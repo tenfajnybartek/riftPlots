@@ -37,6 +37,11 @@ public class SqliteStorageBackend implements StorageBackend {
     }
 
     @Override
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
+
+    @Override
     public PlotRepository getPlotRepository() {
         return plotRepository;
     }

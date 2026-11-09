@@ -10,9 +10,9 @@ public final class BoundingBoxUtil {
         if (a == null || b == null || !a.getWorldName().equalsIgnoreCase(b.getWorldName())) {
             return false;
         }
-        boolean xClose = Math.abs(a.getMinX() - b.getMaxX()) <= 1 || Math.abs(a.getMaxX() - b.getMinX()) <= 1;
-        boolean zClose = Math.abs(a.getMinZ() - b.getMaxZ()) <= 1 || Math.abs(a.getMaxZ() - b.getMinZ()) <= 1;
-        return xClose || zClose;
+        return a.getMinX() <= (long) b.getMaxX() + 1 && b.getMinX() <= (long) a.getMaxX() + 1
+                && a.getMinY() <= (long) b.getMaxY() + 1 && b.getMinY() <= (long) a.getMaxY() + 1
+                && a.getMinZ() <= (long) b.getMaxZ() + 1 && b.getMinZ() <= (long) a.getMaxZ() + 1;
     }
 
     public static boolean isLocationOnBorder(PlotBounds bounds, int x, int y, int z) {

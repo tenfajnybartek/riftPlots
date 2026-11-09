@@ -101,16 +101,16 @@ public class PluginConfiguration {
         this.signResettingAction = config.getString("signs.formats.resetting-action", "<red><b>NIEDOSTĘPNA</b></red>");
         this.signDisabledAction = config.getString("signs.formats.disabled-action", "<dark_red><b>BLOKADA</b></dark_red>");
 
-        this.transferFeePercent = Math.max(0.0, config.getDouble("market.transfer-fee-percent", 5.0));
+        this.transferFeePercent = Math.clamp(config.getDouble("market.transfer-fee-percent", 5.0), 0.0, 100.0);
         this.transferOfferDurationSeconds = Math.max(10, config.getInt("market.transfer-offer-duration-seconds", 300));
 
-        this.auctionCityFeePercent = Math.max(0.0, config.getDouble("auction.city-fee-percent", 5.0));
+        this.auctionCityFeePercent = Math.clamp(config.getDouble("auction.city-fee-percent", 5.0), 0.0, 100.0);
         this.auctionAntiSnipeSeconds = Math.max(0, config.getInt("auction.anti-snipe-extension-seconds", 120));
-        this.auctionDefaultMinBidIncrement = BigDecimal.valueOf(config.getDouble("auction.default-min-bid-increment", 100.0));
+        this.auctionDefaultMinBidIncrement = BigDecimal.valueOf(Math.max(0.01, config.getDouble("auction.default-min-bid-increment", 100.0)));
         this.auctionDefaultDurationMinutes = Math.max(1, config.getInt("auction.default-duration-minutes", 30));
 
         this.teleportEnabled = config.getBoolean("teleport.enabled", true);
-        this.teleportCost = BigDecimal.valueOf(config.getDouble("teleport.cost", 50.0));
+        this.teleportCost = BigDecimal.valueOf(Math.max(0.0, config.getDouble("teleport.cost", 50.0)));
         this.teleportCooldownSeconds = Math.max(0, config.getInt("teleport.cooldown-seconds", 10));
 
         this.cityBudgetInitialBalance = BigDecimal.valueOf(config.getDouble("city-budget.initial-balance", 100000.0));

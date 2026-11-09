@@ -326,7 +326,10 @@ public class Plot {
     }
 
     public int getAdvancePeriodsPaid() {
-        return advancePeriodsPaid;
+        if (nextTaxPayment == null) return 0;
+        long remainingSeconds = java.time.Duration.between(Instant.now(), nextTaxPayment).getSeconds();
+        long periodSeconds = java.time.Duration.ofDays(billingPeriodDays).getSeconds();
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, (remainingSeconds - 1) / periodSeconds));
     }
 
     public void setAdvancePeriodsPaid(int advancePeriodsPaid) {
@@ -496,6 +499,27 @@ public class Plot {
 
     public boolean isAuctionActive() {
         return auctionActive;
+    }
+
+    public boolean isAvailableForPurchase() {
+        return status == PlotStatus.AVAILABLE && ownerUuid == null
+                && !rentalAvailable && !isRented() && !auctionActive;
+    }
+
+    public void clearOwnership() {
+        ownerUuid = null;
+        ownerName = null;
+        clearMembers();
+        purchaseDate = null;
+        nextTaxPayment = null;
+        gracePeriodExpiry = null;
+        advancePeriodsPaid = 0;
+        activeRentalId = null;
+        auctionActive = false;
+        resellAvailable = false;
+        resellPrice = BigDecimal.ZERO;
+        clearHomeLocation();
+        touch();
     }
 
     public void setAuctionActive(boolean auctionActive) {

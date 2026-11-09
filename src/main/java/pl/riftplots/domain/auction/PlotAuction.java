@@ -41,7 +41,7 @@ public class PlotAuction {
         this.currentBidderUuid = currentBidderUuid;
         this.currentBidderName = currentBidderName;
         this.startTime = startTime != null ? startTime : Instant.now();
-        this.endTime = endTime != null ? endTime : startTime.plusSeconds(3600);
+        this.endTime = endTime != null ? endTime : this.startTime.plusSeconds(3600);
         this.buyoutPrice = buyoutPrice;
         if (bids != null) {
             this.bids.addAll(bids);
@@ -117,7 +117,9 @@ public class PlotAuction {
     }
 
     public boolean placeBid(UUID bidderUuid, String bidderName, BigDecimal amount, int antiSnipeExtensionSeconds) {
-        if (status != AuctionStatus.ACTIVE || Instant.now().isAfter(endTime)) {
+        Instant now = Instant.now();
+        if (status != AuctionStatus.ACTIVE || !now.isBefore(endTime)
+                || bidderUuid == null || bidderUuid.equals(sellerUuid) || amount == null || amount.signum() < 0) {
             return false;
         }
 
@@ -131,6 +133,10 @@ public class PlotAuction {
         this.currentBidderName = bidderName;
         this.bids.add(new AuctionBid(bidderUuid, bidderName, amount, Instant.now()));
 
+        if (buyoutPrice != null && amount.compareTo(buyoutPrice) >= 0) {
+            this.endTime = now;
+            return true;
+        }
         if (antiSnipeExtensionSeconds > 0) {
             long remainingSeconds = java.time.Duration.between(Instant.now(), endTime).getSeconds();
             if (remainingSeconds < antiSnipeExtensionSeconds) {
@@ -142,6 +148,6 @@ public class PlotAuction {
     }
 
     public boolean isExpired() {
-        return status == AuctionStatus.ACTIVE && Instant.now().isAfter(endTime);
+        return status == AuctionStatus.ACTIVE && !Instant.now().isBefore(endTime);
     }
 }

@@ -1,6 +1,7 @@
 package pl.riftplots.service.audit;
 
 import org.bukkit.configuration.file.YamlConfiguration;
+import pl.riftplots.storage.yaml.YamlDataFile;
 import pl.riftplots.domain.audit.PlotAuditLog;
 import pl.riftplots.domain.plot.Plot;
 import pl.riftplots.domain.plot.PlotStatus;
@@ -44,7 +45,7 @@ public class AuditService {
                 ps.setLong(7, entry.getTimestamp().toEpochMilli());
                 ps.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new IllegalStateException("Storage operation failed", e);
             }
         } else {
             saveToFile(entry);
@@ -53,7 +54,7 @@ public class AuditService {
 
     private synchronized void saveToFile(PlotAuditLog entry) {
         try {
-            YamlConfiguration config = auditFile.exists() ? YamlConfiguration.loadConfiguration(auditFile) : new YamlConfiguration();
+            YamlConfiguration config = auditFile.exists() ? YamlDataFile.load(auditFile) : new YamlConfiguration();
             String path = "logs." + entry.getId();
             config.set(path + ".plotId", entry.getPlotId());
             config.set(path + ".operatorUuid", entry.getOperatorUuid() != null ? entry.getOperatorUuid().toString() : null);
@@ -64,11 +65,12 @@ public class AuditService {
             auditFile.getParentFile().mkdirs();
             config.save(auditFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
     public synchronized List<PlotAuditLog> getLogsForPlot(String plotId, int limit) {
+        if (plotId == null || limit <= 0) return Collections.emptyList();
         if (databaseManager != null) {
             List<PlotAuditLog> list = new ArrayList<>();
             try (Connection conn = databaseManager.getConnection();
@@ -89,12 +91,25 @@ public class AuditService {
                     }
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new IllegalStateException("Storage operation failed", e);
             }
             return list;
         }
 
-        return inMemoryLogs.stream()
+        YamlConfiguration yaml = YamlDataFile.load(auditFile);
+        List<PlotAuditLog> fileLogs = new ArrayList<>();
+        var logs = yaml.getConfigurationSection("logs");
+        if (logs != null) {
+            for (String id : logs.getKeys(false)) {
+                String path = "logs." + id;
+                String uuid = yaml.getString(path + ".operatorUuid");
+                fileLogs.add(new PlotAuditLog(id, yaml.getString(path + ".plotId"),
+                        uuid != null ? UUID.fromString(uuid) : null, yaml.getString(path + ".operatorName"),
+                        yaml.getString(path + ".action"), yaml.getString(path + ".details"),
+                        Instant.ofEpochMilli(yaml.getLong(path + ".timestamp"))));
+            }
+        }
+        return fileLogs.stream()
                 .filter(l -> l.getPlotId().equalsIgnoreCase(plotId))
                 .sorted(Comparator.comparing(PlotAuditLog::getTimestamp).reversed())
                 .limit(limit)

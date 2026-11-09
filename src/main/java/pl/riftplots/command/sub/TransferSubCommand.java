@@ -102,7 +102,7 @@ public class TransferSubCommand implements SubCommand {
             return true;
         }
 
-        transferService.createOffer(targetPlot, player, buyer, price, 300);
+        transferService.createOffer(targetPlot, player, buyer, price, 0);
         return true;
     }
 

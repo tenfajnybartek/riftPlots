@@ -40,7 +40,7 @@ public class RentalAgreement {
         this.periodUnit = periodUnit != null ? periodUnit : RentalPeriodUnit.DAY;
         this.deposit = deposit != null ? deposit : BigDecimal.ZERO;
         this.startDate = startDate != null ? startDate : Instant.now();
-        this.endDate = endDate != null ? endDate : startDate.plus(this.periodUnit.getDuration());
+        this.endDate = endDate != null ? endDate : this.startDate.plus(this.periodUnit.getDuration());
         this.autoRenew = autoRenew;
         this.status = status != null ? status : RentalStatus.ACTIVE;
     }

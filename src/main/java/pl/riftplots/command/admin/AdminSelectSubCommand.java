@@ -68,6 +68,10 @@ public class AdminSelectSubCommand implements SubCommand {
 
         Plot plot = opt.get();
         PlotBounds bounds = plot.getBounds();
+        if (!player.getWorld().getName().equals(bounds.getWorldName())) {
+            AdventureUtil.sendMessage(player, "<red>Przejdź do świata działki: " + bounds.getWorldName() + "</red>");
+            return true;
+        }
 
         BlockVector3 min = BlockVector3.at(bounds.getMinX(), bounds.getMinY(), bounds.getMinZ());
         BlockVector3 max = BlockVector3.at(bounds.getMaxX(), bounds.getMaxY(), bounds.getMaxZ());

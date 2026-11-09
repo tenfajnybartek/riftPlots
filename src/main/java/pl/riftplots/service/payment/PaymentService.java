@@ -81,7 +81,7 @@ public class PaymentService {
 
         Object lock = plotLocks.computeIfAbsent(plot.getId(), k -> new Object());
         synchronized (lock) {
-            if (plot.getStatus() != PlotStatus.AVAILABLE) {
+            if (!plot.isAvailableForPurchase()) {
                 if (plot.getStatus() == PlotStatus.RESETTING) {
                     player.sendMessage(messageConfig.get("plot.resetting", Map.of("plot_id", plot.getId())));
                 } else if (plot.getStatus() == PlotStatus.DISABLED) {
@@ -92,6 +92,12 @@ public class PaymentService {
                             "status", plot.getStatus().name()
                     )));
                 }
+                return false;
+            }
+
+            var validation = plotManager.validateAcquisition(plot, player.getUniqueId());
+            if (!validation.isValid()) {
+                player.sendMessage(net.kyori.adventure.text.Component.text(validation.getErrorMessage()));
                 return false;
             }
 
@@ -117,6 +123,7 @@ public class PaymentService {
             }
 
             BigDecimal finalPrice = event.getPrice();
+            if (finalPrice == null || finalPrice.signum() < 0) return false;
             boolean withdrawn = vaultHook.withdraw(player, finalPrice);
             if (!withdrawn) {
                 player.sendMessage(messageConfig.get("general.economy-error"));
@@ -176,13 +183,14 @@ public class PaymentService {
         }
     }
 
-    public boolean payTax(Player player, Plot plot, int periods) {
+    public synchronized boolean payTax(Player player, Plot plot, int periods) {
         if (player == null || plot == null) {
             return false;
         }
         if (periods <= 0) {
             periods = 1;
         }
+        if (!plot.getStatus().isOwned() || plot.getOwnerUuid() == null) return false;
 
         if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) {
             player.sendMessage(messageConfig.get("plot.not-owner", Map.of("plot_id", plot.getId())));
@@ -194,7 +202,7 @@ public class PaymentService {
             return false;
         }
 
-        if (plot.getAdvancePeriodsPaid() + periods > config.getMaxAdvancePeriods()) {
+        if ((long) plot.getAdvancePeriodsPaid() + periods > config.getMaxAdvancePeriods()) {
             player.sendMessage(messageConfig.get("tax.max-advance-reached", Map.of("max", String.valueOf(config.getMaxAdvancePeriods()))));
             return false;
         }
@@ -223,6 +231,7 @@ public class PaymentService {
         }
 
         BigDecimal finalAmount = event.getAmount();
+        if (finalAmount == null || finalAmount.signum() < 0) return false;
         boolean withdrawn = vaultHook.withdraw(player, finalAmount);
         if (!withdrawn) {
             player.sendMessage(messageConfig.get("general.economy-error"));
@@ -276,7 +285,7 @@ public class PaymentService {
         return true;
     }
 
-    public boolean abandonPlot(Player player, Plot plot) {
+    public synchronized boolean abandonPlot(Player player, Plot plot) {
         if (player == null || plot == null) {
             return false;
         }
@@ -286,22 +295,41 @@ public class PaymentService {
             return false;
         }
 
+        if (plot.getOwnerUuid() == null || !plot.getStatus().isOwned() || plot.isRented() || plot.isAuctionActive()) {
+            player.sendMessage(messageConfig.get("transfer.not-ready"));
+            return false;
+        }
+
         BigDecimal refund = calculateAbandonRefund(plot);
+        UUID ownerUuid = plot.getOwnerUuid();
+        org.bukkit.OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUuid);
+        if (plot.isAutoResetOnExpire()) {
+            if (!resetService.startReset(plot, null)) return false;
+        } else {
+            plot.clearOwnership();
+            plot.setStatus(PlotStatus.AVAILABLE);
+            plotManager.savePlot(plot);
+        }
+
         if (refund.compareTo(BigDecimal.ZERO) > 0 && vaultHook.isAvailable()) {
-            vaultHook.deposit(player, refund);
+            boolean refunded = vaultHook.deposit(owner, refund);
             TransactionRecord refundRecord = TransactionRecord.create(
                     plot.getId(),
-                    player.getUniqueId(),
-                    player.getName(),
+                    ownerUuid,
+                    owner.getName() != null ? owner.getName() : "Unknown",
                     TransactionType.REFUND,
                     refund,
-                    TransactionStatus.SUCCESS,
+                    refunded ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
                     "Zwrot środków za porzucenie działki"
             );
             transactionRepository.save(refundRecord);
 
-            if (budgetService != null) {
+            if (refunded && budgetService != null) {
                 budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.REFUND_EXPENSE, refund, plot.getId(), player.getUniqueId(), "Zwrot kaucji/części ceny za porzucenie działki");
+            }
+            if (!refunded) {
+                player.sendMessage(messageConfig.get("general.economy-error"));
+                return false;
             }
         }
 
@@ -320,22 +348,6 @@ public class PaymentService {
                 "refund", config.formatMoney(refund)
         )));
 
-        if (plot.isAutoResetOnExpire()) {
-            resetService.startReset(plot, null);
-        } else {
-            plot.setStatus(PlotStatus.AVAILABLE);
-            plot.setOwnerUuid(null);
-            plot.setOwnerName(null);
-            plot.clearMembers();
-            plot.setPurchaseDate(null);
-            plot.setNextTaxPayment(null);
-            plot.setGracePeriodExpiry(null);
-            plotManager.savePlot(plot);
-            if (signService != null) {
-                signService.updateSignsForPlot(plot);
-            }
-        }
-
         return true;
     }
 
@@ -343,7 +355,7 @@ public class PaymentService {
         if (plot == null) {
             return BigDecimal.ZERO;
         }
-        double percent = plot.getRefundPercentOnAbandon();
+        double percent = Math.clamp(plot.getRefundPercentOnAbandon(), 0.0, 100.0);
         if (percent <= 0.0) {
             return BigDecimal.ZERO;
         }

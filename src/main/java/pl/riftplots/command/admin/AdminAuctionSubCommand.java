@@ -61,11 +61,11 @@ public class AdminAuctionSubCommand implements SubCommand {
             int minutes = Integer.parseInt(args[4]);
             BigDecimal buyout = args.length > 5 ? new BigDecimal(args[5]) : null;
 
-            boolean started = auctionService.startAuction(plot, null, startingPrice, minInc, minutes, buyout);
+            boolean started = auctionService.startAuction(plot, plot.getOwnerUuid(), startingPrice, minInc, minutes, buyout);
             if (started) {
                 AdventureUtil.sendMessage(sender, "<green>Rozpoczęto licytację działki <yellow>" + plotId + "</yellow> na czas <gold>" + minutes + " minut</gold>!</green>");
             } else {
-                sender.sendMessage("§cTa działka jest już w trakcie innej licytacji.");
+                sender.sendMessage("§cNie można rozpocząć aukcji. Sprawdź stan działki, wynajem i podane kwoty/czas.");
             }
         } catch (Exception e) {
             sender.sendMessage("§cBłąd parametrów: " + e.getMessage());

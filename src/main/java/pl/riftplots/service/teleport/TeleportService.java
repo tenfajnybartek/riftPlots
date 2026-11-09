@@ -96,11 +96,19 @@ public class TeleportService {
                 player.sendMessage(messageConfig.get("teleport.cannot-afford", Map.of("cost", config.formatMoney(cost))));
                 return false;
             }
-            vaultHook.withdraw(player, cost);
+            if (!vaultHook.withdraw(player, cost)) {
+                player.sendMessage(messageConfig.get("general.economy-error"));
+                return false;
+            }
         }
 
+        if (!player.teleport(targetLoc)) {
+            if (cost.signum() > 0 && !player.hasPermission("riftplots.admin.bypass")) {
+                vaultHook.deposit(player, cost);
+            }
+            return false;
+        }
         cooldowns.put(uuid, Instant.now());
-        player.teleportAsync(targetLoc);
         player.sendMessage(messageConfig.get("teleport.success", Map.of("name", plot.getName())));
         return true;
     }
@@ -109,22 +117,31 @@ public class TeleportService {
         World world = Bukkit.getWorld(plot.getBounds().getWorldName());
         if (world == null) return null;
 
-        if (plot.hasHomeLocation()) {
-            Location home = new Location(world, plot.getHomeX(), plot.getHomeY(), plot.getHomeZ(), plot.getHomeYaw(), plot.getHomePitch());
-            if (isSafe(home)) {
+        if (plot.hasHomeLocation() && world.getName().equals(plot.getHomeWorld())) {
+            Location home = new Location(world, plot.getHomeX(), plot.getHomeY(), plot.getHomeZ(),
+                    plot.getHomeYaw() != null ? plot.getHomeYaw() : 0f,
+                    plot.getHomePitch() != null ? plot.getHomePitch() : 0f);
+            if (isInside(plot, home) && isSafe(home)) {
                 return home;
             }
         }
 
         int centerX = (plot.getBounds().getMinX() + plot.getBounds().getMaxX()) / 2;
         int centerZ = (plot.getBounds().getMinZ() + plot.getBounds().getMaxZ()) / 2;
-        int highestY = world.getHighestBlockYAt(centerX, centerZ);
-
-        Location defaultLoc = new Location(world, centerX + 0.5, highestY + 1.0, centerZ + 0.5);
-        if (isSafe(defaultLoc)) {
-            return defaultLoc;
+        int maxY = Math.min(plot.getBounds().getMaxY() - 1, world.getMaxHeight() - 2);
+        int minY = Math.max(plot.getBounds().getMinY(), world.getMinHeight() + 1);
+        for (int y = maxY; y >= minY; y--) {
+            Location candidate = new Location(world, centerX + 0.5, y, centerZ + 0.5);
+            if (isSafe(candidate)) {
+                return candidate;
+            }
         }
         return null;
+    }
+
+    private boolean isInside(Plot plot, Location location) {
+        return plot.getBounds().contains(location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ())
+                && location.getBlockY() + 1 <= plot.getBounds().getMaxY();
     }
 
     private boolean isSafe(Location loc) {
@@ -132,16 +149,17 @@ public class TeleportService {
         Block head = feet.getRelative(0, 1, 0);
         Block below = feet.getRelative(0, -1, 0);
 
-        if (!below.getType().isSolid()) return false;
-        if (below.getType() == Material.LAVA || below.getType() == Material.FIRE || below.getType() == Material.MAGMA_BLOCK) return false;
-        return !feet.getType().isSolid() && !head.getType().isSolid();
+        if (!below.isSolid()) return false;
+        if (isHazard(below.getType())) return false;
+        return feet.isPassable() && head.isPassable() && !feet.isLiquid() && !head.isLiquid()
+                && !isHazard(feet.getType()) && !isHazard(head.getType());
     }
 
-    public void setTeleportCost(BigDecimal cost) {
-        this.teleportCost = cost != null ? cost.max(BigDecimal.ZERO) : BigDecimal.ZERO;
-    }
-
-    public void setCooldownSeconds(int seconds) {
-        this.cooldownSeconds = Math.max(0, seconds);
+    private boolean isHazard(Material material) {
+        return switch (material) {
+            case LAVA, FIRE, SOUL_FIRE, MAGMA_BLOCK, CACTUS, CAMPFIRE, SOUL_CAMPFIRE,
+                 POWDER_SNOW, SWEET_BERRY_BUSH, WITHER_ROSE, END_PORTAL, NETHER_PORTAL -> true;
+            default -> false;
+        };
     }
 }

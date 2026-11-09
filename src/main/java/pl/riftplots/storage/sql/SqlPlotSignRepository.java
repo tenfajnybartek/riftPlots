@@ -31,7 +31,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 signs.add(mapRow(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return signs;
     }
@@ -51,7 +51,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return Optional.empty();
     }
@@ -74,7 +74,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return Optional.empty();
     }
@@ -95,7 +95,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return signs;
     }
@@ -142,7 +142,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             ps.setInt(7, sign.getZ());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -157,7 +157,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             ps.setString(1, id);
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -172,7 +172,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             ps.setString(1, plotId.toLowerCase());
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 

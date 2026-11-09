@@ -55,6 +55,11 @@ public class AdminDeleteSubCommand implements SubCommand {
             return true;
         }
 
+        Plot plot = opt.get();
+        if (plot.getStatus() == pl.riftplots.domain.plot.PlotStatus.RESETTING || plot.isRented() || plot.isAuctionActive()) {
+            sender.sendMessage(messageConfig.get("transfer.not-ready"));
+            return true;
+        }
         signService.removeSignsForPlot(id);
         plotManager.deletePlot(id);
 

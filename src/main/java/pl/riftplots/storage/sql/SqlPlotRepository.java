@@ -29,7 +29,7 @@ public class SqlPlotRepository implements PlotRepository {
                 plots.add(plot);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return plots;
     }
@@ -51,7 +51,7 @@ public class SqlPlotRepository implements PlotRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return Optional.empty();
     }
@@ -74,7 +74,7 @@ public class SqlPlotRepository implements PlotRepository {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
         return plots;
     }
@@ -234,7 +234,7 @@ public class SqlPlotRepository implements PlotRepository {
 
             conn.commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -265,7 +265,7 @@ public class SqlPlotRepository implements PlotRepository {
             }
             conn.commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 

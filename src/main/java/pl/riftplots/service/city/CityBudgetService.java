@@ -1,6 +1,7 @@
 package pl.riftplots.service.city;
 
 import org.bukkit.configuration.file.YamlConfiguration;
+import pl.riftplots.storage.yaml.YamlDataFile;
 import pl.riftplots.domain.city.CityTransaction;
 import pl.riftplots.domain.city.CityTransactionType;
 import pl.riftplots.storage.sql.DatabaseManager;
@@ -20,10 +21,16 @@ public class CityBudgetService {
     private final DatabaseManager databaseManager;
     private BigDecimal currentBalance = BigDecimal.valueOf(100000);
     private final List<CityTransaction> transactions = new ArrayList<>();
+    private long lastTimestamp;
 
     public CityBudgetService(File dataFolder, DatabaseManager databaseManager) {
+        this(dataFolder, databaseManager, BigDecimal.valueOf(100000));
+    }
+
+    public CityBudgetService(File dataFolder, DatabaseManager databaseManager, BigDecimal initialBalance) {
         this.budgetFile = new File(dataFolder, "data/city_budget.yml");
         this.databaseManager = databaseManager;
+        this.currentBalance = Objects.requireNonNull(initialBalance);
     }
 
     public void initialize() {
@@ -39,30 +46,55 @@ public class CityBudgetService {
             saveToFile();
             return;
         }
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(budgetFile);
-        this.currentBalance = new BigDecimal(config.getString("balance", "100000.0"));
+        YamlConfiguration config = YamlDataFile.load(budgetFile);
+        this.currentBalance = new BigDecimal(config.getString("balance", currentBalance.toPlainString()));
+        transactions.clear();
+        var entries = config.getConfigurationSection("transactions");
+        if (entries != null) {
+            for (String id : entries.getKeys(false)) {
+                String path = "transactions." + id;
+                String uuid = config.getString(path + ".playerUuid");
+                transactions.add(new CityTransaction(id, CityTransactionType.valueOf(config.getString(path + ".type")),
+                        new BigDecimal(config.getString(path + ".amount")), new BigDecimal(config.getString(path + ".balanceAfter")),
+                        Instant.ofEpochMilli(config.getLong(path + ".timestamp")), config.getString(path + ".plotId"),
+                        uuid != null ? UUID.fromString(uuid) : null, config.getString(path + ".description")));
+            }
+            transactions.sort(Comparator.comparing(CityTransaction::getTimestamp));
+            if (!transactions.isEmpty()) lastTimestamp = transactions.getLast().getTimestamp().toEpochMilli();
+        }
     }
 
     private void saveToFile() {
         try {
             YamlConfiguration config = new YamlConfiguration();
             config.set("balance", currentBalance.toPlainString());
+            for (CityTransaction transaction : transactions) {
+                String path = "transactions." + transaction.getId();
+                config.set(path + ".type", transaction.getType().name());
+                config.set(path + ".amount", transaction.getAmount().toPlainString());
+                config.set(path + ".balanceAfter", transaction.getBalanceAfter().toPlainString());
+                config.set(path + ".timestamp", transaction.getTimestamp().toEpochMilli());
+                config.set(path + ".plotId", transaction.getPlotId());
+                config.set(path + ".playerUuid", transaction.getPlayerUuid() != null ? transaction.getPlayerUuid().toString() : null);
+                config.set(path + ".description", transaction.getDescription());
+            }
             budgetFile.getParentFile().mkdirs();
             config.save(budgetFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
     private void loadFromDatabase() {
         try (Connection conn = databaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT balance_after FROM rift_city_budget ORDER BY timestamp DESC LIMIT 1");
+             PreparedStatement ps = conn.prepareStatement("SELECT balance_after, timestamp FROM rift_city_budget ORDER BY timestamp DESC LIMIT 1");
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 this.currentBalance = rs.getBigDecimal("balance_after");
+                this.lastTimestamp = rs.getLong("timestamp");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -80,7 +112,9 @@ public class CityBudgetService {
             currentBalance = currentBalance.add(amount);
         }
 
-        CityTransaction tx = CityTransaction.create(type, amount, currentBalance, plotId, playerUuid, description);
+        lastTimestamp = Math.max(System.currentTimeMillis(), lastTimestamp + 1);
+        CityTransaction tx = new CityTransaction(UUID.randomUUID().toString(), type, amount, currentBalance,
+                Instant.ofEpochMilli(lastTimestamp), plotId, playerUuid, description);
         transactions.add(tx);
 
         if (databaseManager != null) {
@@ -96,7 +130,7 @@ public class CityBudgetService {
                 ps.setString(8, tx.getDescription());
                 ps.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new IllegalStateException("Storage operation failed", e);
             }
         } else {
             saveToFile();
@@ -112,6 +146,7 @@ public class CityBudgetService {
     }
 
     public synchronized List<CityTransaction> getRecentTransactions(int limit) {
+        if (limit <= 0) return Collections.emptyList();
         if (databaseManager != null) {
             List<CityTransaction> list = new ArrayList<>();
             try (Connection conn = databaseManager.getConnection();
@@ -132,13 +167,15 @@ public class CityBudgetService {
                     }
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new IllegalStateException("Storage operation failed", e);
             }
             return list;
         }
 
         int size = transactions.size();
         int from = Math.max(0, size - limit);
-        return new ArrayList<>(transactions.subList(from, size));
+        List<CityTransaction> recent = new ArrayList<>(transactions.subList(from, size));
+        Collections.reverse(recent);
+        return recent;
     }
 }

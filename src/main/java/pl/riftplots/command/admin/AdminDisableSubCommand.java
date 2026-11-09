@@ -57,6 +57,10 @@ public class AdminDisableSubCommand implements SubCommand {
         }
 
         Plot plot = opt.get();
+        if (plot.getStatus() == PlotStatus.RESETTING || plot.isAuctionActive() || plot.isRented()) {
+            sender.sendMessage(messageConfig.get("transfer.not-ready"));
+            return true;
+        }
         plot.setStatus(PlotStatus.DISABLED);
         plotManager.savePlot(plot);
         signService.updateSignsForPlot(plot);

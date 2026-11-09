@@ -17,13 +17,19 @@ import java.util.List;
 public class DataMigrationService {
     private final File dataFolder;
     private final StorageConfiguration storageConfig;
+    private final StorageType activeStorageType;
 
     public DataMigrationService(File dataFolder, StorageConfiguration storageConfig) {
         this.dataFolder = dataFolder;
         this.storageConfig = storageConfig;
+        this.activeStorageType = storageConfig.getStorageType();
     }
 
-    public MigrationReport migrate(StorageType source, StorageType target) throws Exception {
+    public StorageType getActiveStorageType() {
+        return activeStorageType;
+    }
+
+    public synchronized MigrationReport migrate(StorageType source, StorageType target) throws Exception {
         if (source == target) {
             throw new IllegalArgumentException("Źródłowy i docelowy typ bazy danych nie mogą być takie same!");
         }
@@ -31,35 +37,53 @@ public class DataMigrationService {
         StorageBackend srcBackend = createBackend(source);
         StorageBackend dstBackend = createBackend(target);
 
-        srcBackend.initialize();
-        dstBackend.initialize();
+        try {
+            srcBackend.initialize();
+            dstBackend.initialize();
+            ServiceDataMigration serviceData = new ServiceDataMigration(dataFolder);
+            if (!dstBackend.getPlotRepository().findAll().isEmpty()
+                    || !dstBackend.getTransactionRepository().findAll(1).isEmpty()
+                    || !dstBackend.getPlotSignRepository().findAll().isEmpty()
+                    || !dstBackend.getPlayerProfileRepository().findAll().isEmpty()
+                    || !serviceData.isEmpty(dstBackend)) {
+                throw new IllegalStateException("Docelowy magazyn nie jest pusty. Migracja nie nadpisuje istniejących danych.");
+            }
 
-        List<Plot> plots = srcBackend.getPlotRepository().findAll();
-        List<TransactionRecord> transactions = srcBackend.getTransactionRepository().findAll(10000);
-        List<PlotSign> signs = srcBackend.getPlotSignRepository().findAll();
+            List<Plot> plots = srcBackend.getPlotRepository().findAll();
+            List<TransactionRecord> transactions = srcBackend.getTransactionRepository().findAll(Integer.MAX_VALUE);
+            List<PlotSign> signs = srcBackend.getPlotSignRepository().findAll();
 
-        int plotsCount = 0;
-        for (Plot p : plots) {
-            dstBackend.getPlotRepository().save(p);
-            plotsCount++;
+            int plotsCount = 0;
+            for (Plot p : plots) {
+                dstBackend.getPlotRepository().save(p);
+                plotsCount++;
+            }
+
+            int txCount = 0;
+            for (TransactionRecord tx : transactions) {
+                dstBackend.getTransactionRepository().save(tx);
+                txCount++;
+            }
+
+            int signCount = 0;
+            for (PlotSign sign : signs) {
+                dstBackend.getPlotSignRepository().save(sign);
+                signCount++;
+            }
+
+            for (PlotPlayerProfile profile : srcBackend.getPlayerProfileRepository().findAll()) {
+                dstBackend.getPlayerProfileRepository().save(profile);
+            }
+            serviceData.copy(srcBackend, dstBackend);
+
+            return new MigrationReport(source, target, plotsCount, txCount, signCount, true, "Migracja zakonczona sukcesem");
+        } finally {
+            try {
+                dstBackend.shutdown();
+            } finally {
+                srcBackend.shutdown();
+            }
         }
-
-        int txCount = 0;
-        for (TransactionRecord tx : transactions) {
-            dstBackend.getTransactionRepository().save(tx);
-            txCount++;
-        }
-
-        int signCount = 0;
-        for (PlotSign sign : signs) {
-            dstBackend.getPlotSignRepository().save(sign);
-            signCount++;
-        }
-
-        srcBackend.shutdown();
-        dstBackend.shutdown();
-
-        return new MigrationReport(source, target, plotsCount, txCount, signCount, true, "Migracja zakonczona sukcesem");
     }
 
     private StorageBackend createBackend(StorageType type) {
@@ -70,6 +94,7 @@ public class DataMigrationService {
         };
     }
 
-    public record MigrationReport(StorageType source, StorageType target, int plotsMigrated, int transactionsMigrated, int signsMigrated, boolean success, String message) {
+    public record MigrationReport(StorageType source, StorageType target, int plotsMigrated, int transactionsMigrated,
+                                  int signsMigrated, boolean success, String message) {
     }
 }

@@ -56,6 +56,7 @@ public class PlotSignService {
     }
 
     public PlotSign registerSign(String plotId, PlotSignType type, String worldName, int x, int y, int z) {
+        signRepository.findByLocation(worldName, x, y, z).ifPresent(existing -> signRepository.delete(existing.getId()));
         String id = UUID.randomUUID().toString();
         PlotSign sign = new PlotSign(id, plotId, type, worldName, x, y, z);
         signRepository.save(sign);
@@ -126,9 +127,12 @@ public class PlotSignService {
         if (sign.getType() == PlotSignType.FOR_SALE) {
             lines.add(AdventureUtil.parse(config.getSignHeader()));
             lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
-            if (status == PlotStatus.AVAILABLE) {
+            if (plot.isAvailableForPurchase()) {
                 lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(plot.getPrice()) + "</gold>"));
                 lines.add(AdventureUtil.parse(config.getSignForSaleAction()));
+            } else if (plot.isAuctionActive() || plot.isRentalAvailable() || plot.isRented()) {
+                lines.add(AdventureUtil.parse("<gray>" + (plot.isAuctionActive() ? "Aukcja" : "Wynajem") + "</gray>"));
+                lines.add(AdventureUtil.parse(config.getSignResettingAction()));
             } else if (status == PlotStatus.RESETTING) {
                 lines.add(AdventureUtil.parse("<gray>Resetowanie...</gray>"));
                 lines.add(AdventureUtil.parse(config.getSignResettingAction()));
@@ -163,7 +167,7 @@ public class PlotSignService {
     }
 
     public void handleSignClick(Player player, PlotSign sign, boolean isRightClick) {
-        if (player == null || sign == null) {
+        if (player == null || sign == null || !config.isSignsEnabled()) {
             return;
         }
         Optional<Plot> optPlot = plotManager.getPlot(sign.getPlotId());
@@ -172,18 +176,23 @@ public class PlotSignService {
             return;
         }
         Plot plot = optPlot.get();
+        if (!player.hasPermission("riftplots.user")) return;
+        if (sign.getType() == PlotSignType.STATUS) {
+            displayPlotSummary(player, plot);
+            return;
+        }
 
         if (isRightClick) {
             if (sign.getType() == PlotSignType.RENEW) {
-                if (paymentService != null) {
+                if (paymentService != null && player.hasPermission("riftplots.user.pay")) {
                     paymentService.payTax(player, plot, 1);
                 }
-            } else if (plot.getStatus() == PlotStatus.AVAILABLE) {
-                if (paymentService != null) {
+            } else if (plot.isAvailableForPurchase()) {
+                if (paymentService != null && player.hasPermission("riftplots.user.buy")) {
                     paymentService.buyPlot(player, plot);
                 }
             } else if (plot.isOwner(player.getUniqueId())) {
-                if (paymentService != null) {
+                if (paymentService != null && player.hasPermission("riftplots.user.pay")) {
                     paymentService.payTax(player, plot, 1);
                 }
             } else {

@@ -1,6 +1,5 @@
 package pl.riftplots.service.transfer;
 
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import pl.riftplots.domain.city.CityTransactionType;
 import pl.riftplots.domain.payment.TransactionRecord;
@@ -54,7 +53,8 @@ public class PlotTransferService {
     }
 
     public synchronized Optional<TransferOffer> createOffer(Plot plot, Player seller, Player buyer, BigDecimal price, int validSeconds) {
-        if (plot == null || seller == null || buyer == null) {
+        if (plot == null || seller == null || buyer == null || price == null || price.signum() < 0
+                || seller.getUniqueId().equals(buyer.getUniqueId())) {
             return Optional.empty();
         }
 
@@ -68,12 +68,15 @@ public class PlotTransferService {
             return Optional.empty();
         }
 
-        if (plot.getStatus() != PlotStatus.OWNED) {
+        if (plot.getStatus() != PlotStatus.OWNED || plot.isRented() || plot.isAuctionActive()
+                || !plotManager.validateAcquisition(plot, buyer.getUniqueId()).isValid()) {
             seller.sendMessage(messageConfig.get("transfer.not-ready"));
             return Optional.empty();
         }
 
         int duration = validSeconds > 0 ? validSeconds : config.getTransferOfferDurationSeconds();
+        activeOffers.values().removeIf(offer -> offer.isExpired()
+                || offer.getPlotId().equals(plot.getId()));
         TransferOffer offer = TransferOffer.create(
                 plot.getId(), seller.getUniqueId(), seller.getName(),
                 buyer.getUniqueId(), buyer.getName(), price, duration
@@ -84,14 +87,14 @@ public class PlotTransferService {
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{buyer}", buyer.getName())
-                .replace("{price}", config.formatMoney(price)), Sound.BLOCK_NOTE_BLOCK_PLING);
+                .replace("{price}", config.formatMoney(price)), "minecraft:block.note_block.pling");
 
         notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.offer-received", "{prefix}<yellow>Otrzymales oferte zakupu!</yellow>")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{seller}", seller.getName())
                 .replace("{price}", config.formatMoney(price))
-                .replace("{offer_id}", offer.getId()), Sound.ENTITY_EXPERIENCE_ORB_PICKUP);
+                .replace("{offer_id}", offer.getId()), "minecraft:entity.experience_orb.pickup");
 
         auditService.log(plot.getId(), seller.getUniqueId(), seller.getName(), "OFFER_CREATED", "Cena: " + price + ", Kupujący: " + buyer.getName());
         return Optional.of(offer);
@@ -118,6 +121,12 @@ public class PlotTransferService {
         }
         Plot plot = optPlot.get();
 
+        if (plot.getStatus() != PlotStatus.OWNED || plot.isRented() || plot.isAuctionActive()
+                || !plotManager.validateAcquisition(plot, buyer.getUniqueId()).isValid()) {
+            buyer.sendMessage(messageConfig.get("transfer.not-ready"));
+            return false;
+        }
+
         if (!plot.isOwner(offer.getSellerUuid())) {
             buyer.sendMessage(messageConfig.get("transfer.seller-changed"));
             offer.setStatus(TransferStatus.CANCELLED);
@@ -140,7 +149,13 @@ public class PlotTransferService {
             BigDecimal sellerPayout = price.subtract(adminFee);
 
             org.bukkit.OfflinePlayer seller = org.bukkit.Bukkit.getOfflinePlayer(offer.getSellerUuid());
-            vaultHook.deposit(seller, sellerPayout);
+            if (!vaultHook.deposit(seller, sellerPayout)) {
+                if (!vaultHook.deposit(buyer, price)) {
+                    throw new IllegalStateException("Nie udało się zwrócić środków za ofertę " + offerId);
+                }
+                buyer.sendMessage(messageConfig.get("general.economy-error"));
+                return false;
+            }
 
             if (adminFee.compareTo(BigDecimal.ZERO) > 0) {
                 budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, adminFee, plot.getId(), buyer.getUniqueId(), "Prowizja administracyjna z transferu działki");
@@ -153,20 +168,23 @@ public class PlotTransferService {
         plot.setOwnerName(buyer.getName());
         plot.setPurchaseDate(Instant.now());
         plot.clearHomeLocation();
+        plot.clearMembers();
+        plot.setResellAvailable(false);
         plotManager.savePlot(plot);
 
         offer.setStatus(TransferStatus.ACCEPTED);
         activeOffers.remove(offerId);
+        activeOffers.values().removeIf(other -> other.getPlotId().equals(plot.getId()));
 
         notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.buyer-success", "{prefix}<green>Przejales wlasnosc dzialki!</green>")
                 .replace("{prefix}", config.getPrefix())
-                .replace("{name}", plot.getName()), Sound.UI_TOAST_CHALLENGE_COMPLETE);
+                .replace("{name}", plot.getName()), "minecraft:ui.toast.challenge_complete");
 
         notificationService.notifyPlayer(offer.getSellerUuid(), messageConfig.getRaw("transfer.seller-success", "{prefix}<green>Dzialka zostala sprzedana!</green>")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{buyer}", buyer.getName())
-                .replace("{price}", config.formatMoney(price)), Sound.ENTITY_PLAYER_LEVELUP);
+                .replace("{price}", config.formatMoney(price)), "minecraft:entity.player.levelup");
 
         auditService.log(plot.getId(), buyer.getUniqueId(), buyer.getName(), "TRANSFER_COMPLETED", "Sprzedający: " + offer.getSellerName() + ", Kwota: " + price);
         return true;
@@ -174,7 +192,8 @@ public class PlotTransferService {
 
     public synchronized void cancelOffer(Player seller, String offerId) {
         TransferOffer offer = activeOffers.get(offerId);
-        if (offer != null && offer.getSellerUuid().equals(seller.getUniqueId())) {
+        if (offer != null && (offer.getSellerUuid().equals(seller.getUniqueId())
+                || offer.getBuyerUuid().equals(seller.getUniqueId()))) {
             offer.setStatus(TransferStatus.CANCELLED);
             activeOffers.remove(offerId);
             seller.sendMessage(messageConfig.get("transfer.cancelled"));

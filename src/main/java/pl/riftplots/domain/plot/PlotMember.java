@@ -17,7 +17,8 @@ public class PlotMember {
         this.playerUuid = playerUuid;
         this.playerName = playerName;
         this.role = role != null ? role : PlotMemberRole.MEMBER;
-        this.permissions = permissions != null ? EnumSet.copyOf(permissions) : EnumSet.noneOf(PlotPermission.class);
+        this.permissions = permissions != null && !permissions.isEmpty()
+                ? EnumSet.copyOf(permissions) : EnumSet.noneOf(PlotPermission.class);
         this.addedAt = addedAt != null ? addedAt : Instant.now();
     }
 

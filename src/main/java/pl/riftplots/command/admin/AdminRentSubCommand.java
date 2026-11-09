@@ -63,8 +63,14 @@ public class AdminRentSubCommand implements SubCommand {
             }
             try {
                 BigDecimal price = new BigDecimal(args[2]);
-                String unit = args[3].toUpperCase();
+                String unit = pl.riftplots.domain.rental.RentalPeriodUnit.valueOf(args[3].toUpperCase(java.util.Locale.ROOT)).name();
                 BigDecimal deposit = args.length > 4 ? new BigDecimal(args[4]) : BigDecimal.ZERO;
+                if (price.signum() < 0 || deposit.signum() < 0 || plot.isRented() || plot.isAuctionActive()
+                        || (plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.AVAILABLE
+                        && plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.OWNED)) {
+                    sender.sendMessage("§cKwoty muszą być nieujemne, a działka dostępna i bez aktywnego najmu lub aukcji.");
+                    return true;
+                }
 
                 plot.setRentalAvailable(true);
                 plot.setRentalPrice(price);
@@ -82,7 +88,10 @@ public class AdminRentSubCommand implements SubCommand {
         if ("cancel".equals(action)) {
             plot.setRentalAvailable(false);
             if (plot.isRented()) {
-                rentalService.terminateRental(plotId, true, "Anulowanie przez administratora");
+                if (!rentalService.terminateRental(plotId, true, "Anulowanie przez administratora")) {
+                    sender.sendMessage("§cNie udało się zwrócić kaucji. Spróbuj ponownie.");
+                    return true;
+                }
             }
             plotManager.savePlot(plot);
             sender.sendMessage("§aWyłączono wynajem działki " + plotId + ".");

@@ -55,9 +55,9 @@ public class PlotCommand implements CommandExecutor {
         register(new MembersSubCommand(plotManager, messageConfig));
         register(new AbandonSubCommand(plotManager, paymentService, config, messageConfig));
         register(new GuiSubCommand(listGUI, messageConfig));
-        register(new RentSubCommand(plotManager, rentalService));
-        register(new TransferSubCommand(plotManager, transferService));
-        register(new AcceptSubCommand(transferService));
+        register(new RentSubCommand(plotManager, rentalService, messageConfig));
+        register(new TransferSubCommand(plotManager, transferService, messageConfig));
+        register(new AcceptSubCommand(transferService, messageConfig));
         register(new DenySubCommand(transferService));
         register(new AuctionSubCommand(auctionService));
         register(new HomeSubCommand(plotManager, teleportService));
@@ -77,7 +77,8 @@ public class PlotCommand implements CommandExecutor {
 
         if (args.length == 0) {
             if (sender instanceof Player player) {
-                listGUI.open(player);
+                if (player.hasPermission(PermissionConfiguration.USER_GUI)) listGUI.open(player);
+                else player.sendMessage(messageConfig.get("general.no-permission"));
             } else {
                 SubCommand help = subCommands.get("help");
                 if (help != null) {

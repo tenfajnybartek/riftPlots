@@ -102,6 +102,10 @@ public class TrustSubCommand implements SubCommand {
         }
 
         PlotMember newMember = PlotMember.defaultMember(target.getUniqueId(), target.getName());
+        if (targetPlot.getMembers().size() >= plotManager.getMemberLimit(targetPlot)) {
+            AdventureUtil.sendMessage(player, "<red>Osiągnięto limit współużytkowników dla tego typu nieruchomości.</red>");
+            return true;
+        }
         targetPlot.addMember(newMember);
         plotManager.savePlot(targetPlot);
 
