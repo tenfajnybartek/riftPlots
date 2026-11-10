@@ -2,6 +2,8 @@
 
 [← README](README.md) · [Wiki](docs/wiki/Home.md) · [Poprzedni przegląd](docs/review.md)
 
+Materiały do kolejnego etapu: [roadmap testowania i odbioru](roadmap_test.md) oraz [scenariusz prezentacji na YouTube](prezentacja.md).
+
 Stan: **10 listopada 2026 r.**, riftPlots **1.0.0**, wdrożenie **P1–P2**. Punkty 1–12 zrealizowano lokalnie. Pierwotny plan poniżej zachowano jako zapis historyczny. Aktualne komendy i zasady opisuje [przewodnik P1–P2](docs/wiki/Nowosci-P1-P2.md).
 
 ## Edytowalna prezentacja i polityki — kolejny etap

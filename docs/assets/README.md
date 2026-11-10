@@ -6,6 +6,7 @@ Pliki przeznaczone do dokumentacji repozytorium:
 | :--- | :--- |
 | [riftplots-banner.png](riftplots-banner.png) | Baner otwierający README, 2172 × 724 px. |
 | [riftplots-logo.png](riftplots-logo.png) | Emblemat domu i działki, 1254 × 1254 px, przezroczyste tło. |
+| [youtube/riftplots-thumbnail-4k.jpg](youtube/riftplots-thumbnail-4k.jpg) | Miniatura filmu, eksport 3840 × 2160 px, 16:9; [oryginał, PNG i prompt](youtube/README.md). |
 
 Grafiki wygenerowano wbudowanym narzędziem `image_gen` (umiejętność `imagegen`). Oryginały skopiowano do repozytorium; README nie odwołuje się do katalogów roboczych ani plików poza projektem. Są to ilustracje koncepcyjne, a nie zrzuty ekranu z gry.
 

@@ -232,6 +232,8 @@ Migracja działa w kolejce I/O przy wstrzymanych zmianach. Źródłem jest aktyw
 
 Ostatnia weryfikacja: **119 testów Java bez niepowodzeń i pominięć**, w tym rzeczywisty MySQL 8.4.10, **6 testów backupu** i **54 sprawdzenia Paper** obejmujące restart, reset, odtworzenie kopii i edycję GUI/języka. Testy sprawdzają też natywne SQLite w spakowanym JAR-ze. Kontrola konfiguracji obejmuje 166 plików Java i 777 szablonów języka. Raport HTML: `build/reports/tests/test/index.html`. Workflow CI jest przygotowany lokalnie; wynik nie oznacza uruchomienia go na GitHubie.
 
+Do ręcznego odbioru wydania służy [obszerny plan testów](roadmap_test.md), a do nagrania demonstracji — [scenariusz prezentacji na YouTube](prezentacja.md).
+
 Test Paper używa zastępczych obiektów graczy i testowego providera ekonomii. Przed produkcją sprawdź rozgrywkę klientem Minecraft z docelowym zestawem pluginów. [Aktualny zakres, backup i ograniczenia →](docs/wiki/Nowosci-P1-P2.md)
 
 ---
