@@ -68,7 +68,7 @@ public class TransferSubCommand implements SubCommand {
 
         BigDecimal price;
         try {
-            price = new BigDecimal(args[1]);
+            price = pl.riftplots.util.Money.parse(args[1]);
             if (price.compareTo(BigDecimal.ZERO) < 0) {
                 player.sendMessage(messageConfig.get("budget.invalid-amount"));
                 return true;

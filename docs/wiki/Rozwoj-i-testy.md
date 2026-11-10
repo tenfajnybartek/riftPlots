@@ -39,7 +39,7 @@ flowchart TD
 
 ## Co sprawdzają testy?
 
-Stan sprawdzony 10 listopada 2026 r.: **53 testy zakończone powodzeniem**. To zapis konkretnej weryfikacji, nie stale aktualizowana odznaka CI.
+Stan sprawdzony 10 listopada 2026 r.: **102 testów Java zakończonych powodzeniem**, bez pominięć przy włączonym teście rzeczywistego MySQL. Osobno wykonano testy backupu i izolowanego Paper. [Pełna procedura P1–P2](Nowosci-P1-P2.md#migracja-testy-i-backup).
 
 | Obszar | Weryfikacja |
 | :--- | :--- |
@@ -74,4 +74,4 @@ Testy usług używają atrap odpowiedzi Bukkit i Vault. Nie uruchamiają pełnej
 5. Reset ze schematem i restart w trakcie.
 6. Docelowy MySQL, zapis, restart i utratę połączenia, jeśli używasz tego backendu.
 
-Pełny przegląd poprzedzających napraw znajduje się w [raporcie repozytorium](https://github.com/tenfajnybartek/riftPlots/blob/master/docs/review.md). Dynamiczna zależność `26.3.build.+` oznacza, że późniejsze rozwiązanie Paper API może wskazać inny build. Projekt nie zawiera jeszcze konfiguracji CI ani pliku `LICENSE`.
+API Paper jest przypięte do `26.3.build.246-stable`. Workflow GitHub Actions buduje JAR, uruchamia testy z MySQL 8.4 i sprawdza dokumentację oraz backup. Licencję wybiera właściciel. Wynik lokalnej próby nie oznacza wykonania workflow na GitHub.

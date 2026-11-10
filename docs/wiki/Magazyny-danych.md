@@ -22,6 +22,10 @@ data/
 ├── signs.yml           Powiązania tabliczek
 ├── rentals.yml         Umowy najmu
 ├── auctions.yml        Stan aukcji
+├── operations/         Dziennik zamiarów i etapów płatności
+├── refunds/            Zobowiązania zwrotów
+├── transfers.yml       Oczekujące oferty transferu
+├── notifications/      Wiadomości i potwierdzenia wysłania
 ├── city_budget.yml     Księga miasta
 └── audit_logs.yml      Logi operacji
 ```
@@ -73,10 +77,10 @@ Parser konfiguracji rozpoznaje także nazwę `MARIADB` jako wariant `MYSQL`, ale
 
 Zapis obejmuje działki i członków, profile, powiązania tabliczek, transakcje, umowy najmu, aktualne aukcje, budżet i audyt. Schematy pozostają oddzielnymi plikami niezależnie od backendu.
 
-Oczekujące oferty transferu i powiadomienia offline są przechowywane w pamięci. Pełna lista wcześniejszych przebić aukcji nie jest zapisywana przez obecną usługę, mimo że model aukcji ma takie pole.
+Oferty transferu, wiadomości, dziennik operacji i zwroty są trwałe w lokalnym `data/`, niezależnie od backendu. Aukcje zapisują pełną historię przebić; SQL używa tabeli `rift_auction_bids`. Schemat danych ma wersję 2. [Aktualizacja i backup](Nowosci-P1-P2.md#migracja-testy-i-backup).
 
 ## Jedna baza nie oznacza wielu zsynchronizowanych serwerów
 
 Każdy uruchomiony plugin ma własny cache. MySQL nie dodaje mechanizmu uzgadniania zmian, rozproszonych blokad ani odświeżania cache między serwerami. Nie traktuj współdzielenia bazy jako gotowej obsługi sieci serwerów dla tych samych działek.
 
-Weryfikacja automatyczna obejmuje rzeczywiste YAML i SQLite. Połączenie zewnętrznego MySQL, jego awarie i obciążenie należy sprawdzić osobno.
+Weryfikacja objęła rzeczywiste YAML, SQLite oraz MySQL 8.4.10, w tym restart zapisu i migrację MySQL → YAML z historią aukcji. Awarie i obciążenie docelowej bazy nadal wymagają sprawdzenia w Twoim środowisku.

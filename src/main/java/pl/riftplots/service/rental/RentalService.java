@@ -29,6 +29,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RentalService {
+    private pl.riftplots.service.transaction.OperationJournal journal;
+
+    public void setOperationJournal(pl.riftplots.service.transaction.OperationJournal journal) {
+        this.journal = journal;
+    }
+
+    private pl.riftplots.service.transaction.RefundService refunds;
+
+    public void setRefundService(pl.riftplots.service.transaction.RefundService refunds) {
+        this.refunds = refunds;
+    }
+
+    private final Map<String, RentalAgreement> committed = new HashMap<>();
     private final File rentalsFile;
     private final DatabaseManager databaseManager;
     private final PlotManager plotManager;
@@ -70,6 +83,16 @@ public class RentalService {
         } else {
             loadFromFile();
         }
+        committed.clear();
+        activeAgreements.values().forEach(agreement -> committed.put(agreement.getId(), agreement.copy()));
+        for (Plot plot : plotManager.getAllPlots()) {
+            if (plot.isRented() && !activeAgreements.containsKey(plot.getId())) {
+                plot.setActiveRentalId(null);
+                plot.getMembers().values().stream().filter(member -> member.getRole() == PlotMemberRole.TENANT)
+                        .map(PlotMember::getPlayerUuid).toList().forEach(plot::removeMember);
+                plotManager.savePlot(plot);
+            }
+        }
         for (RentalAgreement agreement : activeAgreements.values()) {
             plotManager.getPlot(agreement.getPlotId()).ifPresent(plot -> {
                 if ((plot.getStatus() == PlotStatus.AVAILABLE || plot.getStatus().isOwned())
@@ -77,7 +100,7 @@ public class RentalService {
                     plot.setActiveRentalId(agreement.getId());
                     plot.addMember(new PlotMember(agreement.getTenantUuid(), agreement.getTenantName(), PlotMemberRole.TENANT,
                             EnumSet.of(PlotPermission.BUILD, PlotPermission.DESTROY, PlotPermission.CONTAINERS,
-                                    PlotPermission.DOORS, PlotPermission.INTERACT), agreement.getStartDate()));
+                                    PlotPermission.DOORS, PlotPermission.INTERACT, PlotPermission.TELEPORT), agreement.getStartDate()));
                     plotManager.savePlot(plot);
                 }
             });
@@ -151,12 +174,23 @@ public class RentalService {
 
     public synchronized void saveAgreement(RentalAgreement agreement) {
         if (agreement == null) return;
+        try {
+            persistAgreement(agreement);
+        } catch (RuntimeException e) {
+            RentalAgreement previous = committed.get(agreement.getId());
+            if (previous != null) agreement.restore(previous);
+            throw e;
+        }
         if (agreement.getStatus() == RentalStatus.ACTIVE) {
             activeAgreements.put(agreement.getPlotId().toLowerCase(), agreement);
         } else {
             activeAgreements.remove(agreement.getPlotId().toLowerCase());
         }
+        committed.put(agreement.getId(), agreement.copy());
+    }
 
+    private void persistAgreement(RentalAgreement agreement) {
+        if (journal != null && !journal.isWriteAllowed()) throw new IllegalStateException("Trwa migracja danych");
         if (databaseManager != null) {
             String sql = """
                         INSERT INTO rift_rentals (id, plot_id, owner_uuid, tenant_uuid, tenant_name, rent_price, period_unit, deposit, start_date, end_date, auto_renew, status)
@@ -204,7 +238,7 @@ public class RentalService {
                 config.set(p + ".autoRenew", agreement.isAutoRenew());
                 config.set(p + ".status", agreement.getStatus().name());
                 rentalsFile.getParentFile().mkdirs();
-                config.save(rentalsFile);
+                YamlDataFile.save(config, rentalsFile);
             } catch (IOException e) {
                 throw new IllegalStateException("Storage operation failed", e);
             }
@@ -212,8 +246,16 @@ public class RentalService {
     }
 
     public synchronized boolean rentPlot(Player tenant, Plot plot, int periods, boolean autoRenew) {
+        if (tenant == null || plot == null) return false;
+        return journal == null ? rentPlotInternal(tenant, plot, periods, autoRenew) : journal.execute("RENTAL",
+                "rent:" + plot.getId() + ":" + tenant.getUniqueId() + ":" + plot.getUpdatedAt().toEpochMilli(),
+                plot.getId(), tenant.getUniqueId(), plot.getRentalPrice().multiply(BigDecimal.valueOf(Math.max(1, periods))).add(plot.getRentalDeposit()),
+                () -> rentPlotInternal(tenant, plot, periods, autoRenew));
+    }
+
+    private boolean rentPlotInternal(Player tenant, Plot plot, int periods, boolean autoRenew) {
         if (tenant == null || plot == null || !plot.isRentalAvailable() || plot.isRented()
-                || activeAgreements.containsKey(plot.getId()) || periods <= 0 || plot.isAuctionActive()
+                || activeAgreements.containsKey(plot.getId()) || periods <= 0 || periods > config.getMaxRentalPeriods() || plot.isAuctionActive() || plotManager.isResetPending(plot.getId())
                 || (plot.getStatus() != PlotStatus.AVAILABLE && plot.getStatus() != PlotStatus.OWNED)
                 || plot.isOwner(tenant.getUniqueId()) || plot.isMember(tenant.getUniqueId())) {
             return false;
@@ -267,7 +309,7 @@ public class RentalService {
 
         plot.setActiveRentalId(agreement.getId());
         PlotMember tenantMember = new PlotMember(tenant.getUniqueId(), tenant.getName(), PlotMemberRole.TENANT,
-                EnumSet.of(PlotPermission.BUILD, PlotPermission.DESTROY, PlotPermission.CONTAINERS, PlotPermission.DOORS, PlotPermission.INTERACT),
+                EnumSet.of(PlotPermission.BUILD, PlotPermission.DESTROY, PlotPermission.CONTAINERS, PlotPermission.DOORS, PlotPermission.INTERACT, PlotPermission.TELEPORT),
                 Instant.now());
         plot.addMember(tenantMember);
         plotManager.savePlot(plot);
@@ -283,11 +325,18 @@ public class RentalService {
 
     public synchronized boolean terminateRental(String plotId, boolean refundDeposit, String reason) {
         RentalAgreement agreement = activeAgreements.get(plotId.toLowerCase());
-        if (agreement == null) return true;
+        if (agreement == null) {
+            clearStaleRental(plotId);
+            return true;
+        }
 
         if (refundDeposit && agreement.getDeposit().signum() > 0) {
-            org.bukkit.OfflinePlayer tenant = org.bukkit.Bukkit.getOfflinePlayer(agreement.getTenantUuid());
-            if (!vaultHook.deposit(tenant, agreement.getDeposit())) return false;
+            if (refunds != null) refunds.prepare("rental-deposit:" + agreement.getId(), "RENTAL_DEPOSIT", plotId,
+                    agreement.getId(), agreement.getTenantUuid(), agreement.getDeposit(), reason);
+            else {
+                org.bukkit.OfflinePlayer tenant = org.bukkit.Bukkit.getOfflinePlayer(agreement.getTenantUuid());
+                if (!vaultHook.deposit(tenant, agreement.getDeposit())) return false;
+            }
         }
 
         agreement.setStatus(RentalStatus.TERMINATED);
@@ -299,6 +348,7 @@ public class RentalService {
             plot.removeMember(agreement.getTenantUuid());
             plotManager.savePlot(plot);
         });
+        if (refunds != null) refunds.retryPending();
 
         notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.terminated", "{prefix}<red>Wynajem dzialki {plot_id} zostal zakonczony ({reason}).</red>")
                 .replace("{prefix}", config.getPrefix())
@@ -309,43 +359,98 @@ public class RentalService {
 
     public synchronized void checkExpiredRentals() {
         Instant now = Instant.now();
-        for (RentalAgreement agreement : activeAgreements.values()) {
-            if (agreement.getEndDate().isBefore(now)) {
-                Optional<Plot> plot = plotManager.getPlot(agreement.getPlotId());
-                boolean canRenew = plot.isPresent() && plot.get().isRentalAvailable()
-                        && (plot.get().getStatus() == PlotStatus.AVAILABLE || plot.get().getStatus() == PlotStatus.OWNED)
-                        && Objects.equals(plot.get().getOwnerUuid(), agreement.getOwnerUuid());
-                if (agreement.isAutoRenew() && canRenew) {
-                    org.bukkit.OfflinePlayer tenant = org.bukkit.Bukkit.getOfflinePlayer(agreement.getTenantUuid());
-                    if (vaultHook.has(tenant, agreement.getRentPrice()) && vaultHook.withdraw(tenant, agreement.getRentPrice())) {
-                        if (agreement.getOwnerUuid() != null) {
-                            var owner = org.bukkit.Bukkit.getOfflinePlayer(agreement.getOwnerUuid());
-                            if (!vaultHook.deposit(owner, agreement.getRentPrice())) {
-                                if (!vaultHook.deposit(tenant, agreement.getRentPrice())) {
-                                    throw new IllegalStateException("Nie udało się zwrócić czynszu za " + agreement.getPlotId());
-                                }
-                                terminateRental(agreement.getPlotId(), true, "Nieudane rozliczenie czynszu");
-                                continue;
-                            }
-                        } else {
-                            budgetService.recordTransaction(CityTransactionType.RENTAL_FEE, agreement.getRentPrice(),
-                                    agreement.getPlotId(), agreement.getTenantUuid(), "Odnowienie wynajmu lokalu miejskiego");
-                        }
-                        agreement.setEndDate(now.plus(agreement.getPeriodUnit().getDuration()));
-                        saveAgreement(agreement);
-                        notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.auto-renewed", "{prefix}<green>Przedluzono wynajem dzialki {name}.</green>")
-                                .replace("{prefix}", config.getPrefix())
-                                .replace("{name}", agreement.getPlotId()), "minecraft:block.note_block.pling");
-                        continue;
-                    }
-                }
-                terminateRental(agreement.getPlotId(), true, "Koniec okresu umowy");
+        for (Plot plot : plotManager.getAllPlots())
+            if (plot.isRented() && !activeAgreements.containsKey(plot.getId())) clearStaleRental(plot.getId());
+        for (RentalAgreement agreement : new ArrayList<>(activeAgreements.values())) {
+            if (agreement.getEndDate().isAfter(now)) continue;
+            try {
+                if (journal == null) checkAgreement(agreement, now);
+                else journal.execute("RENTAL_RENEWAL", "renewal:" + agreement.getId() + ":" + agreement.getEndDate(),
+                        agreement.getPlotId(), agreement.getTenantUuid(), agreement.getRentPrice(), () -> checkAgreement(agreement, now));
+            } catch (RuntimeException e) {
+                java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE,
+                        "Nie można rozliczyć umowy " + agreement.getId(), e);
             }
         }
+        if (refunds != null) refunds.retryPending();
+    }
+
+    private boolean checkAgreement(RentalAgreement agreement, Instant now) {
+        Optional<Plot> plot = plotManager.getPlot(agreement.getPlotId());
+        boolean canRenew = plot.isPresent() && plot.get().isRentalAvailable() && !plotManager.isResetPending(agreement.getPlotId())
+                && (plot.get().getStatus() == PlotStatus.AVAILABLE || plot.get().getStatus() == PlotStatus.OWNED)
+                && Objects.equals(plot.get().getOwnerUuid(), agreement.getOwnerUuid());
+        if (agreement.isAutoRenew() && canRenew) {
+            var tenant = org.bukkit.Bukkit.getOfflinePlayer(agreement.getTenantUuid());
+            if (vaultHook.has(tenant, agreement.getRentPrice()) && vaultHook.withdraw(tenant, agreement.getRentPrice())) {
+                if (agreement.getOwnerUuid() != null) {
+                    var owner = org.bukkit.Bukkit.getOfflinePlayer(agreement.getOwnerUuid());
+                    if (!vaultHook.deposit(owner, agreement.getRentPrice())) {
+                        if (!vaultHook.deposit(tenant, agreement.getRentPrice()))
+                            throw new IllegalStateException("Nie udało się zwrócić czynszu " + agreement.getId());
+                        terminateRental(agreement.getPlotId(), true, "Nieudane rozliczenie czynszu");
+                        return false;
+                    }
+                } else budgetService.recordTransaction(CityTransactionType.RENTAL_FEE, agreement.getRentPrice(),
+                        agreement.getPlotId(), agreement.getTenantUuid(), "Odnowienie wynajmu lokalu miejskiego");
+                agreement.setEndDate(now.plus(agreement.getPeriodUnit().getDuration()));
+                saveAgreement(agreement);
+                notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.auto-renewed", "{prefix}<green>Przedluzono wynajem dzialki {name}.</green>")
+                        .replace("{prefix}", config.getPrefix()).replace("{name}", agreement.getPlotId()), "minecraft:block.note_block.pling");
+                return true;
+            }
+        }
+        terminateRental(agreement.getPlotId(), true, "Koniec okresu umowy");
+        return false;
+    }
+
+    public synchronized boolean setAutoRenew(Player tenant, String plotId, boolean enabled) {
+        RentalAgreement agreement = activeAgreements.get(plotId.toLowerCase());
+        if (agreement == null || !agreement.getTenantUuid().equals(tenant.getUniqueId()) || !agreement.isActive())
+            return false;
+        agreement.setAutoRenew(enabled);
+        saveAgreement(agreement);
+        return true;
+    }
+
+    public int getMaxRentalPeriods() {
+        return config.getMaxRentalPeriods();
+    }
+
+    public synchronized boolean offerRental(Player owner, Plot plot, BigDecimal price, RentalPeriodUnit unit, BigDecimal deposit) {
+        if (plot == null || !plot.isOwner(owner.getUniqueId()) || plot.getStatus() != PlotStatus.OWNED
+                || plot.isRented() || plot.isAuctionActive() || plotManager.isResetPending(plot.getId())
+                || (journal != null && journal.isBlocked(plot.getId())) || !typeManager.getType(plot.getPropertyType()).isRentalAllowed())
+            return false;
+        if (plot.getDistrictId() != null && districtManager.getDistrict(plot.getDistrictId())
+                .filter(district -> district.isRentalEnabled() && district.isTypeAllowed(plot.getPropertyType())).isEmpty())
+            return false;
+        if (!pl.riftplots.util.Money.isSafe(price) || !pl.riftplots.util.Money.isSafe(deposit)) return false;
+        plot.setRentalPrice(price);
+        plot.setRentalDeposit(deposit);
+        plot.setRentalPeriodUnit(unit.name());
+        plot.setRentalAvailable(true);
+        plotManager.savePlot(plot);
+        return true;
+    }
+
+    public synchronized boolean cancelByTenant(Player tenant, String plotId) {
+        RentalAgreement agreement = activeAgreements.get(plotId.toLowerCase());
+        return agreement != null && agreement.getTenantUuid().equals(tenant.getUniqueId())
+                && terminateRental(plotId, true, "Wypowiedzenie przez najemcę; opłacony czynsz nie podlega zwrotowi");
     }
 
     public Optional<RentalAgreement> getActiveRental(String plotId) {
         if (plotId == null) return Optional.empty();
         return Optional.ofNullable(activeAgreements.get(plotId.toLowerCase()));
+    }
+
+    private void clearStaleRental(String plotId) {
+        plotManager.getPlot(plotId).filter(Plot::isRented).ifPresent(plot -> {
+            plot.setActiveRentalId(null);
+            plot.getMembers().values().stream().filter(member -> member.getRole() == PlotMemberRole.TENANT)
+                    .map(PlotMember::getPlayerUuid).toList().forEach(plot::removeMember);
+            plotManager.savePlot(plot);
+        });
     }
 }

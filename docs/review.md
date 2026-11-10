@@ -2,6 +2,8 @@
 
 [← README](../README.md) · [Architektura](architecture.md)
 
+Ponowny przegląd z 10 listopada 2026 r., kolejne poprawki i propozycje rozwoju opisuje [NOWOSCI.md](../NOWOSCI.md). Wyniki poniżej dotyczą wcześniejszego przeglądu.
+
 Przegląd wykonano 9–10 listopada 2026 r. Objął kod produkcyjny we wszystkich pakietach, istniejące testy, sześć plików zasobów, konfigurację Gradle i wcześniejsze README. Po zmianach projekt zawiera 142 pliki Java kodu produkcyjnego oraz 12 klas testowych. Przegląd źródeł i przejście testów nie stanowią dowodu braku wszystkich możliwych błędów wykonania.
 
 ## Najważniejsze naprawy

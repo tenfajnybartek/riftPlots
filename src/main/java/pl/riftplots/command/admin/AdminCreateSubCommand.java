@@ -103,6 +103,7 @@ public class AdminCreateSubCommand implements SubCommand {
             return true;
         }
 
+        plot.setSettingOverrides(java.util.Set.of());
         boolean registered = plotManager.registerPlot(plot);
         if (!registered) {
             player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Nie udało się utworzyć regionu WorldGuard")));

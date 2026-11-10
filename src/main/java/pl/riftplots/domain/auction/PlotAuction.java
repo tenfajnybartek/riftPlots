@@ -18,6 +18,15 @@ public class PlotAuction {
     private final BigDecimal buyoutPrice;
     private final List<AuctionBid> bids = new ArrayList<>();
     private AuctionStatus status;
+    private boolean escrowEnabled;
+
+    public boolean isEscrowEnabled() {
+        return escrowEnabled;
+    }
+
+    public void setEscrowEnabled(boolean escrowEnabled) {
+        this.escrowEnabled = escrowEnabled;
+    }
 
     public PlotAuction(String id,
                        String plotId,
@@ -124,6 +133,7 @@ public class PlotAuction {
         }
 
         BigDecimal minRequired = currentBidderUuid == null ? startingPrice : currentBid.add(minBidIncrement);
+        if (buyoutPrice != null) minRequired = minRequired.min(buyoutPrice);
         if (amount.compareTo(minRequired) < 0) {
             return false;
         }
@@ -149,5 +159,25 @@ public class PlotAuction {
 
     public boolean isExpired() {
         return status == AuctionStatus.ACTIVE && !Instant.now().isBefore(endTime);
+    }
+
+    public PlotAuction copy() {
+        var copy = new PlotAuction(id, plotId, sellerUuid, startingPrice, minBidIncrement, currentBid, currentBidderUuid,
+                currentBidderName, startTime, endTime, buyoutPrice, bids, status);
+        copy.escrowEnabled = escrowEnabled;
+        return copy;
+    }
+
+    public void restore(PlotAuction state) {
+        if (this == state) return;
+        if (!id.equals(state.id)) throw new IllegalArgumentException("Different auction ID");
+        currentBid = state.currentBid;
+        currentBidderUuid = state.currentBidderUuid;
+        currentBidderName = state.currentBidderName;
+        endTime = state.endTime;
+        status = state.status;
+        bids.clear();
+        bids.addAll(state.bids);
+        escrowEnabled = state.escrowEnabled;
     }
 }

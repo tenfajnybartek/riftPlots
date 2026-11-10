@@ -50,12 +50,12 @@ Działki są **przestrzenią 3D**. Dom, sklep na parterze i mieszkanie na piętr
 
 > **Własność i najem to różne rzeczy.** Najemca może korzystać z lokalu zgodnie z umową, ale nie staje się jego właścicielem.
 
-> **`trust` nie nadaje domyślnie budowania.** Zwykły współużytkownik otrzymuje interakcje, drzwi i pojemniki. Więcej w [poradniku gracza](Poradnik-gracza.md).
+> **`trust` nie nadaje domyślnie budowania.** Nowy współużytkownik otrzymuje interakcje, drzwi, pojemniki i teleportację. Właściciel może zmieniać prawa w panelu. Więcej w [poradniku gracza](Poradnik-gracza.md).
 
-> **Typ nie ustawia automatycznie ceny.** Po przypisaniu typu ustal cenę, podatek i okres osobnymi komendami. Aktualne zachowanie opisuje [rozdział o typach](Dzielnice-i-typy.md).
+> **Nowe działki dziedziczą parametry typu.** Ręczne nadpisania i starsze rekordy zachowują warunki. [Nowości P1–P2](Nowosci-P1-P2.md) opisują ceny, zwroty, nowe GUI i zasady aktualizacji.
 
 ## Wersja dokumentacji
 
-Wiki opisuje implementację **riftPlots 1.0.0** po przeglądzie kodu z 9–10 listopada 2026 r. Docelowe API projektu to Paper 26.3 i Java 25. Wersje zależności oraz zakres testów znajdują się w [instalacji](Instalacja.md) i [rozdziale dla programistów](Rozwoj-i-testy.md).
+Wiki opisuje **riftPlots 1.0.0 z wdrożeniem P1–P2** z 10 listopada 2026 r. Docelowe API projektu to Paper 26.3 i Java 25. Wersje zależności oraz zakres testów znajdują się w [instalacji](Instalacja.md) i [rozdziale dla programistów](Rozwoj-i-testy.md).
 
 Zacznij od [szybkiego startu](Szybki-start.md), a jeśli coś nie działa — od [diagnozy problemów](Rozwiazywanie-problemow.md).

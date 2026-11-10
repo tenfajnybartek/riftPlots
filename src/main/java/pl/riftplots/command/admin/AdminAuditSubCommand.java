@@ -18,6 +18,11 @@ public class AdminAuditSubCommand implements SubCommand {
     private final PlotManager plotManager;
     private final TransactionRepository transactionRepository;
     private final PluginConfiguration config;
+    private pl.riftplots.service.audit.AuditService audit;
+
+    public void setAuditService(pl.riftplots.service.audit.AuditService audit) {
+        this.audit = audit;
+    }
 
     public AdminAuditSubCommand(PlotManager plotManager, TransactionRepository transactionRepository, PluginConfiguration config) {
         this.plotManager = plotManager;
@@ -37,7 +42,7 @@ public class AdminAuditSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin audit <id>";
+        return "plots admin audit <id> [strona]";
     }
 
     @Override
@@ -47,13 +52,24 @@ public class AdminAuditSubCommand implements SubCommand {
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
-        if (args.length < 1) {
+        if (args.length < 1 || args.length > 2) {
             AdventureUtil.sendMessage(sender, "<red>Użycie: /" + getUsage() + "</red>");
             return true;
         }
 
         String id = args[0].toLowerCase();
-        List<TransactionRecord> records = transactionRepository.findByPlotId(id);
+        int page;
+        try {
+            page = args.length == 2 ? pl.riftplots.command.BillingArguments.positiveInt(args[1]) - 1 : 0;
+        } catch (IllegalArgumentException e) {
+            sender.sendMessage("Użycie: /" + getUsage());
+            return true;
+        }
+        sender.sendMessage("Audyt — strona " + (page + 1));
+        if (audit != null) for (var entry : audit.getLogsForPlot(id, page, 20))
+            sender.sendMessage(net.kyori.adventure.text.Component.text(
+                    entry.getTimestamp() + " | " + entry.getOperatorName() + " | " + entry.getAction() + " | " + entry.getDetails()));
+        List<TransactionRecord> records = transactionRepository.findByPlotId(id, page, 20);
 
         AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== AUDYT TRANSAKCJI DZIAŁKI " + id.toUpperCase() + " ===</b></gradient>");
         if (records.isEmpty()) {
@@ -61,7 +77,7 @@ public class AdminAuditSubCommand implements SubCommand {
             return true;
         }
 
-        for (TransactionRecord record : records) {
+        for (TransactionRecord record : records.stream().limit(20).toList()) {
             AdventureUtil.sendMessage(sender, "<gray>[" + TimeUtil.formatInstant(record.getTimestamp()) + "]</gray> <gold>" + record.getType() + "</gold> <yellow>" + config.formatMoney(record.getAmount()) + "</yellow> <aqua>" + record.getPlayerName() + "</aqua> <dark_gray>(" + record.getStatus() + " - " + record.getDetails() + ")</dark_gray>");
         }
 

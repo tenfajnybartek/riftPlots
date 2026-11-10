@@ -69,7 +69,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
         config.set("ownedPlots", new ArrayList<>(profile.getOwnedPlotIds()));
 
         try {
-            config.save(file);
+            YamlDataFile.save(config, file);
         } catch (IOException e) {
             throw new IllegalStateException("Storage operation failed", e);
         }

@@ -68,7 +68,7 @@ public class AdminBudgetSubCommand implements SubCommand {
             }
             BigDecimal amount;
             try {
-                amount = new BigDecimal(args[1]);
+                amount = pl.riftplots.util.Money.parse(args[1]);
                 if (amount.compareTo(BigDecimal.ZERO) <= 0) {
                     sender.sendMessage("§cKwota musi być większa od zera!");
                     return true;

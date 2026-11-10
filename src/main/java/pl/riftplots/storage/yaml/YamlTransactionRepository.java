@@ -40,7 +40,7 @@ public class YamlTransactionRepository implements TransactionRepository {
         config.set("details", record.getDetails());
 
         try {
-            config.save(file);
+            YamlDataFile.save(config, file);
         } catch (IOException e) {
             throw new IllegalStateException("Storage operation failed", e);
         }

@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 public class PlotTaxScheduler implements Runnable {
     private final Plugin plugin;
@@ -37,7 +38,17 @@ public class PlotTaxScheduler implements Runnable {
     private pl.riftplots.service.auction.AuctionService auctionService;
 
     private BukkitTask task;
-    private final Set<String> sentReminders = ConcurrentHashMap.newKeySet();
+
+    private record Reminders(Instant deadline, Set<Long> sent) {
+    }
+
+    private final Map<String, Reminders> sentReminders = new HashMap<>();
+    private final Map<String, Instant> graceWarnings = new HashMap<>();
+    private java.util.function.BooleanSupplier writeAllowed = () -> true;
+
+    public void setWriteAllowed(java.util.function.BooleanSupplier allowed) {
+        writeAllowed = allowed;
+    }
 
     public PlotTaxScheduler(Plugin plugin,
                             PluginConfiguration config,
@@ -77,29 +88,46 @@ public class PlotTaxScheduler implements Runnable {
             task = null;
         }
         sentReminders.clear();
+        graceWarnings.clear();
     }
 
     @Override
     public void run() {
+        if (!writeAllowed.getAsBoolean()) return;
         Instant now = Instant.now();
+        Set<String> livePlots = plotManager.getAllPlots().stream().map(Plot::getId).collect(java.util.stream.Collectors.toSet());
+        sentReminders.keySet().retainAll(livePlots);
+        graceWarnings.keySet().retainAll(livePlots);
 
         for (Plot plot : plotManager.getAllPlots()) {
-            if (!plot.isTaxEnabled() || plot.getOwnerUuid() == null) {
-                continue;
-            }
+            try {
+                if (!plot.isTaxEnabled() || plot.getOwnerUuid() == null) {
+                    continue;
+                }
 
-            if (plot.getStatus() == PlotStatus.OWNED) {
-                handleOwnedPlot(plot, now);
-            } else if (plot.getStatus() == PlotStatus.GRACE_PERIOD || plot.getStatus() == PlotStatus.PAYMENT_DUE) {
-                handleGracePeriodPlot(plot, now);
+                if (plot.getStatus() == PlotStatus.OWNED) {
+                    handleOwnedPlot(plot, now);
+                } else if (plot.getStatus() == PlotStatus.GRACE_PERIOD || plot.getStatus() == PlotStatus.PAYMENT_DUE) {
+                    handleGracePeriodPlot(plot, now);
+                }
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Nie udało się sprawdzić podatku działki " + plot.getId(), e);
             }
         }
 
         if (rentalService != null) {
-            rentalService.checkExpiredRentals();
+            try {
+                rentalService.checkExpiredRentals();
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Nie udało się sprawdzić wygasłych umów najmu", e);
+            }
         }
         if (auctionService != null) {
-            auctionService.checkCompletedAuctions();
+            try {
+                auctionService.checkCompletedAuctions();
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Nie udało się sprawdzić zakończonych aukcji", e);
+            }
         }
     }
 
@@ -130,26 +158,22 @@ public class PlotTaxScheduler implements Runnable {
         Duration remaining = Duration.between(now, nextTax);
         long hoursRemaining = remaining.toHours();
 
-        for (Long reminderHour : config.getTaxReminderHours()) {
-            if (hoursRemaining == reminderHour) {
-                String reminderKey = plot.getId() + "_" + reminderHour + "_" + nextTax.toEpochMilli();
-                if (sentReminders.add(reminderKey)) {
-                    notifyReminder(plot, nextTax);
-                }
-                break;
-            }
-        }
+        Reminders reminders = sentReminders.compute(plot.getId(), (id, old) -> old != null && old.deadline().equals(nextTax)
+                ? old : new Reminders(nextTax, new HashSet<>()));
+        config.getTaxReminderHours().stream().filter(hour -> hour > 0 && hoursRemaining <= hour).min(Long::compareTo)
+                .filter(hour -> reminders.sent().add(hour)).ifPresent(hour -> notifyReminder(plot, nextTax));
     }
 
     private void handleGracePeriodPlot(Plot plot, Instant now) {
         Instant expiry = plot.getGracePeriodExpiry();
         if (expiry == null) {
-            expiry = now.plus(Duration.ofHours(plot.getGracePeriodHours()));
+            Instant deadline = plot.getNextTaxPayment();
+            expiry = (deadline != null ? deadline : now).plus(Duration.ofHours(plot.getGracePeriodHours()));
             plot.setGracePeriodExpiry(expiry);
             plotManager.savePlot(plot);
         }
 
-        if (expiry.isBefore(now)) {
+        if (!expiry.isAfter(now)) {
             expirePlot(plot);
         } else {
             notifyGracePeriod(plot, expiry);
@@ -163,9 +187,34 @@ public class PlotTaxScheduler implements Runnable {
             return;
         }
 
-        UUID ownerUuid = plot.getOwnerUuid();
         String ownerName = plot.getOwnerName();
 
+        if (plot.isAutoResetOnExpire()) {
+            UUID owner = plot.getOwnerUuid();
+            resetService.startReset(plot, success -> {
+                if (signService != null) {
+                    signService.updateSignsForPlot(plot);
+                }
+                if (!Objects.equals(owner, plot.getOwnerUuid())) broadcastExpiration(plot, ownerName);
+            });
+            return;
+        } else {
+            if (rentalService != null && !rentalService.terminateRental(plot.getId(), true, "Wygaśnięcie nieruchomości"))
+                return;
+            if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plot.getId());
+            plot.clearOwnership();
+            plot.setStatus(PlotStatus.AVAILABLE);
+            plotManager.savePlot(plot);
+
+            if (signService != null) {
+                signService.updateSignsForPlot(plot);
+            }
+        }
+
+        broadcastExpiration(plot, ownerName);
+    }
+
+    private void broadcastExpiration(Plot plot, String ownerName) {
         AdventureUtil.sendMessage(Bukkit.getConsoleSender(), messageConfig.getRaw("tax.expired-broadcast", "{prefix}<red>Dzialka {plot_id} wygasla!</red>")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
@@ -178,25 +227,6 @@ public class PlotTaxScheduler implements Runnable {
                     "plot_id", plot.getId(),
                     "player", ownerName != null ? ownerName : "Nieznany"
             )));
-        }
-
-        if (plot.isAutoResetOnExpire()) {
-            resetService.startReset(plot, success -> {
-                if (signService != null) {
-                    signService.updateSignsForPlot(plot);
-                }
-            });
-        } else {
-            if (rentalService != null && !rentalService.terminateRental(plot.getId(), true, "Wygaśnięcie nieruchomości"))
-                return;
-            if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plot.getId());
-            plot.clearOwnership();
-            plot.setStatus(PlotStatus.AVAILABLE);
-            plotManager.savePlot(plot);
-
-            if (signService != null) {
-                signService.updateSignsForPlot(plot);
-            }
         }
     }
 
@@ -222,6 +252,10 @@ public class PlotTaxScheduler implements Runnable {
         }
         Player player = Bukkit.getPlayer(plot.getOwnerUuid());
         if (player != null && player.isOnline()) {
+            Instant now = Instant.now();
+            Instant last = graceWarnings.get(plot.getId());
+            if (last != null && last.plusSeconds(config.getGraceWarningIntervalSeconds()).isAfter(now)) return;
+            graceWarnings.put(plot.getId(), now);
             BigDecimal tax = taxCalculator.calculateTax(plot);
             player.sendMessage(messageConfig.get("tax.grace-period-warning", Map.of(
                     "name", plot.getName(),

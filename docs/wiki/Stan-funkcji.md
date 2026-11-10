@@ -2,7 +2,7 @@
 
 [← Strona główna](Home.md) · [FAQ](FAQ.md) · [Rozwój i testy](Rozwoj-i-testy.md)
 
-Dokumentacja opisuje implementację riftPlots 1.0.0 po przeglądzie z 9–10 listopada 2026 r. Poniższe rozróżnienie pomaga planować konfigurację bez zakładania funkcji, które są jedynie polami modelu lub pomysłem na dalszy rozwój.
+Dokumentacja opisuje lokalne wdrożenie P1–P2 dla riftPlots 1.0.0 z 10 listopada 2026 r. [Przewodnik zmian](Nowosci-P1-P2.md) zawiera komendy, ustawienia i zasady aktualizacji.
 
 ## Zaimplementowane ścieżki
 
@@ -11,26 +11,28 @@ Dokumentacja opisuje implementację riftPlots 1.0.0 po przeglądzie z 9–10 lis
 | Rejestracja | Zaznaczenie WorldEdit, granice 3D, schemat i region WorldGuard. |
 | Zakup | Komenda, GUI i tabliczka; kontrola dostępności i reguł nabycia. |
 | Podatki | Sześć modeli, terminy, karencja i przedpłaty. |
-| Najem | Oferta administracyjna, czynsz, kaucja i auto-odnowienie. |
+| Najem | Czynsz, trwały zwrot kaucji, wybór odnowienia, zakończenie przez najemcę i opcjonalne oferty właściciela. |
 | Rynek wtórny | Oferta do wskazanego gracza i akceptacja lub odrzucenie. |
-| Aukcje | Przebicia, końcowe okno odpowiedzi i próg kup teraz. |
+| Aukcje | Trwałe przebicia, panel, kup teraz, anulowanie i opcjonalny escrow. |
 | Reset | Wzorzec bloków, porcjowanie, kontrola wymiarów i ponowienie po restarcie. |
 | Obsługa | Wewnętrzny budżet, transakcje, audyt i trzy backendy. |
-| Migracja | Kopia danych repozytoriów i zapisanych usług pomiędzy backendami. |
+| Migracja | Kolejka I/O, blokada zmian do restartu, schemat v2 i historia przebić. |
+| Interfejs | Strony, sortowanie i filtry rynku, edytor roli i praw, obrys 3D. |
+| Rozliczenia | Trwały dziennik z ID, blokada niepewnych operacji, kolejka zobowiązań i narzędzia uzgodnienia. |
 
-## Dziedziczenie parametrów jest częściowe
+## Dziedziczenie i aktualizacja
 
-Typy mają domyślne ceny, podatki i inne metadane, ale `type set` nie kopiuje ich na działkę. Mnożnik cen dzielnicy nie jest używany w bezpośrednim zakupie. Pola flag i ikon typu nie sterują automatycznie regionem i GUI.
+Nowe działki dziedziczą parametry typu; starsze rekordy i ręczne nadpisania zachowują wartości. Cena dziedziczona uwzględnia mnożnik dzielnicy. Aktywne umowy zachowują warunki. Ikona działa w rynku, a flagi stanu typu przy rejestracji i `apply-defaults`.
 
-Działające reguły sprzedaży, najmu, dozwolonych typów i limitów są opisane w [rozdziale o dzielnicach](Dzielnice-i-typy.md). Ceny i rozliczenia działki konfiguruj jawnie.
+Działające reguły opisuje [rozdział o dzielnicach](Dzielnice-i-typy.md). `apply-defaults` pokazuje różnice i wymaga potwierdzenia.
 
 ## Finanse nie są jedną transakcją atomową
 
-Odpowiedzi Vault są sprawdzane i istnieją ścieżki refundacji, ale provider ekonomii, zapis własności i logi nie uczestniczą w jednej wspólnej transakcji. Awaria bazy lub procesu pomiędzy etapami może wymagać ręcznego uzgodnienia. Nie ma trwałego dziennika pozwalającego automatycznie odtworzyć każdą przerwaną operację.
+Dziennik utrwala zamiar i odpowiedź Vault oraz zachowuje operację po restarcie. Niepewnego wyniku nie powtarza; administrator sprawdza portfele i stan, a następnie uzgadnia wynik. Provider ekonomii i baza pozostają osobnymi systemami.
 
-## Co znika po restarcie?
+## Trwałość danych
 
-Oczekujące oferty transferu i kolejka powiadomień offline są w pamięci. Aukcje zachowują aktualną kwotę i licytującego, lecz nie pełną historię wcześniejszych przebić z modelu. Te różnice nie powinny być opisywane jako trwała historia wszystkich wydarzeń.
+Oferty transferu, wiadomości, operacje i zwroty mają lokalne pliki. Historia aukcji jest zapisywana w backendzie. Potwierdzenie wiadomości oznacza wysłanie przez serwer, nie przeczytanie; przerwanie przed zapisem potwierdzenia może spowodować ponowne wysłanie.
 
 ## MySQL nie oznacza synchronizacji sieci
 
@@ -38,15 +40,13 @@ Każdy proces utrzymuje własny cache. Brakuje rozproszonych blokad i uzgadniani
 
 ## Interfejs i operacje
 
-- GUI ma ograniczoną liczbę widocznych pozycji i nie posiada jeszcze paginacji.
 - Nie wszystkie teksty pochodzą z `lang.yml`.
-- Gracz nie ma komendy wyłączenia auto-odnowienia najmu ani samodzielnego zakończenia umowy.
-- Komendy aukcji nie udostępniają wystawiania przez gracza i osobnego anulowania.
+- Wystawianie aukcji pozostaje komendą administracyjną.
 - Zdarzenia API nie pokrywają każdej zmiany statusu i własności.
-- Większość I/O oraz migracja są synchroniczne; duże miasta wymagają pomiaru obciążenia.
+- Zwykłe płatności i ich trwałe zapisy pozostają synchroniczne. Migracja działa w kolejce; większe miasta wymagają pomiaru obciążenia.
 
 ## Zakres sprawdzenia
 
-Kompilacja, budowa JAR-a i 53 testy przechodziły podczas wskazanej weryfikacji. YAML i SQLite były sprawdzane rzeczywistymi operacjami. Testy nie obejmowały pełnego serwera Minecraft ani zewnętrznego MySQL. Ochrona fizyki, wklejanie w docelowym świecie i wydajność wymagają próby integracyjnej.
+Build i **102 testów Java** przeszły, w tym rzeczywisty MySQL. Dodatkowo przeszło 6 testów backupu i scenariusz Paper z WorldEdit, WorldGuard, Vault i testową ekonomią: zakup, restart, reset i odtworzona kopia. Zastępcze obiekty graczy nie zastępują próby z klientem i testu wszystkich mechanik fizyki.
 
 [Przewodnik testowania](Rozwoj-i-testy.md) wskazuje, jak uzupełnić sprawdzenie przed uruchomieniem miasta.

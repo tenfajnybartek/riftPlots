@@ -45,14 +45,15 @@ Nie prowadź równocześnie kilku modeli udostępnienia tej samej działki. Plug
 ## Codzienna obsługa
 
 - Sprawdzaj `/plots admin list` i szczegóły zgłoszonego lokalu.
+- Używaj read-only `/plots admin health` do kontroli backendu, integracji, regionów i schematów. `admin transactions pending` i `refunds` pokazują rozliczenia wymagające uwagi.
 - Weryfikuj [budżet i transakcje](Budzet-i-audyt.md), jeśli zgłaszane jest błędne saldo.
-- Zmieniaj konfigurację świadomie: `reload` odświeża ustawienia, ale nie przelicza automatycznie zapisanych cen wszystkich działek.
+- `reload` aktualizuje dziedziczone parametry dostępnych działek. Nadpisania i warunki posiadanych lokali pozostają zachowane; `type apply-defaults <id>` pokazuje zmiany przed `confirm`.
 - Aktualizuj wzorzec przez `snapshot` dopiero po sprawdzeniu budynku.
 - Wykonuj spójne [kopie danych i świata](Migracja-i-kopie-zapasowe.md).
 
 ## Działania wymagające uwagi
 
-> **`reset` i `restore` usuwają własność.** Obie komendy uruchamiają powrót do wzorca. Nie służą do kosmetycznej naprawy domu z zachowaniem właściciela.
+> **`reset` i `restore` z `confirm` usuwają własność.** Bez potwierdzenia pokazują podgląd. Schemat jest odczytywany i sprawdzany przed zwolnieniem własności. Nie służą do kosmetycznej naprawy domu z zachowaniem właściciela.
 
 `setowner <id> none` usuwa własność bez odtwarzania bloków. `delete` usuwa rejestrację i region, lecz nie wyburza budynku. `snapshot` zastępuje dotychczasowy wzorzec aktualnym stanem świata.
 

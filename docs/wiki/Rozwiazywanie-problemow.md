@@ -34,7 +34,7 @@ Sprawdź `riftplots.admin.bypass`, uprawnienia i bypass innych pluginów. Testuj
 
 ## „Typ lub dzielnica nie zmieniły ceny”
 
-Typ nie przepisuje automatycznie domyślnych stawek, a mnożnik cen dzielnicy nie wpływa na ścieżkę bezpośredniego zakupu. Użyj `setprice`, `settax`, `settaxmode`, `setperiod`. Podatek dzielnicy jest mnożony przy obliczeniu. [Szczegóły](Dzielnice-i-typy.md).
+Sprawdź ręczne nadpisania i cenę końcową przez `admin info`. Starsze rekordy zachowują nadpisania; `type apply-defaults` pozwala je zastąpić po podglądzie i potwierdzeniu. Cena dziedziczona uwzględnia dzielnicę. [Szczegóły](Dzielnice-i-typy.md).
 
 ## „Wyliczony podatek jest za duży”
 
@@ -52,15 +52,15 @@ Sprawdź zapisany dom, wysokość granic, podłoże i wolne miejsce na nogi/gło
 
 ## „Najem nie kończy się przy błędzie kaucji”
 
-Nieudana wypłata kaucji może zachować umowę do ponowienia zwrotu. Sprawdź ekonomię i konto odbiorcy; nie usuwaj umowy lub członka ręcznie. Taka zmiana może zgubić zobowiązanie do wypłaty.
+Odmowa wypłaty nie powinna zachowywać wygasłego dostępu: umowa kończy się, a zwrot trafia do trwałej kolejki. Sprawdź `admin transactions refunds`, ekonomię i konto odbiorcy. Jeżeli umowa nadal jest aktywna, szukaj błędu zapisu lub niepewnej operacji. Nie usuwaj rekordów ręcznie — zachowaj zobowiązanie i uzgodnij dziennik.
 
 ## „Wygrałem aukcję, ale nie dostałem lokalu”
 
-Środki nie są rezerwowane przy licytowaniu. Jeśli przy finalizacji zwycięzca nie ma pieniędzy lub pobranie zostało odrzucone, aukcja jest anulowana. Nie wybiera automatycznie drugiej osoby. Sprawdź też aktualną własność i reguły nabycia. [Aukcje](Aukcje.md).
+W domyślnym trybie bez depozytu zwycięzca musi mieć środki przy finalizacji. Opcjonalny escrow rezerwuje je podczas licytacji. Sprawdź dziennik operacji, własność i reguły nabycia. [Aukcje](Aukcje.md).
 
 ## „Oferta transferu zniknęła”
 
-Mogła wygasnąć, zostać zastąpiona nową ofertą tej samej działki albo zostać usunięta przy restarcie. Oferty oczekujące są w pamięci. Wystaw nową i użyj jej dokładnego ID.
+Mogła wygasnąć lub zostać zastąpiona nową ofertą tej samej działki. Restart zachowuje ID i termin w `data/transfers.yml`. Sprawdź także niepewne rozliczenia w `admin transactions pending`.
 
 ## „Zmiana backendu nie działa po reload”
 

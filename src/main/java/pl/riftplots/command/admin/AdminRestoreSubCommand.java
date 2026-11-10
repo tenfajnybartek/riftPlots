@@ -33,7 +33,7 @@ public class AdminRestoreSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin restore <id>";
+        return "plots admin restore <id> [confirm]";
     }
 
     @Override
@@ -56,6 +56,12 @@ public class AdminRestoreSubCommand implements SubCommand {
         }
 
         Plot plot = opt.get();
+        if (args.length != 2 || !args[1].equalsIgnoreCase("confirm")) {
+            resetService.preview(plot, problem -> sender.sendMessage(net.kyori.adventure.text.Component.text(problem != null ? problem
+                    : "Reset odbierze własność i zakończy najem. Odtworzy " + plot.getBounds().getVolume()
+                    + " bloków. Potwierdź: /plots admin restore " + plot.getId() + " confirm")));
+            return true;
+        }
         sender.sendMessage(messageConfig.get("admin.restore-started", Map.of("plot_id", id)));
 
         resetService.startReset(plot, success -> {

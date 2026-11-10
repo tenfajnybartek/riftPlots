@@ -9,3 +9,7 @@
 
 # Binary files should be left untouched
 *.jar           binary
+
+*.java text
+*.md text
+*.png binary

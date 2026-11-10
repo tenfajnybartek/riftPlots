@@ -4,17 +4,17 @@
 
 ## Domyślne ustawienia
 
-Nowe działki pobierają ustawienia z `config.yml` w momencie tworzenia. Późniejsza edycja globalnych stawek nie przepisuje zapisanych cen ani terminów istniejących działek.
+Nowe działki dziedziczą stawki z `plot-types.yml`. Pola `economy.default-*` pozostają w konfiguracji, ale przy rejestracji nie zastępują ustawień przypisanego typu. Polityka resetu i karencja są zapisywane przy tworzeniu. Starsze rekordy zachowują stawki jako jawne nadpisania.
 
 | Klucz | Wartość domyślna | Znaczenie |
 | :--- | :--- | :--- |
-| `economy.default-price` | `25000.0` | Cena nowej działki. |
-| `economy.default-base-tax` | `1500.0` | Podstawa podatku. |
-| `economy.default-tax-mode` | `FIXED` | Sposób obliczania podatku. |
-| `economy.default-billing-period-days` | `7` | Długość okresu podatkowego. |
+| `economy.default-price` | `25000.0` | Wartość startowa przed zastosowaniem ceny typu. |
+| `economy.default-base-tax` | `1500.0` | Wartość startowa przed zastosowaniem podatku typu. |
+| `economy.default-tax-mode` | `FIXED` | Tryb startowy; nowa działka dziedziczy tryb typu. |
+| `economy.default-billing-period-days` | `7` | Okres startowy; nowa działka dziedziczy okres typu. |
 | `economy.default-grace-period-hours` | `6` | Czas na uregulowanie zaległości. |
 | `economy.max-advance-periods` | `4` | Limit dodatkowych okresów opłaconych z góry. |
-| `economy.default-abandon-refund-percent` | `50.0` | Zwrot liczony od zapisanej ceny działki. |
+| `economy.default-abandon-refund-percent` | `50.0` | Procent startowy przed zastosowaniem `refund-percent` typu. |
 | `scheduler.check-interval-seconds` | `60` | Sprawdzanie podatków, najmu i aukcji. |
 | `scheduler.tax-reminder-hours` | `[48, 24, 12, 2, 1]` | Okna przypomnień o podatku. |
 | `reset.auto-reset-on-expire` | `true` | Domyślna polityka resetu nowych działek. |
@@ -24,6 +24,11 @@ Nowe działki pobierają ustawienia z `config.yml` w momencie tworzenia. Późni
 | `market.transfer-offer-duration-seconds` | `300` | Ważność oferty transferu. |
 | `auction.city-fee-percent` | `5.0` | Prowizja od aukcji nieruchomości gracza. |
 | `auction.anti-snipe-extension-seconds` | `120` | Minimalne pozostałe okno po późnej ofercie. |
+| `auction.escrow-enabled` | `false` | Rezerwacja środków podczas licytacji w nowych aukcjach. |
+| `rental.max-periods` | `365` | Limit okresów przy wynajmie. |
+| `privacy.public-history` | `false` | Prywatna historia lokalu dla właściciela i administracji. |
+| `notifications.retention-days` | `30` | Retencja wysłanych wiadomości przy zapisie. |
+| `notifications.max-history-per-player` | `200` | Limit wysłanych wpisów; niewysłane pozostają w kolejce. |
 | `teleport.enabled` | `true` | Dostępność `/plots home`. |
 | `teleport.cost` | `50.0` | Opłata za udaną teleportację. |
 | `teleport.cooldown-seconds` | `10` | Czas odnowienia teleportacji. |
@@ -32,6 +37,8 @@ Nowe działki pobierają ustawienia z `config.yml` w momencie tworzenia. Późni
 Symbol `$` jest formatowaniem z `general.currency-symbol`; rozliczenia korzystają z waluty providera Vault. Budżet miasta jest wewnętrzną księgą pluginu, a nie osobnym kontem bankowym Vault. Korekty budżetu nie zasilają konta wykonującego komendę.
 
 `auction.default-min-bid-increment` i `auction.default-duration-minutes` są wczytywane, ale komenda rozpoczynająca aukcję wymaga podania obu parametrów jawnie.
+
+Granice 3D mają osobną sekcję `visualization`: domyślnie 10 sekund, 10 sekund cooldownu i 120 punktów. Auto-odnowienie najmu wybiera gracz, domyślnie jest wyłączone. Oferty właścicieli wymagają jawnego nadania `riftplots.rent.offer`; nie ma osobnego przełącznika konfiguracji dla tej funkcji.
 
 ## Podatki
 
@@ -85,13 +92,15 @@ Sprzedaż i wynajem weryfikują zasady typu oraz dzielnicy. Zakup i nabycie prze
 | `handlowa` | 1.30 | 3 | `COMMERCIAL`, `RENTAL` |
 | `przemyslowa` | 0.90 | 5 | `INDUSTRIAL`; najem wyłączony |
 
-Aktualne granice działania konfiguracji:
+Dziedziczenie i nadpisania:
 
-- `type set` zapisuje typ. Domyślne ceny, podatki, tryby, okresy i zwroty z definicji typu nie są automatycznie kopiowane na działkę.
-- Cena zakupu pochodzi z `Plot.price`. Mnożnik cen dzielnicy nie jest podłączony do tej ścieżki. Ustaw konkretną cenę przez `setprice`.
+- Dostępne działki aktualizują dziedziczone stawki po zmianie typu lub reloadzie. Indywidualne nadpisania pozostają zachowane.
+- Cena dziedziczona to cena typu razy mnożnik cen dzielnicy. `setprice` ustala końcową cenę ręczną; reload nie mnoży jej ponownie.
 - Podatek korzysta z `Plot.baseTax`, wybranego trybu i mnożnika dzielnicy. Dotyczy to również `CUSTOM`.
-- `flags` i `icon-material` w definicji typu nie są automatycznie stosowane w regionie WorldGuard ani w GUI.
+- `icon-material` określa ikonę rynku. Flagi stanu typu (`allow`/`deny`) są stosowane przy rejestracji oraz jawnym `type apply-defaults`.
 - Administracyjne przypisanie typu lub dzielnicy nie przebudowuje wcześniejszych umów. Używaj go świadomie przy aktywnych nieruchomościach.
+
+`/plots admin type apply-defaults <id>` pokazuje różnice; dopiero dodanie `confirm` usuwa ręczne nadpisania. Aktywny najem, aukcja lub reset blokuje to działanie. [Pełny opis wdrożenia P1–P2](wiki/Nowosci-P1-P2.md).
 
 ## Magazyny danych
 
@@ -121,7 +130,7 @@ Parametry puli `storage.pool` dotyczą połączenia MySQL. SQLite ma w kodzie pu
 
 ## Migracja i kopie zapasowe
 
-Migracja przenosi zapisane działki, członków działek, profile graczy, transakcje finansowe, tabliczki, umowy najmu, aktualny stan aukcji, budżet i audyt. Schematy pozostają we wspólnym katalogu `schematics/` i nie wymagają konwersji backendu. Oferty transferu i oczekujące powiadomienia są przechowywane w pamięci i nie są migrowane.
+Migracja przenosi działki, członków, profile, transakcje, tabliczki, umowy, aukcje z historią przebić, budżet i audyt. Schematy oraz lokalne pliki operacji, zwrotów, transferów i wiadomości pozostają we wspólnym katalogu pluginu i nie wymagają konwersji backendu.
 
 1. Wykonaj spójną kopię całego `plugins/riftPlots/` przy zatrzymanym serwerze; dla MySQL dodaj eksport bazy. Zachowaj również kopię świata.
 2. Przygotuj pusty backend docelowy i dane połączenia. Nie zmieniaj jeszcze `storage.type`.
@@ -132,10 +141,10 @@ Migracja przenosi zapisane działki, członków działek, profile graczy, transa
    ```
 
 4. Sprawdź wynik i liczby przeniesionych rekordów. Przy błędzie nie przełączaj magazynu. Częściowa kopia może pozostać w celu i wymaga osobnej weryfikacji przed ponowieniem.
-5. Zatrzymaj serwer, zmień `storage.type` na backend docelowy i uruchom go ponownie.
+5. Po sukcesie plugin zapisuje backend docelowy. Zrestartuj serwer, zachowując blokadę nowych zapisów do przełączenia.
 6. Zweryfikuj właścicieli, terminy, najem, aukcje i saldo miasta przed wpuszczeniem graczy.
 
-Komenda dopuszcza jako źródło aktywny backend i odmawia nadpisania niepustego celu. Kopiowanie odbywa się synchronicznie na wątku serwera, aby komendy i scheduler nie zmieniały danych w trakcie odczytu. Przy dużej liczbie rekordów oznacza to pauzę w obsłudze ticków. Zmiany wykonane po skopiowaniu nie pojawią się automatycznie w celu.
+Komenda dopuszcza jako źródło aktywny backend i odmawia nadpisania niepustego celu. Kopiowanie wykonuje uporządkowana kolejka I/O przy wstrzymanych zmianach i nowych logowaniach. Sukces zapisuje docelowy backend w `storage.yml`; blokada trwa do restartu. `admin migrate resume confirm` wraca do źródła i czyni docelową kopię nieaktualną.
 
 ## Ochrona i reset
 
@@ -143,7 +152,7 @@ Sześć przełączników `protection.*` kontroluje dodatkową ochronę tłoków,
 
 Reset odbiera własność, kończy najem z próbą zwrotu kaucji, anuluje aukcję i przywraca zapisane bloki partiami. Wczytanie schematu odbywa się poza wątkiem serwera; zmiana świata — na wątku serwera. Wymiary schematu muszą odpowiadać działce. Encje i biomy nie są kopiowane.
 
-Brak schematu powoduje `DISABLED` z zachowaniem dotychczasowej własności. Nieudane wklejanie również pozostawia działkę wyłączoną; w tym przypadku własność została już oddana. Napraw schemat lub przyczynę błędu i ponów `/plots admin restore <id>`.
+Brak schematu powoduje `DISABLED` z zachowaniem dotychczasowej własności. Błędny odczyt lub wymiary odrzucają przygotowanie przed oddaniem własności. Nieudane wklejanie pozostawia działkę wyłączoną już po oddaniu własności. Napraw przyczynę i sprawdź podgląd `/plots admin restore <id>`, następnie potwierdź przez `confirm`.
 
 `/plots admin snapshot <id>` zastępuje wzorzec aktualnym stanem budynku. Nie zapisuj w ten sposób przypadkowo zniszczonego lokalu. `restore` i `reset` usuwają własność — nie są tylko kosmetycznym odświeżeniem bloków.
 
@@ -154,10 +163,10 @@ Brak schematu powoduje `DISABLED` z zachowaniem dotychczasowej własności. Nieu
 | Plugin nie uruchamia się | Java 25, docelowe API, WorldEdit, WorldGuard, Vault i provider ekonomii; pełny błąd w konsoli. |
 | Zakup odrzucony mimo wolnej działki | Ofertę najmu, aktywną aukcję, zakaz sprzedaży typu/dzielnicy i limit własności. |
 | Nie można budować po `trust` | To domyślny zakres `MEMBER`: interakcje, drzwi i pojemniki. |
-| Typ nie zmienił ceny ani podatku | Ustaw `setprice`, `settax`, `settaxmode` i `setperiod` osobno. |
+| Typ nie zmienił ceny ani podatku | Sprawdź ręczne nadpisania przez `admin info`. `type apply-defaults <id>` pokazuje zmiany przed potwierdzeniem. |
 | Działka jest wyłączona po resecie | Istnienie i wymiary `schematics/<id>.schem`, dostępność świata i log błędu WorldEdit. |
 | Zmiana bazy nie działa po `reload` | Backend jest wybierany podczas uruchomienia; potrzebny jest restart. |
-| Najem nie kończy się przy awarii wypłaty | Sprawdź provider Vault i wypłatę kaucji; mechanizm zachowuje umowę do ponowienia zwrotu. |
+| Kaucja nie została zwrócona | Najem kończy się niezależnie od zwrotu. Sprawdź `admin transactions refunds` i uzgodnij niepewne wypłaty bez usuwania zobowiązania. |
 | Zwrot po porzuceniu nie dotarł | Sprawdź rekord `REFUND` ze statusem `FAILED` i konto rzeczywistego właściciela. Nieruchomość mogła już zostać oddana; potrzebna jest ręczna korekta. |
 
 Nie edytuj bezpośrednio aktywnej bazy ani plików danych: plugin utrzymuje część rekordów w pamięci. Do edycji plikowej zatrzymaj serwer i zachowaj kopię.

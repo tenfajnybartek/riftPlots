@@ -41,6 +41,10 @@ public class HelpSubCommand implements SubCommand {
         AdventureUtil.sendMessage(sender, "<yellow>/plots members <działka></yellow> <gray>- Lista członków nieruchomości</gray>");
         AdventureUtil.sendMessage(sender, "<yellow>/plots abandon <działka></yellow> <gray>- Porzuć działkę i odbierz częściowy zwrot</gray>");
         AdventureUtil.sendMessage(sender, "<yellow>/plots gui</yellow> <gray>- Otwórz panel graficzny działek</gray>");
+        AdventureUtil.sendMessage(sender, "<yellow>/plots border [działka]</yellow> <gray>- Pokaż granice 3D przez krótki czas</gray>");
+        AdventureUtil.sendMessage(sender, "<yellow>/plots rent info <działka></yellow> <gray>- Umowa, kaucja i automatyczne odnowienie</gray>");
+        AdventureUtil.sendMessage(sender, "<yellow>/plots auction history <działka></yellow> <gray>- Historia licytacji</gray>");
+        AdventureUtil.sendMessage(sender, "<yellow>/plots notifications [strona]</yellow> <gray>- Zapisane powiadomienia</gray>");
 
         if (sender.hasPermission(PermissionConfiguration.ADMIN_BASE)) {
             AdventureUtil.sendMessage(sender, "<red>/plots admin</red> <gray>- Zaawansowane komendy administracyjne</gray>");

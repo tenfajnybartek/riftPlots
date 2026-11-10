@@ -98,6 +98,40 @@ public class SqlTransactionRepository implements TransactionRepository {
         return list;
     }
 
+    @Override
+    public List<TransactionRecord> findByPlotId(String plotId, int page, int size) {
+        return plotId == null ? List.of() : page("plot_id", plotId.toLowerCase(java.util.Locale.ROOT), page, size);
+    }
+
+    @Override
+    public List<TransactionRecord> findByPlayer(UUID player, int page, int size) {
+        return player == null ? List.of() : page("player_uuid", player.toString(), page, size);
+    }
+
+    @Override
+    public List<TransactionRecord> findAll(int page, int size) {
+        return page(null, null, page, size);
+    }
+
+    private List<TransactionRecord> page(String column, String value, int page, int size) {
+        if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("Invalid history page");
+        String sql = "SELECT * FROM rift_transactions" + (column == null ? "" : " WHERE " + column + " = ?")
+                + " ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?";
+        List<TransactionRecord> result = new ArrayList<>();
+        try (Connection connection = databaseManager.getConnection(); PreparedStatement query = connection.prepareStatement(sql)) {
+            int parameter = 1;
+            if (column != null) query.setString(parameter++, value);
+            query.setInt(parameter++, size);
+            query.setLong(parameter, (long) page * size);
+            try (ResultSet rows = query.executeQuery()) {
+                while (rows.next()) result.add(mapRow(rows));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Cannot read history page", e);
+        }
+        return result;
+    }
+
     private TransactionRecord mapRow(ResultSet rs) throws SQLException {
         String id = rs.getString("id");
         String plotId = rs.getString("plot_id");

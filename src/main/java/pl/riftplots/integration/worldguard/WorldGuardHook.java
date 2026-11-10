@@ -127,6 +127,34 @@ public class WorldGuardHook {
         return manager.getRegion(regionId);
     }
 
+    public void applyTypeFlags(Plot plot, java.util.Set<String> managedFlags, Map<String, String> values) {
+        validateTypeFlags(values);
+        ProtectedRegion region = getRegion(plot.getBounds().getWorldName(), plot.getWorldGuardRegionId());
+        if (region == null) throw new IllegalStateException("Brak regionu działki");
+        for (String name : managedFlags) {
+            var flag = WorldGuard.getInstance().getFlagRegistry().get(name);
+            if (!(flag instanceof StateFlag state)) {
+                if (values.containsKey(name))
+                    plugin.getLogger().warning("Flaga typu wymaga ręcznej konfiguracji: " + name);
+                continue;
+            }
+            String value = values.get(name);
+            if (value == null) region.setFlag(state, null);
+            else if (value.equalsIgnoreCase("allow") || value.equalsIgnoreCase("deny")) region.setFlag(state,
+                    value.equalsIgnoreCase("allow") ? StateFlag.State.ALLOW : StateFlag.State.DENY);
+            else throw new IllegalArgumentException("Flaga " + name + " wymaga allow albo deny.");
+        }
+    }
+
+    public void validateTypeFlags(Map<String, String> values) {
+        for (var entry : values.entrySet()) {
+            if (!(WorldGuard.getInstance().getFlagRegistry().get(entry.getKey()) instanceof StateFlag)
+                    || !(entry.getValue().equalsIgnoreCase("allow") || entry.getValue().equalsIgnoreCase("deny"))) {
+                throw new IllegalArgumentException("Domyślne flagi typu obsługują zarejestrowane flagi allow/deny: " + entry.getKey());
+            }
+        }
+    }
+
     public PlotBounds getRegionBounds(String worldName, String regionId) {
         ProtectedRegion region = getRegion(worldName, regionId);
         if (region == null) {

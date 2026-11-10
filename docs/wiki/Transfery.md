@@ -63,4 +63,4 @@ Po udanym transferze stare oferty dla działki są usuwane. Członkowie i punkt 
 
 Transfer nie jest komendą opłacenia podatku. Implementacja zachowuje zapisany termin działki. Kupujący powinien sprawdzić go od razu przez `/plots info <id>` i nie zakładać, że cena sprzedaży obejmuje nowy pełny okres.
 
-Oferty transferu są przechowywane w pamięci. Restart usuwa oczekujące oferty; sprzedający musi wtedy wystawić nową. Zapisana historia udanych transakcji pozostaje w backendzie.
+Oferty transferu są zapisywane w `data/transfers.yml`. Restart zachowuje ich ID i pierwotny termin wygaśnięcia. Rozliczenie ma ID w dzienniku operacji, a niepewny wynik blokuje kolejne kolidujące operacje do sprawdzenia przez administrację.

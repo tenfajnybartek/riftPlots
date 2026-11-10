@@ -29,6 +29,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AuctionService {
+    private pl.riftplots.service.transaction.OperationJournal journal;
+
+    public void setOperationJournal(pl.riftplots.service.transaction.OperationJournal journal) {
+        this.journal = journal;
+    }
+
+    private final Map<String, PlotAuction> committed = new HashMap<>();
+    private pl.riftplots.service.transaction.RefundService refunds;
+
+    public void setRefundService(pl.riftplots.service.transaction.RefundService refunds) {
+        this.refunds = refunds;
+    }
+
     private final File auctionsFile;
     private final DatabaseManager databaseManager;
     private final PlotManager plotManager;
@@ -67,6 +80,8 @@ public class AuctionService {
         } else {
             loadFromFile();
         }
+        committed.clear();
+        activeAuctions.values().forEach(auction -> committed.put(auction.getId(), auction.copy()));
         for (Plot plot : plotManager.getAllPlots()) {
             boolean active = activeAuctions.containsKey(plot.getId());
             if (plot.isAuctionActive() != active) {
@@ -100,7 +115,8 @@ public class AuctionService {
             BigDecimal buyout = buyStr != null && !buyStr.isBlank() ? new BigDecimal(buyStr) : null;
             AuctionStatus status = AuctionStatus.valueOf(config.getString(p + ".status", "ACTIVE"));
 
-            PlotAuction auction = new PlotAuction(key, plotId, sUuid, startPrice, minInc, curBid, bUuid, bName, Instant.ofEpochMilli(start), Instant.ofEpochMilli(end), buyout, Collections.emptyList(), status);
+            PlotAuction auction = new PlotAuction(key, plotId, sUuid, startPrice, minInc, curBid, bUuid, bName, Instant.ofEpochMilli(start), Instant.ofEpochMilli(end), buyout, fileBids(config, p, key), status);
+            auction.setEscrowEnabled(config.getBoolean(p + ".escrow", false));
             if (auction.getStatus() == AuctionStatus.ACTIVE) {
                 activeAuctions.put(plotId.toLowerCase(), auction);
             }
@@ -128,7 +144,8 @@ public class AuctionService {
                 BigDecimal buyout = rs.getBigDecimal("buyout_price");
                 AuctionStatus status = AuctionStatus.valueOf(rs.getString("status"));
 
-                PlotAuction auction = new PlotAuction(id, plotId, sUuid, startPrice, minInc, curBid, bUuid, bName, Instant.ofEpochMilli(start), Instant.ofEpochMilli(end), buyout, Collections.emptyList(), status);
+                PlotAuction auction = new PlotAuction(id, plotId, sUuid, startPrice, minInc, curBid, bUuid, bName, Instant.ofEpochMilli(start), Instant.ofEpochMilli(end), buyout, databaseBids(conn, id), status);
+                auction.setEscrowEnabled(rs.getBoolean("escrow_enabled"));
                 activeAuctions.put(plotId.toLowerCase(), auction);
             }
         } catch (SQLException e) {
@@ -138,27 +155,39 @@ public class AuctionService {
 
     public synchronized void saveAuction(PlotAuction auction) {
         if (auction == null) return;
+        try {
+            persistAuction(auction);
+        } catch (RuntimeException e) {
+            PlotAuction previous = committed.get(auction.getId());
+            if (previous != null) auction.restore(previous);
+            throw e;
+        }
         if (auction.getStatus() == AuctionStatus.ACTIVE) {
             activeAuctions.put(auction.getPlotId().toLowerCase(), auction);
         } else {
             activeAuctions.remove(auction.getPlotId().toLowerCase());
         }
+        committed.put(auction.getId(), auction.copy());
+    }
 
+    private void persistAuction(PlotAuction auction) {
+        if (journal != null && !journal.isWriteAllowed()) throw new IllegalStateException("Trwa migracja danych");
         if (databaseManager != null) {
             String sql = """
-                        INSERT INTO rift_auctions (id, plot_id, seller_uuid, starting_price, min_bid_increment, current_bid, current_bidder_uuid, current_bidder_name, start_time, end_time, buyout_price, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(id) DO UPDATE SET current_bid = excluded.current_bid, current_bidder_uuid = excluded.current_bidder_uuid, current_bidder_name = excluded.current_bidder_name, end_time = excluded.end_time, status = excluded.status
+                        INSERT INTO rift_auctions (id, plot_id, seller_uuid, starting_price, min_bid_increment, current_bid, current_bidder_uuid, current_bidder_name, start_time, end_time, buyout_price, status, escrow_enabled)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET current_bid = excluded.current_bid, current_bidder_uuid = excluded.current_bidder_uuid, current_bidder_name = excluded.current_bidder_name, end_time = excluded.end_time, status = excluded.status, escrow_enabled = excluded.escrow_enabled
                     """;
             if (databaseManager.getStorageType() == pl.riftplots.storage.StorageType.MYSQL) {
                 sql = """
-                            INSERT INTO rift_auctions (id, plot_id, seller_uuid, starting_price, min_bid_increment, current_bid, current_bidder_uuid, current_bidder_name, start_time, end_time, buyout_price, status)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            ON DUPLICATE KEY UPDATE current_bid = VALUES(current_bid), current_bidder_uuid = VALUES(current_bidder_uuid), current_bidder_name = VALUES(current_bidder_name), end_time = VALUES(end_time), status = VALUES(status)
+                            INSERT INTO rift_auctions (id, plot_id, seller_uuid, starting_price, min_bid_increment, current_bid, current_bidder_uuid, current_bidder_name, start_time, end_time, buyout_price, status, escrow_enabled)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE current_bid = VALUES(current_bid), current_bidder_uuid = VALUES(current_bidder_uuid), current_bidder_name = VALUES(current_bidder_name), end_time = VALUES(end_time), status = VALUES(status), escrow_enabled = VALUES(escrow_enabled)
                         """;
             }
             try (Connection conn = databaseManager.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
+                conn.setAutoCommit(false);
                 ps.setString(1, auction.getId());
                 ps.setString(2, auction.getPlotId());
                 ps.setString(3, auction.getSellerUuid() != null ? auction.getSellerUuid().toString() : null);
@@ -171,7 +200,10 @@ public class AuctionService {
                 ps.setLong(10, auction.getEndTime().toEpochMilli());
                 ps.setBigDecimal(11, auction.getBuyoutPrice());
                 ps.setString(12, auction.getStatus().name());
+                ps.setBoolean(13, auction.isEscrowEnabled());
                 ps.executeUpdate();
+                persistBids(conn, auction);
+                conn.commit();
             } catch (SQLException e) {
                 throw new IllegalStateException("Storage operation failed", e);
             }
@@ -190,8 +222,11 @@ public class AuctionService {
                 config.set(p + ".endTime", auction.getEndTime().toEpochMilli());
                 config.set(p + ".buyoutPrice", auction.getBuyoutPrice() != null ? auction.getBuyoutPrice().toPlainString() : null);
                 config.set(p + ".status", auction.getStatus().name());
+                config.set(p + ".escrow", auction.isEscrowEnabled());
+                config.set(p + ".bids", auction.getBids().stream().map(bid -> Map.of("bidderUuid", bid.getBidderUuid().toString(),
+                        "bidderName", bid.getBidderName(), "amount", bid.getAmount().toPlainString(), "timestamp", bid.getTimestamp().toEpochMilli())).toList());
                 auctionsFile.getParentFile().mkdirs();
-                config.save(auctionsFile);
+                YamlDataFile.save(config, auctionsFile);
             } catch (IOException e) {
                 throw new IllegalStateException("Storage operation failed", e);
             }
@@ -199,10 +234,19 @@ public class AuctionService {
     }
 
     public synchronized boolean startAuction(Plot plot, UUID sellerUuid, BigDecimal startingPrice, BigDecimal minIncrement, int durationMinutes, BigDecimal buyoutPrice) {
+        if (plot == null) return false;
+        return journal == null ? startAuctionInternal(plot, sellerUuid, startingPrice, minIncrement, durationMinutes, buyoutPrice)
+                : journal.execute("AUCTION_START", "auction-start:" + plot.getId() + ":" + plot.getUpdatedAt().toEpochMilli(),
+                plot.getId(), sellerUuid, startingPrice,
+                () -> startAuctionInternal(plot, sellerUuid, startingPrice, minIncrement, durationMinutes, buyoutPrice));
+    }
+
+    private boolean startAuctionInternal(Plot plot, UUID sellerUuid, BigDecimal startingPrice, BigDecimal minIncrement, int durationMinutes, BigDecimal buyoutPrice) {
         if (plot == null || activeAuctions.containsKey(plot.getId().toLowerCase())
-                || plot.isAuctionActive() || plot.isRented() || plot.isRentalAvailable()
+                || plot.isAuctionActive() || plot.isRented() || plot.isRentalAvailable() || plotManager.isResetPending(plot.getId())
                 || (plot.getStatus() != PlotStatus.AVAILABLE && plot.getStatus() != PlotStatus.OWNED)
                 || !Objects.equals(sellerUuid, plot.getOwnerUuid())
+                || plotManager.financiallyBlocked(plot.getId(), plotManager.currentOperationId())
                 || startingPrice == null || startingPrice.signum() < 0
                 || minIncrement == null || minIncrement.signum() <= 0 || durationMinutes <= 0
                 || (buyoutPrice != null && buyoutPrice.compareTo(startingPrice) < 0)) {
@@ -210,6 +254,8 @@ public class AuctionService {
         }
 
         PlotAuction auction = PlotAuction.create(plot.getId(), sellerUuid, startingPrice, minIncrement, durationMinutes, buyoutPrice);
+        if (config.isAuctionEscrowEnabled() && (journal == null || refunds == null)) return false;
+        auction.setEscrowEnabled(config.isAuctionEscrowEnabled());
         plot.setAuctionActive(true);
         plotManager.savePlot(plot);
 
@@ -219,6 +265,18 @@ public class AuctionService {
     }
 
     public synchronized boolean placeBid(Player bidder, String plotId, BigDecimal amount) {
+        if (bidder == null || plotId == null || amount == null) return false;
+        PlotAuction auction = activeAuctions.get(plotId.toLowerCase());
+        if (auction == null) return false;
+        boolean accepted = journal == null ? placeBidInternal(bidder, plotId, amount) : journal.execute("BID",
+                "bid:" + auction.getId() + ":" + auction.getBids().size() + ":" + bidder.getUniqueId() + ":" + amount,
+                plotId, bidder.getUniqueId(), amount, () -> placeBidInternal(bidder, plotId, amount));
+        if (accepted && auction.isExpired()) finalizeAuction(auction);
+        if (refunds != null) refunds.retryPending();
+        return accepted;
+    }
+
+    private boolean placeBidInternal(Player bidder, String plotId, BigDecimal amount) {
         if (bidder == null || plotId == null || amount == null || amount.signum() < 0) return false;
         PlotAuction auction = activeAuctions.get(plotId.toLowerCase());
         if (auction == null || auction.getStatus() != AuctionStatus.ACTIVE || auction.isExpired()) {
@@ -233,7 +291,10 @@ public class AuctionService {
             return false;
         }
 
-        if (!vaultHook.has(bidder, amount)) {
+        PlotAuction previous = auction.copy();
+        BigDecimal charge = auction.isEscrowEnabled() && bidder.getUniqueId().equals(previous.getCurrentBidderUuid())
+                ? amount.subtract(previous.getCurrentBid()) : amount;
+        if (!vaultHook.has(bidder, charge)) {
             bidder.sendMessage(messageConfig.get("auction.cannot-afford", Map.of("amount", config.formatMoney(amount))));
             return false;
         }
@@ -245,24 +306,48 @@ public class AuctionService {
             return false;
         }
 
+        if (auction.isEscrowEnabled()) {
+            if (!vaultHook.withdraw(bidder, charge)) {
+                auction.restore(previous);
+                return false;
+            }
+            if (previous.getCurrentBidderUuid() != null && !bidder.getUniqueId().equals(previous.getCurrentBidderUuid())) {
+                refunds.prepare("outbid:" + auction.getId() + ":" + previous.getBids().size(), "AUCTION_OUTBID", plotId,
+                        journal.currentId(), previous.getCurrentBidderUuid(), previous.getCurrentBid(), "Zwrot przebitej oferty aukcji " + auction.getId());
+            }
+        }
         saveAuction(auction);
         notificationService.notifyPlayer(bidder.getUniqueId(), messageConfig.getRaw("auction.bid-accepted", "{prefix}<green>Oferta zostala przyjeta!</green>")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{amount}", config.formatMoney(amount))
                 .replace("{plot_id}", plotId), "minecraft:block.note_block.bell");
-        if (auction.isExpired()) finalizeAuction(auction);
         return true;
     }
 
     public void checkCompletedAuctions() {
         for (PlotAuction auction : activeAuctions.values()) {
             if (auction.isExpired()) {
-                finalizeAuction(auction);
+                try {
+                    finalizeAuction(auction);
+                } catch (RuntimeException e) {
+                    java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE,
+                            "Nie można rozliczyć aukcji " + auction.getId(), e);
+                }
             }
         }
     }
 
     private synchronized void finalizeAuction(PlotAuction auction) {
+        if (journal == null) finalizeAuctionInternal(auction);
+        else journal.execute("AUCTION", "auction:" + auction.getId(), auction.getPlotId(),
+                auction.getCurrentBidderUuid(), auction.getCurrentBid(), () -> {
+                    finalizeAuctionInternal(auction);
+                    return auction.getStatus() != AuctionStatus.ACTIVE;
+                });
+        if (refunds != null) refunds.retryPending();
+    }
+
+    private void finalizeAuctionInternal(PlotAuction auction) {
         if (auction.getStatus() != AuctionStatus.ACTIVE || !auction.isExpired()) return;
 
         Optional<Plot> optPlot = plotManager.getPlot(auction.getPlotId());
@@ -290,21 +375,24 @@ public class AuctionService {
         BigDecimal winningBid = auction.getCurrentBid();
 
         if (plotManager.validateAcquisition(plot, winner.getUniqueId()).isValid()
-                && vaultHook.has(winner, winningBid) && vaultHook.withdraw(winner, winningBid)) {
+                && (auction.isEscrowEnabled() || vaultHook.has(winner, winningBid) && vaultHook.withdraw(winner, winningBid))) {
 
-            double feePct = config.getAuctionCityFeePercent() / 100.0;
+            BigDecimal feePct = BigDecimal.valueOf(config.getAuctionCityFeePercent()).movePointLeft(2);
             if (auction.getSellerUuid() != null) {
                 org.bukkit.OfflinePlayer seller = org.bukkit.Bukkit.getOfflinePlayer(auction.getSellerUuid());
-                BigDecimal sellerShare = winningBid.multiply(BigDecimal.valueOf(1.0 - feePct)).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal cityFee = winningBid.multiply(feePct).setScale(2, RoundingMode.HALF_UP).min(winningBid);
+                BigDecimal sellerShare = winningBid.subtract(cityFee);
                 if (!vaultHook.deposit(seller, sellerShare)) {
-                    if (!vaultHook.deposit(winner, winningBid)) {
+                    if (refunds != null && !auction.isEscrowEnabled()) {
+                        refunds.prepare("auction-failed-payout:" + auction.getId(), "AUCTION_SETTLEMENT_REFUND", plot.getId(), journal.currentId(),
+                                winner.getUniqueId(), winningBid, "Nieudana wypłata dla sprzedawcy aukcji");
+                    } else if (!auction.isEscrowEnabled() && !vaultHook.deposit(winner, winningBid)) {
                         throw new IllegalStateException("Nie udało się zwrócić środków zwycięzcy aukcji " + auction.getId());
                     }
                     cancelAuction(plot.getId());
                     auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_PAYMENT_FAILED", "Nieudana wypłata dla sprzedawcy; zwrócono środki kupującemu.");
                     return;
                 }
-                BigDecimal cityFee = winningBid.subtract(sellerShare);
                 budgetService.recordTransaction(CityTransactionType.AUCTION_FEE, cityFee, plot.getId(), winner.getUniqueId(), "Prowizja miejska z aukcji");
             } else {
                 budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, winningBid, plot.getId(), winner.getUniqueId(), "Wygrana w licytacji działki miejskiej");
@@ -341,7 +429,23 @@ public class AuctionService {
 
     public synchronized void cancelAuction(String plotId) {
         PlotAuction auction = activeAuctions.get(plotId.toLowerCase());
+        if (auction != null && journal != null && !journal.isRunning()) {
+            journal.execute("AUCTION_CANCEL", "auction-cancel:" + auction.getId(), plotId, auction.getCurrentBidderUuid(),
+                    auction.getCurrentBid(), false, () -> {
+                        cancelAuctionInternal(plotId);
+                        return true;
+                    });
+        } else cancelAuctionInternal(plotId);
+        if (refunds != null) refunds.retryPending();
+    }
+
+    private void cancelAuctionInternal(String plotId) {
+        PlotAuction auction = activeAuctions.get(plotId.toLowerCase());
         if (auction != null) {
+            if (auction.isEscrowEnabled() && auction.getCurrentBidderUuid() != null) {
+                refunds.prepare("auction-cancel:" + auction.getId(), "AUCTION_CANCELLED", plotId, journal.currentId(),
+                        auction.getCurrentBidderUuid(), auction.getCurrentBid(), "Anulowanie aukcji z depozytem ofert");
+            }
             auction.setStatus(AuctionStatus.CANCELLED);
             saveAuction(auction);
         }
@@ -351,6 +455,13 @@ public class AuctionService {
         });
     }
 
+    public synchronized void cancelAuction(String plotId, String operator, String reason) {
+        if (journal != null && journal.isBlocked(plotId))
+            throw new IllegalArgumentException("Najpierw uzgodnij trwającą operację finansową.");
+        cancelAuction(plotId);
+        auditService.log(plotId, null, operator, "AUCTION_CANCELLED", reason);
+    }
+
     public Collection<PlotAuction> getActiveAuctions() {
         return Collections.unmodifiableCollection(activeAuctions.values());
     }
@@ -358,5 +469,79 @@ public class AuctionService {
     public Optional<PlotAuction> getAuction(String plotId) {
         if (plotId == null) return Optional.empty();
         return Optional.ofNullable(activeAuctions.get(plotId.toLowerCase()));
+    }
+
+    private List<AuctionBid> fileBids(YamlConfiguration yaml, String path, String id) {
+        List<? extends Map<?, ?>> rows = yaml.getMapList(path + ".bids");
+        if (rows.isEmpty()) {
+            var migrated = YamlDataFile.load(new File(auctionsFile.getParentFile(), "auction_bids.yml"));
+            var section = migrated.getConfigurationSection("bids");
+            if (section != null)
+                rows = section.getKeys(false).stream().filter(key -> id.equals(section.getString(key + ".auctionId")))
+                        .sorted(Comparator.comparingLong(key -> section.getLong(key + ".sequence")))
+                        .map(key -> section.getConfigurationSection(key).getValues(false)).toList();
+        }
+        List<AuctionBid> bids = new ArrayList<>();
+        for (Map<?, ?> row : rows)
+            bids.add(new AuctionBid(UUID.fromString(row.get("bidderUuid").toString()), row.get("bidderName").toString(),
+                    new BigDecimal(row.get("amount").toString()), Instant.ofEpochMilli(Long.parseLong(row.get("timestamp").toString()))));
+        return bids;
+    }
+
+    private List<AuctionBid> databaseBids(Connection connection, String id) throws SQLException {
+        List<AuctionBid> bids = new ArrayList<>();
+        try (var statement = connection.prepareStatement("SELECT * FROM rift_auction_bids WHERE auction_id = ? ORDER BY sequence")) {
+            statement.setString(1, id);
+            try (var result = statement.executeQuery()) {
+                while (result.next())
+                    bids.add(new AuctionBid(UUID.fromString(result.getString("bidder_uuid")), result.getString("bidder_name"),
+                            result.getBigDecimal("amount"), Instant.ofEpochMilli(result.getLong("timestamp"))));
+            }
+        }
+        return bids;
+    }
+
+    public synchronized List<AuctionBid> getBidHistory(String plotId, int page) {
+        List<AuctionBid> bids;
+        var active = getAuction(plotId);
+        if (active.isPresent()) bids = new ArrayList<>(active.get().getBids());
+        else if (databaseManager != null) {
+            try (var connection = databaseManager.getConnection(); var statement = connection.prepareStatement("SELECT id FROM rift_auctions WHERE plot_id = ? ORDER BY start_time DESC LIMIT 1")) {
+                statement.setString(1, plotId.toLowerCase());
+                try (var result = statement.executeQuery()) {
+                    bids = result.next() ? databaseBids(connection, result.getString(1)) : new ArrayList<>();
+                }
+            } catch (SQLException e) {
+                throw new IllegalStateException("Nie można odczytać historii aukcji", e);
+            }
+        } else {
+            var yaml = YamlDataFile.load(auctionsFile);
+            var section = yaml.getConfigurationSection("auctions");
+            var latest = section == null ? Optional.<String>empty() : section.getKeys(false).stream().filter(key -> plotId.equalsIgnoreCase(section.getString(key + ".plotId")))
+                    .max(Comparator.comparingLong(key -> section.getLong(key + ".startTime")));
+            bids = latest.isPresent() ? fileBids(yaml, "auctions." + latest.get(), latest.get()) : new ArrayList<>();
+        }
+        Collections.reverse(bids);
+        return bids.stream().skip((long) Math.max(0, page) * 10).limit(10).toList();
+    }
+
+    private void persistBids(Connection connection, PlotAuction auction) throws SQLException {
+        try (var remove = connection.prepareStatement("DELETE FROM rift_auction_bids WHERE auction_id = ?")) {
+            remove.setString(1, auction.getId());
+            remove.executeUpdate();
+        }
+        try (var insert = connection.prepareStatement("INSERT INTO rift_auction_bids (auction_id, bidder_uuid, bidder_name, amount, timestamp, sequence) VALUES (?, ?, ?, ?, ?, ?)")) {
+            int sequence = 0;
+            for (var bid : auction.getBids()) {
+                insert.setString(1, auction.getId());
+                insert.setString(2, bid.getBidderUuid().toString());
+                insert.setString(3, bid.getBidderName());
+                insert.setBigDecimal(4, bid.getAmount());
+                insert.setLong(5, bid.getTimestamp().toEpochMilli());
+                insert.setInt(6, sequence++);
+                insert.addBatch();
+            }
+            insert.executeBatch();
+        }
     }
 }

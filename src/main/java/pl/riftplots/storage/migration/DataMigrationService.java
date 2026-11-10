@@ -18,11 +18,13 @@ public class DataMigrationService {
     private final File dataFolder;
     private final StorageConfiguration storageConfig;
     private final StorageType activeStorageType;
+    private final StorageConfiguration activeConfiguration;
 
     public DataMigrationService(File dataFolder, StorageConfiguration storageConfig) {
         this.dataFolder = dataFolder;
         this.storageConfig = storageConfig;
         this.activeStorageType = storageConfig.getStorageType();
+        this.activeConfiguration = storageConfig.copy();
     }
 
     public StorageType getActiveStorageType() {
@@ -34,7 +36,7 @@ public class DataMigrationService {
             throw new IllegalArgumentException("Źródłowy i docelowy typ bazy danych nie mogą być takie same!");
         }
 
-        StorageBackend srcBackend = createBackend(source);
+        StorageBackend srcBackend = createBackend(source, activeConfiguration);
         StorageBackend dstBackend = createBackend(target);
 
         try {
@@ -87,11 +89,26 @@ public class DataMigrationService {
     }
 
     private StorageBackend createBackend(StorageType type) {
+        return createBackend(type, storageConfig);
+    }
+
+    private StorageBackend createBackend(StorageType type, StorageConfiguration settings) {
         return switch (type) {
             case YAML -> new YamlStorageBackend(dataFolder);
-            case SQLITE -> new SqliteStorageBackend(storageConfig, dataFolder);
-            case MYSQL -> new MysqlStorageBackend(storageConfig, dataFolder);
+            case SQLITE -> new SqliteStorageBackend(settings, dataFolder);
+            case MYSQL -> new MysqlStorageBackend(settings, dataFolder);
         };
+    }
+
+    public java.util.concurrent.CompletableFuture<MigrationReport> migrateAsync(StorageType source, StorageType target,
+                                                                                pl.riftplots.service.io.OrderedIoQueue queue) {
+        return queue.submit(() -> {
+            try {
+                return migrate(source, target);
+            } catch (Exception e) {
+                throw new java.util.concurrent.CompletionException(e);
+            }
+        });
     }
 
     public record MigrationReport(StorageType source, StorageType target, int plotsMigrated, int transactionsMigrated,

@@ -26,6 +26,11 @@ public class PlotSessionListener implements Listener {
     private final TaxCalculator taxCalculator;
     private final PlayerProfileRepository profileRepository;
     private pl.riftplots.service.notification.NotificationService notificationService;
+    private java.util.function.BooleanSupplier writeAllowed = () -> true;
+
+    public void setWriteAllowed(java.util.function.BooleanSupplier writeAllowed) {
+        this.writeAllowed = Objects.requireNonNull(writeAllowed);
+    }
 
     public PlotSessionListener(PluginConfiguration config,
                                MessageConfiguration messageConfig,
@@ -44,6 +49,10 @@ public class PlotSessionListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        if (!writeAllowed.getAsBoolean()) {
+            player.kick(net.kyori.adventure.text.Component.text("Trwa migracja danych miasta. Spróbuj po restarcie serwera."));
+            return;
+        }
         UUID uuid = player.getUniqueId();
         Instant now = Instant.now();
 

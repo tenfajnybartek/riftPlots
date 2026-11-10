@@ -18,7 +18,7 @@ Pozycja musi znajdować się wewnątrz granic działki. Zapisywane są współrz
 /plots home rynek_1
 ```
 
-Wrócić może właściciel, członek działki lub uprawniony administrator. Bez identyfikatora komenda wybiera jedną z posiadanych działek; przy wielu nieruchomościach podawaj ID, aby uzyskać jednoznaczny cel.
+Wrócić może właściciel, członek z `TELEPORT` lub uprawniony administrator. Dostęp najemcy wymaga aktualnej umowy. Nowi członkowie mają `TELEPORT`, ale dawne zapisane listy praw pozostają bez zmian; właściciel może dodać je w edytorze. Bez ID komenda wybiera jedną z posiadanych działek; przy wielu nieruchomościach podawaj ID.
 
 | Ustawienie domyślne | Wartość |
 | :--- | ---: |

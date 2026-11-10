@@ -49,7 +49,7 @@ Jeśli zaznaczenie koliduje z działką albo innym regionem WorldGuard, popraw j
 | Podatek wynikowy | **3 750 co 7 dni**. |
 | Karencja | 6 godzin od terminu podatku. |
 
-> Przypisanie typu nie kopiuje domyślnych cen i stawek. Dlatego przykład ustawia je jawnie. Mnożnik podatku dzielnicy działa; mnożnik cen nie przelicza automatycznie `setprice`.
+> Nowe działki dziedziczą parametry typu. Ten przykład ustawia ręczne nadpisania, więc `setprice` jest końcową ceną bez dodatkowego mnożenia przez dzielnicę. Cena dziedziczona uwzględnia mnożnik cen dzielnicy. Dla starszych rekordów `/plots admin type apply-defaults rynek_1` pokazuje zmiany przed potwierdzeniem.
 
 ## 5. Dodaj tabliczkę
 

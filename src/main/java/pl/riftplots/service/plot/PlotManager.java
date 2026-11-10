@@ -20,6 +20,70 @@ public class PlotManager {
     private final WorldGuardHook worldGuardHook;
     private final Map<String, Plot> plots = new ConcurrentHashMap<>();
     private final Map<String, UUID> savedOwners = new HashMap<>();
+    private final Map<String, Plot> committed = new HashMap<>();
+    private final PlotSpatialIndex spatialIndex = new PlotSpatialIndex();
+    private pl.riftplots.service.transaction.OperationJournal journal;
+    private pl.riftplots.service.audit.AuditService audit;
+
+    public record Actor(UUID uuid, String name) {
+    }
+
+    private final ThreadLocal<Actor> actor = new ThreadLocal<>();
+
+    public Actor enterActor(org.bukkit.command.CommandSender sender) {
+        Actor previous = actor.get();
+        actor.set(new Actor(sender instanceof org.bukkit.entity.Player player ? player.getUniqueId() : null, sender.getName()));
+        return previous;
+    }
+
+    public void restoreActor(Actor previous) {
+        if (previous == null) actor.remove();
+        else actor.set(previous);
+    }
+
+    public void setAuditService(pl.riftplots.service.audit.AuditService audit) {
+        this.audit = audit;
+    }
+
+    public void setOperationJournal(pl.riftplots.service.transaction.OperationJournal journal) {
+        this.journal = journal;
+    }
+
+    public String currentOperationId() {
+        return journal != null ? journal.currentId() : null;
+    }
+
+    public boolean financiallyBlocked(String id, String allowed) {
+        return journal != null && journal.isBlockedExcept(id, allowed);
+    }
+
+    private java.util.function.BooleanSupplier writeAllowed = () -> true;
+
+    public void setWriteAllowed(java.util.function.BooleanSupplier allowed) {
+        writeAllowed = allowed;
+    }
+
+    private java.util.function.Predicate<String> resetPending = id -> false;
+
+    public void setResetPending(java.util.function.Predicate<String> resetPending) {
+        this.resetPending = resetPending;
+    }
+
+    public boolean isResetPending(String id) {
+        return resetPending.test(id);
+    }
+
+    private java.util.function.BiPredicate<String, UUID> tenantAccess = (plot, player) -> true;
+
+    public void setTenantAccess(java.util.function.BiPredicate<String, UUID> tenantAccess) {
+        this.tenantAccess = tenantAccess;
+    }
+
+    public boolean hasUsableMembership(Plot plot, UUID player) {
+        var member = plot.getMember(player);
+        return member != null && (member.getRole() != pl.riftplots.domain.plot.PlotMemberRole.TENANT || tenantAccess.test(plot.getId(), player));
+    }
+
     private PlayerProfileRepository profileRepository;
     private PropertyTypeManager typeManager;
     private DistrictManager districtManager;
@@ -34,10 +98,14 @@ public class PlotManager {
     public void loadAll() {
         plots.clear();
         savedOwners.clear();
+        committed.clear();
+        spatialIndex.clear();
         List<Plot> list = repository.findAll();
         for (Plot plot : list) {
             plots.put(plot.getId(), plot);
             savedOwners.put(plot.getId(), plot.getOwnerUuid());
+            committed.put(plot.getId(), plot.copy());
+            spatialIndex.put(plot.getId(), plot.getBounds());
         }
     }
 
@@ -46,6 +114,34 @@ public class PlotManager {
         this.typeManager = typeManager;
         this.districtManager = districtManager;
         this.profileRepository = profileRepository;
+        refreshInheritedDefaults();
+    }
+
+    public void refreshInheritedDefaults() {
+        for (Plot plot : plots.values()) if (refreshInherited(plot)) savePlot(plot);
+    }
+
+    private boolean refreshInherited(Plot plot) {
+        if (typeManager == null || plot.getOwnerUuid() != null || plot.isRented() || plot.isAuctionActive()
+                || plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.AVAILABLE) return false;
+        var type = typeManager.getType(plot.getPropertyType());
+        var old = plot.copy();
+        var mask = new HashSet<>(plot.getSettingOverrides());
+        if (!plot.overrides(pl.riftplots.domain.plot.PropertySetting.PRICE)) plot.setPrice(type.getDefaultPrice());
+        if (!plot.overrides(pl.riftplots.domain.plot.PropertySetting.BASE_TAX))
+            plot.setBaseTax(type.getDefaultBaseTax());
+        if (!plot.overrides(pl.riftplots.domain.plot.PropertySetting.TAX_MODE))
+            plot.setTaxMode(type.getDefaultTaxMode());
+        if (!plot.overrides(pl.riftplots.domain.plot.PropertySetting.TAX_MULTIPLIER))
+            plot.setTaxMultiplier(type.getDefaultTaxMultiplier());
+        if (!plot.overrides(pl.riftplots.domain.plot.PropertySetting.BILLING_PERIOD))
+            plot.setBillingPeriodDays(type.getDefaultBillingPeriodDays());
+        if (!plot.overrides(pl.riftplots.domain.plot.PropertySetting.REFUND_PERCENT))
+            plot.setRefundPercentOnAbandon(type.getRefundPercent());
+        plot.setSettingOverrides(mask);
+        return old.getPrice().compareTo(plot.getPrice()) != 0 || old.getBaseTax().compareTo(plot.getBaseTax()) != 0
+                || old.getTaxMode() != plot.getTaxMode() || old.getTaxMultiplier() != plot.getTaxMultiplier()
+                || old.getBillingPeriodDays() != plot.getBillingPeriodDays() || old.getRefundPercentOnAbandon() != plot.getRefundPercentOnAbandon();
     }
 
     public void setUpdateListener(Consumer<Plot> updateListener) {
@@ -54,6 +150,9 @@ public class PlotManager {
 
     public PlotValidationResult validateAcquisition(Plot plot, UUID buyerUuid) {
         if (plot == null || buyerUuid == null) return PlotValidationResult.error("Nieprawidłowy kupujący lub działka.");
+        if (isResetPending(plot.getId())) return PlotValidationResult.error("Działka jest przygotowywana do resetu.");
+        if (financiallyBlocked(plot.getId(), currentOperationId()))
+            return PlotValidationResult.error("Operacja tej nieruchomości wymaga uzgodnienia przez administrację.");
         if (typeManager != null && !typeManager.getType(plot.getPropertyType()).isSalesAllowed()) {
             return PlotValidationResult.error("Ten typ nieruchomości nie pozwala na sprzedaż.");
         }
@@ -77,6 +176,33 @@ public class PlotManager {
         return typeManager != null ? typeManager.getType(plot.getPropertyType()).getMaxMembers() : Integer.MAX_VALUE;
     }
 
+    public java.math.BigDecimal getPurchasePrice(Plot plot) {
+        if (plot.overrides(pl.riftplots.domain.plot.PropertySetting.PRICE) || typeManager == null)
+            return plot.getPrice();
+        var price = typeManager.getType(plot.getPropertyType()).getDefaultPrice();
+        price = price.multiply(java.math.BigDecimal.valueOf(getDistrictPriceMultiplier(plot)));
+        return price.setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    public double getDistrictPriceMultiplier(Plot plot) {
+        return districtManager != null && plot.getDistrictId() != null
+                ? districtManager.getDistrict(plot.getDistrictId()).map(pl.riftplots.domain.district.District::getPriceMultiplier).orElse(1.0) : 1.0;
+    }
+
+    public org.bukkit.Material getIcon(Plot plot) {
+        return typeManager != null ? typeManager.getType(plot.getPropertyType()).getIconMaterial() : org.bukkit.Material.GRASS_BLOCK;
+    }
+
+    public void applyTypeDefaults(Plot plot) {
+        if (typeManager == null) throw new IllegalStateException("Property types not configured");
+        if (plot.isRented() || plot.isAuctionActive() || isResetPending(plot.getId()))
+            throw new IllegalArgumentException("Zakończ najem, aukcję lub reset przed zmianą warunków.");
+        worldGuardHook.validateTypeFlags(typeManager.getType(plot.getPropertyType()).getDefaultFlags());
+        plot.applyTypeDefaults(typeManager.getType(plot.getPropertyType()));
+        savePlot(plot);
+        worldGuardHook.applyTypeFlags(plot, typeManager.getAllTypes().stream().flatMap(type -> type.getDefaultFlags().keySet().stream()).collect(java.util.stream.Collectors.toSet()), typeManager.getType(plot.getPropertyType()).getDefaultFlags());
+    }
+
     public Collection<Plot> getAllPlots() {
         return Collections.unmodifiableCollection(plots.values());
     }
@@ -92,7 +218,9 @@ public class PlotManager {
         if (worldName == null) {
             return Optional.empty();
         }
-        for (Plot plot : plots.values()) {
+        for (String id : spatialIndex.candidates(worldName, x, z)) {
+            Plot plot = plots.get(id);
+            if (plot == null) continue;
             if (plot.getBounds().contains(worldName, x, y, z)) {
                 return Optional.of(plot);
             }
@@ -104,7 +232,9 @@ public class PlotManager {
         if (worldName == null) {
             return Optional.empty();
         }
-        for (Plot plot : plots.values()) {
+        for (String id : spatialIndex.candidates(worldName, x, z)) {
+            Plot plot = plots.get(id);
+            if (plot == null) continue;
             if (plot.getBounds().containsHorizontal(worldName, x, z)) {
                 return Optional.of(plot);
             }
@@ -168,15 +298,21 @@ public class PlotManager {
     }
 
     public boolean registerPlot(Plot plot) {
+        if (!writeAllowed.getAsBoolean()) return false;
         if (plot == null) {
             return false;
         }
+        refreshInherited(plot);
         if (!worldGuardHook.createOrUpdateRegion(plot)) {
             return false;
         }
+        if (typeManager != null)
+            worldGuardHook.applyTypeFlags(plot, typeManager.getAllTypes().stream().flatMap(type -> type.getDefaultFlags().keySet().stream()).collect(java.util.stream.Collectors.toSet()), typeManager.getType(plot.getPropertyType()).getDefaultFlags());
         repository.save(plot);
         plots.put(plot.getId(), plot);
         savedOwners.put(plot.getId(), plot.getOwnerUuid());
+        committed.put(plot.getId(), plot.copy());
+        spatialIndex.put(plot.getId(), plot.getBounds());
         return true;
     }
 
@@ -184,17 +320,55 @@ public class PlotManager {
         if (plot == null) {
             return;
         }
+        if (!writeAllowed.getAsBoolean()) {
+            if (committed.containsKey(plot.getId())) plot.restore(committed.get(plot.getId()));
+            throw new IllegalStateException("Zmiany są wstrzymane na czas migracji.");
+        }
+        refreshInherited(plot);
         plot.touch();
+        Plot before = committed.get(plot.getId());
+        try {
+            repository.save(plot);
+        } catch (RuntimeException e) {
+            Plot previous = committed.get(plot.getId());
+            if (previous != null) plot.restore(previous);
+            throw e;
+        }
         plots.put(plot.getId(), plot);
-        repository.save(plot);
-        worldGuardHook.syncMembers(plot);
+        committed.put(plot.getId(), plot.copy());
+        spatialIndex.put(plot.getId(), plot.getBounds());
+        if (!worldGuardHook.syncMembers(plot))
+            throw new IllegalStateException("Nie można zsynchronizować ochrony działki " + plot.getId());
         synchronizeOwnerProfile(plot);
         updateListener.accept(plot);
+        if (audit != null && before != null && !auditState(before).equals(auditState(plot))) {
+            Actor operator = actor.get();
+            UUID id = operator != null ? operator.uuid() : journal != null && journal.currentId() != null ? journal.find(journal.currentId()).map(pl.riftplots.service.transaction.OperationJournal.Entry::actor).orElse(null) : null;
+            audit.log(plot.getId(), id, operator != null ? operator.name() : "SYSTEM", "PLOT_CHANGED", auditState(before) + " -> " + auditState(plot) + " [op:" + currentOperationId() + "]");
+        }
+    }
+
+    private String auditState(Plot plot) {
+        String members = plot.getMembers().values().stream().sorted(java.util.Comparator.comparing(member -> member.getPlayerUuid().toString()))
+                .map(member -> member.getPlayerUuid() + ":" + member.getRole() + member.getPermissions()).collect(java.util.stream.Collectors.joining(","));
+        return plot.getStatus() + " owner=" + plot.getOwnerUuid() + " type=" + plot.getPropertyType() + " district=" + plot.getDistrictId()
+                + " price=" + plot.getPrice() + " tax=" + plot.getBaseTax() + "/" + plot.getTaxMode() + "/" + plot.getTaxMultiplier()
+                + " period=" + plot.getBillingPeriodDays() + " refund=" + plot.getRefundPercentOnAbandon() + " overrides=" + plot.getSettingOverrides() + " members=[" + members + "]"
+                + " name=" + plot.getName() + " description=" + plot.getDescription() + " bounds=" + plot.getBounds()
+                + " tax-enabled=" + plot.isTaxEnabled() + " grace-hours=" + plot.getGracePeriodHours()
+                + " next-tax=" + plot.getNextTaxPayment() + " grace-end=" + plot.getGracePeriodExpiry()
+                + " rental=" + plot.isRentalAvailable() + "/" + plot.getRentalPrice() + "/" + plot.getRentalPeriodUnit() + "/" + plot.getRentalDeposit() + "/" + plot.getActiveRentalId()
+                + " auction=" + plot.isAuctionActive() + " resell=" + plot.isResellAvailable() + "/" + plot.getResellPrice()
+                + " home=" + plot.getHomeWorld() + "/" + plot.getHomeX() + "/" + plot.getHomeY() + "/" + plot.getHomeZ() + "/" + plot.getHomeYaw() + "/" + plot.getHomePitch()
+                + " schematic=" + plot.getSchematicFile() + " auto-reset=" + plot.isAutoResetOnExpire();
     }
 
     private void synchronizeOwnerProfile(Plot plot) {
-        UUID previous = savedOwners.put(plot.getId(), plot.getOwnerUuid());
-        if (profileRepository == null || Objects.equals(previous, plot.getOwnerUuid())) return;
+        UUID previous = savedOwners.get(plot.getId());
+        if (profileRepository == null || Objects.equals(previous, plot.getOwnerUuid())) {
+            savedOwners.put(plot.getId(), plot.getOwnerUuid());
+            return;
+        }
         if (previous != null) {
             profileRepository.findById(previous).ifPresent(profile -> {
                 profile.removeOwnedPlot(plot.getId());
@@ -209,16 +383,23 @@ public class PlotManager {
             profile.addOwnedPlot(plot.getId());
             profileRepository.save(profile);
         }
+        savedOwners.put(plot.getId(), plot.getOwnerUuid());
     }
 
     public boolean deletePlot(String id) {
+        if (!writeAllowed.getAsBoolean()) throw new IllegalStateException("Zmiany są wstrzymane na czas migracji.");
         if (id == null) {
             return false;
         }
-        Plot plot = plots.remove(id.toLowerCase());
+        Plot plot = plots.get(id.toLowerCase());
         if (plot == null) {
             return false;
         }
+        repository.delete(plot.getId());
+        plots.remove(plot.getId());
+        committed.remove(plot.getId());
+        spatialIndex.remove(plot.getId());
+        worldGuardHook.removeRegion(plot.getBounds().getWorldName(), plot.getWorldGuardRegionId());
         UUID owner = savedOwners.remove(plot.getId());
         if (profileRepository != null && owner != null) {
             profileRepository.findById(owner).ifPresent(profile -> {
@@ -226,8 +407,6 @@ public class PlotManager {
                 profileRepository.save(profile);
             });
         }
-        worldGuardHook.removeRegion(plot.getBounds().getWorldName(), plot.getWorldGuardRegionId());
-        repository.delete(id.toLowerCase());
         return true;
     }
 }

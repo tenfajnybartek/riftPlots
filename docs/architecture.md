@@ -60,7 +60,7 @@ Większość operacji zapisu jest synchroniczna. `ConcurrentHashMap` i blokady w
 
 `PlotSnapshotService` zapisuje schemat przez plik tymczasowy, a następnie zastępuje poprzednią wersję. `WorldEditHook` kopiuje stan bloków bez encji.
 
-Reset ma trzy etapy: zatwierdzenie i zapis `RESETTING`, odczyt schematu poza wątkiem serwera oraz wklejanie bloków partiami na wątku serwera. Nowa sesja WorldEdit jest zamykana po każdej porcji. Przed wklejaniem sprawdzane są wymiary schematu, a punkty docelowe wynikają z granic działki. Awaria prowadzi do `DISABLED`; stan `RESETTING` zapisany przed zatrzymaniem serwera jest odtwarzany podczas uruchamiania.
+Reset najpierw rezerwuje działkę, odczytuje schemat poza wątkiem serwera i sprawdza świat, wymiary oraz niezmieniony stan. Następnie zwalnia własność i zapisuje `RESETTING`, a bloki wkleja partiami na wątku serwera. Sesja WorldEdit jest zamykana po każdej porcji. Błąd wklejania prowadzi do `DISABLED`; `RESETTING` jest wznawiane po restarcie. Błąd końcowego zapisu pozostaje widoczny w logu, a blokada zadania jest zwalniana.
 
 ## Zdarzenia API
 
@@ -86,7 +86,7 @@ Wymagane jest JDK 25. Wrapper używa Gradle wskazanego w [`gradle-wrapper.proper
 .\gradlew.bat build
 ```
 
-Na Linux/macOS użyj `./gradlew`. Zadanie `build` uruchamia testy i buduje Shadow JAR: `build/libs/riftPlots-1.0.0.jar`. Gradle pobiera zależności z repozytoriów zapisanych w `build.gradle.kts`. Paper API jest wskazane jako `26.3.build.+`, więc wynik rozwiązywania zależności może zmienić się między pobraniami.
+Na Linux/macOS użyj `./gradlew`. `build` uruchamia testy i buduje Shadow JAR: `build/libs/riftPlots-1.0.0.jar`. API Paper jest przypięte do `26.3.build.246-stable`. `integrationProbeJar` tworzy osobny plugin testowy, którego klasy nie trafiają do produkcyjnego JAR-a.
 
 SQLite używa natywnego JNI. Jego klasy zachowują oryginalny pakiet `org.sqlite`; zmiana nazwy tego pakietu uniemożliwia bibliotece natywnej znalezienie `org.sqlite.core.NativeDB`. HikariCP i MySQL są relokowane. Pliki usług JDBC są scalane w Shadow JAR.
 
@@ -102,6 +102,6 @@ Test `ShadedSqliteTest` uruchamia osobną JVM z gotowym JAR-em, bez zależności
 | `StorageMigrationTest` | Przejście SQLite → YAML → SQLite, profile, usługi, budżet, audyt oraz błędy magazynu. |
 | `ShadedSqliteTest` | Sterownik SQLite w gotowym artefakcie. |
 
-HTML z wynikami: `build/reports/tests/test/index.html`. Testy usług używają atrap granic Bukkit/Vault; nie uruchamiają serwera Minecraft. Ręczne scenariusze integracyjne opisuje [raport przeglądu](review.md#zakres-weryfikacji).
+HTML z wynikami: `build/reports/tests/test/index.html`. Testy usług używają atrap granic Bukkit/Vault. Osobne scenariusze MySQL i Paper, kolejkę migracji oraz backup opisuje [przewodnik P1–P2](wiki/Nowosci-P1-P2.md).
 
 Repozytorium nie zawiera pliku `LICENSE`. Wybór zasad udostępniania kodu i grafik pozostaje po stronie autora.

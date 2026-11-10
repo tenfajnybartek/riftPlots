@@ -60,7 +60,7 @@ public class YamlPlotSignRepository implements PlotSignRepository {
             if (parent != null && !parent.exists()) {
                 parent.mkdirs();
             }
-            config.save(signsFile);
+            YamlDataFile.save(config, signsFile);
         } catch (IOException e) {
             throw new IllegalStateException("Storage operation failed", e);
         }

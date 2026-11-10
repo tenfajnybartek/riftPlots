@@ -97,6 +97,26 @@ class MarketServiceTest {
     }
 
     @Test
+    void eventDiscountIsAppliedBeforeBalanceChecksForPurchaseAndTax() {
+        var plot = TestFixtures.plot(null);
+        when(vault.has(any(), any())).thenAnswer(call -> ((BigDecimal) call.getArgument(1)).compareTo(BigDecimal.ONE) <= 0);
+        var events = mock(PluginManager.class);
+        doAnswer(call -> {
+            Object event = call.getArgument(0);
+            if (event instanceof pl.riftplots.api.PlotBuyEvent purchase) purchase.setPrice(BigDecimal.ONE);
+            if (event instanceof pl.riftplots.api.PlotTaxPayEvent tax) tax.setAmount(BigDecimal.ONE);
+            return null;
+        }).when(events).callEvent(any());
+        var service = payments();
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(events);
+            assertTrue(service.buyPlot(buyer, plot));
+            assertTrue(service.payTax(buyer, plot, 1));
+        }
+        verify(vault, times(2)).withdraw(buyer, BigDecimal.ONE);
+    }
+
+    @Test
     void failedAuctionWithdrawalNeverTransfersOwnershipOrCreditsTheCity() {
         Plot plot = TestFixtures.plot(null);
         when(plots.getPlot(plot.getId())).thenReturn(Optional.of(plot));
@@ -273,6 +293,120 @@ class MarketServiceTest {
         plot.setRentalAvailable(true);
         assertFalse(payments().buyPlot(buyer, plot));
         verify(vault, never()).withdraw(any(), any());
+    }
+
+    @Test
+    void auctionPayoutDoesNotCreateMoneyForAFractionalCentBid() {
+        Plot plot = TestFixtures.plot(seller.getUniqueId());
+        when(plots.getPlot(plot.getId())).thenReturn(Optional.of(plot));
+        AuctionService auctions = auctions();
+        BigDecimal price = new BigDecimal("0.009");
+        assertTrue(auctions.startAuction(plot, seller.getUniqueId(), BigDecimal.ZERO, new BigDecimal("0.001"), 5, null));
+        assertTrue(auctions.placeBid(buyer, plot.getId(), price));
+        auctions.getAuction(plot.getId()).orElseThrow().setEndTime(Instant.now().minusSeconds(1));
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getOfflinePlayer(buyer.getUniqueId())).thenReturn(buyer);
+            bukkit.when(() -> Bukkit.getOfflinePlayer(seller.getUniqueId())).thenReturn(seller);
+            auctions.checkCompletedAuctions();
+        }
+        verify(vault).deposit(seller, price);
+        UUID buyerUuid = buyer.getUniqueId();
+        verify(budget).recordTransaction(eq(CityTransactionType.AUCTION_FEE), eq(new BigDecimal("0.00")),
+                eq(plot.getId()), eq(buyerUuid), anyString());
+    }
+
+    @Test
+    void transferCommissionCannotExceedThePrice() {
+        var settings = TestFixtures.resource("config.yml");
+        settings.set("market.transfer-fee-percent", 100);
+        config.load(settings);
+        Plot plot = TestFixtures.plot(seller.getUniqueId());
+        when(plots.getPlot(plot.getId())).thenReturn(Optional.of(plot));
+        PlotTransferService transfers = transfers();
+        BigDecimal price = new BigDecimal("0.009");
+        var offer = transfers.createOffer(plot, seller, buyer, price, 300).orElseThrow();
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getOfflinePlayer(seller.getUniqueId())).thenReturn(seller);
+            assertTrue(transfers.acceptOffer(buyer, offer.getId()));
+        }
+        verify(vault).deposit(eq(seller), argThat(value -> value.signum() == 0));
+        verify(budget).recordTransaction(eq(CityTransactionType.PURCHASE_INCOME), eq(price), eq(plot.getId()), any(), anyString());
+    }
+
+    @Test
+    void escrowChargesOnlyTheIncrementAndNeverChargesTheWinnerAgain() {
+        var settings = TestFixtures.resource("config.yml");
+        settings.set("auction.escrow-enabled", true);
+        config.load(settings);
+        Plot plot = TestFixtures.plot(seller.getUniqueId());
+        when(plots.getPlot(plot.getId())).thenReturn(Optional.of(plot));
+        var journal = new pl.riftplots.service.transaction.OperationJournal(directory.toFile());
+        journal.initialize();
+        var refunds = new pl.riftplots.service.transaction.RefundService(directory.toFile(), journal, vault);
+        refunds.initialize();
+        refunds.setEligibility(refund -> journal.find(refund.releaseId()).filter(entry -> entry.status() == pl.riftplots.service.transaction.OperationJournal.Status.COMPLETED).isPresent());
+        var auctions = auctions();
+        auctions.setOperationJournal(journal);
+        auctions.setRefundService(refunds);
+        Player second = player("Second");
+        assertTrue(auctions.startAuction(plot, seller.getUniqueId(), BigDecimal.TEN, BigDecimal.ONE, 5, null));
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getOfflinePlayer(buyer.getUniqueId())).thenReturn(buyer);
+            bukkit.when(() -> Bukkit.getOfflinePlayer(second.getUniqueId())).thenReturn(second);
+            bukkit.when(() -> Bukkit.getOfflinePlayer(seller.getUniqueId())).thenReturn(seller);
+            assertTrue(auctions.placeBid(buyer, plot.getId(), BigDecimal.TEN));
+            assertTrue(auctions.placeBid(second, plot.getId(), BigDecimal.valueOf(20)));
+            assertTrue(auctions.placeBid(second, plot.getId(), BigDecimal.valueOf(30)));
+            var restarted = auctions();
+            restarted.setOperationJournal(journal);
+            restarted.setRefundService(refunds);
+            restarted.initialize();
+            var loaded = restarted.getAuction(plot.getId()).orElseThrow();
+            assertTrue(loaded.isEscrowEnabled());
+            assertEquals(3, loaded.getBids().size());
+            loaded.setEndTime(Instant.now().minusSeconds(1));
+            restarted.checkCompletedAuctions();
+            restarted.checkCompletedAuctions();
+            assertEquals(second.getUniqueId(), plot.getOwnerUuid());
+            assertEquals(3, restarted.getBidHistory(plot.getId(), 0).size());
+        }
+        verify(vault, times(1)).withdraw(buyer, BigDecimal.TEN);
+        verify(vault, times(1)).withdraw(second, BigDecimal.valueOf(20));
+        verify(vault, times(1)).withdraw(second, BigDecimal.TEN);
+        verify(vault, never()).withdraw(second, BigDecimal.valueOf(30));
+        verify(vault, times(1)).deposit(buyer, BigDecimal.TEN);
+        verify(vault).deposit(seller, new BigDecimal("28.50"));
+        assertTrue(journal.pending().isEmpty());
+    }
+
+    @Test
+    void transferOfferSurvivesRestartWithTheSameIdAndExpiry() {
+        var plot = TestFixtures.plot(seller.getUniqueId());
+        var service = transfers();
+        service.initialize(directory.toFile());
+        var offer = service.createOffer(plot, seller, buyer, BigDecimal.TEN, 300).orElseThrow();
+        var restarted = transfers();
+        restarted.initialize(directory.toFile());
+        var loaded = restarted.getOffersForBuyer(buyer.getUniqueId()).getFirst();
+        assertEquals(offer.getId(), loaded.getId());
+        assertEquals(offer.getExpiresAt().toEpochMilli(), loaded.getExpiresAt().toEpochMilli());
+        restarted.cancelOffer(buyer, loaded.getId());
+        var again = transfers();
+        again.initialize(directory.toFile());
+        assertTrue(again.getOffersForBuyer(buyer.getUniqueId()).isEmpty());
+    }
+
+    @Test
+    void failedAuctionCreationLeavesADurableBlockUntilTheTwoRecordsAreReconciled() throws Exception {
+        var journal = new pl.riftplots.service.transaction.OperationJournal(directory.toFile()); journal.initialize();
+        java.nio.file.Files.createDirectories(directory.resolve("data/auctions.yml/occupied"));
+        var plot = TestFixtures.plot(seller.getUniqueId());
+        var service = auctions(); service.setOperationJournal(journal);
+        assertThrows(IllegalStateException.class, () -> service.startAuction(plot, seller.getUniqueId(), BigDecimal.TEN, BigDecimal.ONE, 5, null));
+        assertTrue(journal.isBlocked(plot.getId()));
+        var restarted = new pl.riftplots.service.transaction.OperationJournal(directory.toFile()); restarted.initialize();
+        assertEquals("AUCTION_START", restarted.pending().getFirst().kind());
+        assertTrue(restarted.isBlocked(plot.getId())); verifyNoInteractions(vault);
     }
 
     @Test

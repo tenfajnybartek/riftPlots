@@ -27,6 +27,7 @@ import java.util.*;
 public class AdminCommandDispatcher {
     private final Map<String, SubCommand> subCommands = new HashMap<>();
     private final MessageConfiguration messageConfig;
+    private java.util.function.Predicate<String> plotManagerGuard;
 
     public AdminCommandDispatcher(RiftPlotsPlugin plugin,
                                   PluginConfiguration config,
@@ -46,6 +47,7 @@ public class AdminCommandDispatcher {
                                   AuctionService auctionService,
                                   RentalService rentalService) {
         this.messageConfig = messageConfig;
+        this.plotManagerGuard = id -> plotManager.isResetPending(id) || plotManager.financiallyBlocked(id, null);
 
         register(new AdminCreateSubCommand(plotManager, worldEditHook, snapshotService, config, messageConfig));
         register(new AdminDeleteSubCommand(plotManager, signService, messageConfig));
@@ -64,15 +66,19 @@ public class AdminCommandDispatcher {
         register(new AdminUnsignSubCommand(signService, messageConfig));
         register(new AdminListSubCommand(plotManager));
         register(new AdminReloadSubCommand(plugin, messageConfig));
-        register(new AdminAuditSubCommand(plotManager, transactionRepository, config));
+        var auditCommand = new AdminAuditSubCommand(plotManager, transactionRepository, config);
+        auditCommand.setAuditService(plugin.getAuditService());
+        register(auditCommand);
         register(new AdminDisableSubCommand(plotManager, signService, messageConfig));
         register(new AdminEnableSubCommand(plotManager, signService, messageConfig));
         register(new AdminDistrictSubCommand(districtManager, plotManager));
         register(new AdminTypeSubCommand(typeManager, plotManager));
         register(new AdminBudgetSubCommand(budgetService));
-        register(new AdminMigrateSubCommand(migrationService));
+        register(new AdminMigrateSubCommand(migrationService, plugin));
         register(new AdminAuctionSubCommand(auctionService, plotManager));
         register(new AdminRentSubCommand(rentalService, plotManager));
+        register(new AdminTransactionsSubCommand(plugin.getOperationJournal(), plugin.getRefundService()));
+        register(new AdminHealthSubCommand(plugin, plugin.getStorageBackend(), plugin.getWorldGuardHook(), snapshotService));
     }
 
     private void register(SubCommand sub) {
@@ -103,6 +109,15 @@ public class AdminCommandDispatcher {
         }
 
         String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+        boolean readOnly = Set.of("help", "info", "list", "audit", "health", "transactions").contains(subName)
+                || Set.of("type", "district").contains(subName) && subArgs.length > 0 && Set.of("list", "info").contains(subArgs[0].toLowerCase(Locale.ROOT));
+        if (!readOnly && subArgs.length > 0) {
+            String id = Set.of("type", "district", "rent", "auction").contains(subName) && subArgs.length > 1 ? subArgs[1] : subArgs[0];
+            if (plotManagerGuard.test(id)) {
+                sender.sendMessage("Działka ma trwający reset lub operację wymagającą uzgodnienia. Sprawdź /plots admin health i transactions.");
+                return true;
+            }
+        }
         return sub.execute(sender, subArgs);
     }
 

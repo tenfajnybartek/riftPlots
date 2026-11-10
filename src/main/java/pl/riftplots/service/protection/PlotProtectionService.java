@@ -48,7 +48,7 @@ public class PlotProtectionService {
             return true;
         }
 
-        if (plot.getStatus() == PlotStatus.RESETTING || plot.getStatus() == PlotStatus.DISABLED) {
+        if (plotManager.isResetPending(plot.getId()) || plot.getStatus() == PlotStatus.RESETTING || plot.getStatus() == PlotStatus.DISABLED) {
             return false;
         }
 
@@ -61,7 +61,7 @@ public class PlotProtectionService {
         }
 
         if (requiredPermission != null) {
-            return plot.hasPermission(player.getUniqueId(), requiredPermission);
+            return plotManager.hasUsableMembership(plot, player.getUniqueId()) && plot.hasPermission(player.getUniqueId(), requiredPermission);
         }
 
         return false;

@@ -43,15 +43,15 @@ Zwrot przy dobrowolnym oddaniu może zostać zapisany jako wydatek miasta. Nie n
 /plots admin audit rynek_1
 ```
 
-`history` jest ścieżką gracza do zapisanych transakcji. Administracyjne `audit` obecnie również wyświetla historię transakcji finansowych lokalu — nie jest przeglądarką całej tabeli logów operacyjnych `AuditService`.
+`history [id|all] [strona]` pokazuje dziennik operacji i zwroty. Opcja `legacy` otwiera starsze transakcje. Historia lokalu jest domyślnie prywatna. `admin audit <id> [strona]` pokazuje logi operacyjne z operatorem i zmianami stanu oraz transakcje.
 
-Zakupy i podatki tworzą rekordy transakcji. Usługi najmu i aukcji zapisują własne dane oraz odpowiednie wpisy budżetu/audytu; nie każda ich operacja trafia do tej samej historii gracza.
+Nowe rozliczenia zakupu, podatku, najmu, transferów, aukcji i zwrotów mają ID we wspólnym dzienniku. Starsze rekordy pozostają dostępne jako historia `legacy`.
 
 ## Zapis i restart
 
 Przy YAML budżet znajduje się w `data/city_budget.yml`, a audyt w `data/audit_logs.yml`. SQL używa odpowiednich tabel. Historia księgi YAML i zapisany audyt są dostępne po restarcie.
 
-Kolejka powiadomień dla nieobecnych graczy jest innym mechanizmem i pozostaje w pamięci. Utrata takiego powiadomienia po restarcie nie oznacza automatycznie utraty zapisanej transakcji.
+Wiadomości mają trwałe ID, datę i potwierdzenie wysłania przez serwer. `/plots notifications [strona]` pokazuje ich historię. Retencja dotyczy wysłanych wpisów; przerwanie między wysłaniem a potwierdzeniem może spowodować ponowne wysłanie.
 
 ## Wyjaśnianie rozbieżności
 

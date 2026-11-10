@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.*;
 
@@ -71,7 +70,6 @@ public class YamlPlotRepository implements PlotRepository {
             return;
         }
         File file = new File(plotsDirectory, plot.getId().toLowerCase() + ".yml");
-        File tempFile = new File(plotsDirectory, plot.getId().toLowerCase() + ".yml.tmp");
 
         YamlConfiguration config = new YamlConfiguration();
         config.set("id", plot.getId());
@@ -96,6 +94,7 @@ public class YamlPlotRepository implements PlotRepository {
         config.set("economy.taxMode", plot.getTaxMode().name());
         config.set("economy.taxMultiplier", plot.getTaxMultiplier());
         config.set("economy.taxEnabled", plot.isTaxEnabled());
+        config.set("economy.overrides", plot.getSettingOverrides().stream().map(Enum::name).toList());
         config.set("economy.billingPeriodDays", plot.getBillingPeriodDays());
         config.set("economy.gracePeriodHours", plot.getGracePeriodHours());
 
@@ -150,14 +149,9 @@ public class YamlPlotRepository implements PlotRepository {
         config.set("timestamps.updatedAt", plot.getUpdatedAt().toEpochMilli());
 
         try {
-            config.save(tempFile);
-            Files.move(tempFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            YamlDataFile.save(config, file);
         } catch (IOException e) {
-            try {
-                config.save(file);
-            } catch (IOException ex) {
-                throw new IllegalStateException("Storage operation failed", ex);
-            }
+            throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
@@ -177,8 +171,10 @@ public class YamlPlotRepository implements PlotRepository {
             return;
         }
         File file = new File(plotsDirectory, id.toLowerCase() + ".yml");
-        if (file.exists()) {
-            file.delete();
+        try {
+            Files.deleteIfExists(file.toPath());
+        } catch (IOException e) {
+            throw new IllegalStateException("Nie można usunąć danych działki: " + id, e);
         }
     }
 
@@ -292,6 +288,9 @@ public class YamlPlotRepository implements PlotRepository {
             loadedPlot.setResellAvailable(config.getBoolean("market.resellAvailable", false));
             loadedPlot.setAuctionActive(config.getBoolean("market.auctionActive", false));
 
+            if (config.contains("economy.overrides"))
+                loadedPlot.setSettingOverrides(config.getStringList("economy.overrides").stream()
+                        .map(PropertySetting::valueOf).collect(java.util.stream.Collectors.toSet()));
             return loadedPlot;
         } catch (Exception e) {
             throw new IllegalStateException("Storage operation failed", e);

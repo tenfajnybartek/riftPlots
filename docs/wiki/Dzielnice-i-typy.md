@@ -21,7 +21,7 @@ Poniższe wartości pochodzą z `plot-types.yml`.
 | `RENTAL` | 30 000 | 1 000 | `FIXED` / 7 | 3 | Tak / nie |
 | `CUSTOM` | 50 000 | 2 500 | `CUSTOM` / 7 | 25 | Tak / tak |
 
-> To wartości definicji typu, a nie automatyczny cennik wszystkich działek. `type set` zapisuje typ, ale nie przepisuje na działkę ceny, podatku, trybu, okresu ani procentu zwrotu.
+> Nowe działki dziedziczą te wartości. Starsze rekordy zachowują ustawienia jako jawne nadpisania. Dostępne działki aktualizują parametry dziedziczone; posiadane lokale zachowują warunki rozliczenia.
 
 ## Jak przypisać typ?
 
@@ -31,7 +31,7 @@ Poniższe wartości pochodzą z `plot-types.yml`.
 /plots admin type set rynek_1 COMMERCIAL
 ```
 
-Po przypisaniu ustal parametry konkretnej działki:
+Możesz ustawić indywidualne nadpisania:
 
 ```text
 /plots admin setprice rynek_1 45000
@@ -40,7 +40,7 @@ Po przypisaniu ustal parametry konkretnej działki:
 /plots admin setperiod rynek_1 7
 ```
 
-Pola `rental-allowed`, `sales-allowed` i limit dodawania współużytkowników mają zastosowanie w odpowiednich ścieżkach usług. Samo pole `flags` nie nadaje automatycznie flag regionowi WorldGuard, a `icon-material` nie zmienia automatycznie ikony GUI.
+Reguły sprzedaży, najmu i limitów są sprawdzane w usługach. Ikona typu działa w rynku. Flagi stanu typu (`allow`/`deny`) są stosowane przy rejestracji i jawnym `type apply-defaults`. Ta komenda pokazuje różnice i wymaga `confirm`; usuwa ręczne nadpisania. [Szczegóły](Nowosci-P1-P2.md#dziedziczenie-i-ręczne-ceny).
 
 ## Dzielnice domyślne
 
@@ -66,8 +66,8 @@ Limit jest sprawdzany przy zakupie, transferze i rozliczeniu aukcji. `max-plots-
 | Ustawienie | Aktualne zachowanie |
 | :--- | :--- |
 | `tax-multiplier` dzielnicy | Mnoży wynik podatku, również dla `CUSTOM`. |
-| `price-multiplier` dzielnicy | Jest w definicji, ale nie zmienia bezpośredniej ceny zakupu `Plot.price`. |
-| `default-*` typu | Nie są automatycznie kopiowane przez komendę przypisania typu. |
+| `price-multiplier` dzielnicy | Mnoży dziedziczoną cenę typu. Ręczna cena jest końcowa. |
+| `default-*` typu | Obowiązują dla parametrów dziedziczonych dostępnych działek; aktywne umowy zachowują warunki. |
 | `max-members` typu | Kontroluje dodawanie przez `trust`; automatyczny najem jest osobną operacją. |
 | `sales-enabled` i `rental-enabled` | Są sprawdzane przy odpowiednich operacjach nabycia lub najmu. |
 

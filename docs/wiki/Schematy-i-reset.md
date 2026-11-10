@@ -13,8 +13,8 @@ Przygotuj wzorzec jako gotowy lokal dla następnego użytkownika. Zawartość po
 | Komenda | Znaczenie |
 | :--- | :--- |
 | `/plots admin snapshot rynek_1` | Zapisuje aktualny stan jako nowy wzorzec. |
-| `/plots admin reset rynek_1` | Usuwa własność i uruchamia odtworzenie wzorca. |
-| `/plots admin restore rynek_1` | Wywołuje ten sam mechanizm resetu, również usuwając własność. |
+| `/plots admin reset rynek_1 [confirm]` | Pokazuje podgląd; z `confirm` oddaje własność i odtwarza wzorzec. |
+| `/plots admin restore rynek_1 [confirm]` | Ten sam podgląd i potwierdzenie resetu. |
 
 > **`restore` nie zachowuje właściciela.** Jeśli chcesz tylko naprawić kilka bloków właściciela, nie traktuj tej komendy jako kosmetycznej naprawy.
 
@@ -30,16 +30,16 @@ Reset może rozpocząć administrator. Przy domyślnej polityce uruchamia go tak
 flowchart TD
     A["Żądanie resetu"] --> B{"Istnieje niepusty schemat?"}
     B -->|Nie| C["DISABLED<br/>Dotychczasowa własność pozostaje"]
-    B -->|Tak| D["Zdarzenie rozpoczęcia i rozliczenie najmu"]
-    D --> E["Odebranie własności, anulowanie aukcji<br/>Zapis RESETTING"]
-    E --> F["Wczytanie schematu i kontrola wymiarów"]
-    F --> G["Wklejanie bloków partiami"]
+    B -->|Tak| D["Zdarzenie rozpoczęcia"]
+    D --> F["Wczytanie schematu i kontrola wymiarów"]
+    F --> E["Zakończenie najmu i aukcji, oddanie własności<br/>Zapis RESETTING"]
+    E --> G["Wklejanie bloków partiami"]
     G -->|Sukces| H["AVAILABLE"]
-    F -->|Błąd| I["DISABLED"]
-    G -->|Błąd| I
+    F -->|Błąd| J["Odrzucone przygotowanie<br/>Własność pozostaje"]
+    G -->|Błąd| I["DISABLED"]
 ```
 
-Dodatek korzystający z API może anulować rozpoczęcie. Nieudany zwrot kaucji również może powstrzymać przejście do resetu. Po zaakceptowanym rozpoczęciu własność, współużytkownicy, punkt domowy i dane bieżącego użytkowania są czyszczone.
+Dodatek korzystający z API może anulować rozpoczęcie. Zwrot kaucji jest osobnym zobowiązaniem i odmowa ekonomii nie zachowuje wygasłego dostępu. Błąd zapisu zakończenia umowy może odrzucić reset. Własność jest czyszczona dopiero po odczycie i walidacji schematu; blokada przygotowania jest zwalniana także po błędzie.
 
 Odczyt schematu odbywa się poza wątkiem serwera. Wklejanie świata odbywa się na jego wątku w porcjach:
 

@@ -85,70 +85,70 @@ public class SqlPlotRepository implements PlotRepository {
             return;
         }
         String sql = """
-            INSERT INTO rift_plots (
-                id, name, description, category, status, world, min_x, min_y, min_z, max_x, max_y, max_z,
-                worldguard_region_id, price, base_tax, tax_mode, tax_multiplier, tax_enabled,
-                billing_period_days, grace_period_hours, owner_uuid, owner_name, purchase_date,
-                next_tax_payment, grace_period_expiry, advance_periods_paid, schematic_file,
-                auto_reset_on_expire, refund_percent_on_abandon, created_at, updated_at,
-                property_type, district_id, rental_available, rental_price, rental_period_unit,
-                rental_deposit, active_rental_id, home_world, home_x, home_y, home_z, home_yaw, home_pitch,
-                resell_price, resell_available, auction_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                name = VALUES(name), description = VALUES(description), category = VALUES(category),
-                status = VALUES(status), world = VALUES(world), min_x = VALUES(min_x), min_y = VALUES(min_y),
-                min_z = VALUES(min_z), max_x = VALUES(max_x), max_y = VALUES(max_y), max_z = VALUES(max_z),
-                worldguard_region_id = VALUES(worldguard_region_id), price = VALUES(price), base_tax = VALUES(base_tax),
-                tax_mode = VALUES(tax_mode), tax_multiplier = VALUES(tax_multiplier), tax_enabled = VALUES(tax_enabled),
-                billing_period_days = VALUES(billing_period_days), grace_period_hours = VALUES(grace_period_hours),
-                owner_uuid = VALUES(owner_uuid), owner_name = VALUES(owner_name), purchase_date = VALUES(purchase_date),
-                next_tax_payment = VALUES(next_tax_payment), grace_period_expiry = VALUES(grace_period_expiry),
-                advance_periods_paid = VALUES(advance_periods_paid), schematic_file = VALUES(schematic_file),
-                auto_reset_on_expire = VALUES(auto_reset_on_expire), refund_percent_on_abandon = VALUES(refund_percent_on_abandon),
-                updated_at = VALUES(updated_at),
-                property_type = VALUES(property_type), district_id = VALUES(district_id),
-                rental_available = VALUES(rental_available), rental_price = VALUES(rental_price),
-                rental_period_unit = VALUES(rental_period_unit), rental_deposit = VALUES(rental_deposit),
-                active_rental_id = VALUES(active_rental_id), home_world = VALUES(home_world),
-                home_x = VALUES(home_x), home_y = VALUES(home_y), home_z = VALUES(home_z),
-                home_yaw = VALUES(home_yaw), home_pitch = VALUES(home_pitch),
-                resell_price = VALUES(resell_price), resell_available = VALUES(resell_available),
-                auction_active = VALUES(auction_active)
-        """;
+                    INSERT INTO rift_plots (
+                        id, name, description, category, status, world, min_x, min_y, min_z, max_x, max_y, max_z,
+                        worldguard_region_id, price, base_tax, tax_mode, tax_multiplier, tax_enabled,
+                        billing_period_days, grace_period_hours, owner_uuid, owner_name, purchase_date,
+                        next_tax_payment, grace_period_expiry, advance_periods_paid, schematic_file,
+                        auto_reset_on_expire, refund_percent_on_abandon, created_at, updated_at,
+                        property_type, district_id, rental_available, rental_price, rental_period_unit,
+                        rental_deposit, active_rental_id, home_world, home_x, home_y, home_z, home_yaw, home_pitch,
+                        resell_price, resell_available, auction_active, settings_overrides
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        name = VALUES(name), description = VALUES(description), category = VALUES(category),
+                        status = VALUES(status), world = VALUES(world), min_x = VALUES(min_x), min_y = VALUES(min_y),
+                        min_z = VALUES(min_z), max_x = VALUES(max_x), max_y = VALUES(max_y), max_z = VALUES(max_z),
+                        worldguard_region_id = VALUES(worldguard_region_id), price = VALUES(price), base_tax = VALUES(base_tax),
+                        tax_mode = VALUES(tax_mode), tax_multiplier = VALUES(tax_multiplier), tax_enabled = VALUES(tax_enabled),
+                        billing_period_days = VALUES(billing_period_days), grace_period_hours = VALUES(grace_period_hours),
+                        owner_uuid = VALUES(owner_uuid), owner_name = VALUES(owner_name), purchase_date = VALUES(purchase_date),
+                        next_tax_payment = VALUES(next_tax_payment), grace_period_expiry = VALUES(grace_period_expiry),
+                        advance_periods_paid = VALUES(advance_periods_paid), schematic_file = VALUES(schematic_file),
+                        auto_reset_on_expire = VALUES(auto_reset_on_expire), refund_percent_on_abandon = VALUES(refund_percent_on_abandon),
+                        updated_at = VALUES(updated_at),
+                        property_type = VALUES(property_type), district_id = VALUES(district_id),
+                        rental_available = VALUES(rental_available), rental_price = VALUES(rental_price),
+                        rental_period_unit = VALUES(rental_period_unit), rental_deposit = VALUES(rental_deposit),
+                        active_rental_id = VALUES(active_rental_id), home_world = VALUES(home_world),
+                        home_x = VALUES(home_x), home_y = VALUES(home_y), home_z = VALUES(home_z),
+                        home_yaw = VALUES(home_yaw), home_pitch = VALUES(home_pitch),
+                        resell_price = VALUES(resell_price), resell_available = VALUES(resell_available),
+                        auction_active = VALUES(auction_active), settings_overrides = VALUES(settings_overrides)
+                """;
 
         String sqliteSql = """
-            INSERT INTO rift_plots (
-                id, name, description, category, status, world, min_x, min_y, min_z, max_x, max_y, max_z,
-                worldguard_region_id, price, base_tax, tax_mode, tax_multiplier, tax_enabled,
-                billing_period_days, grace_period_hours, owner_uuid, owner_name, purchase_date,
-                next_tax_payment, grace_period_expiry, advance_periods_paid, schematic_file,
-                auto_reset_on_expire, refund_percent_on_abandon, created_at, updated_at,
-                property_type, district_id, rental_available, rental_price, rental_period_unit,
-                rental_deposit, active_rental_id, home_world, home_x, home_y, home_z, home_yaw, home_pitch,
-                resell_price, resell_available, auction_active
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name, description = excluded.description, category = excluded.category,
-                status = excluded.status, world = excluded.world, min_x = excluded.min_x, min_y = excluded.min_y,
-                min_z = excluded.min_z, max_x = excluded.max_x, max_y = excluded.max_y, max_z = excluded.max_z,
-                worldguard_region_id = excluded.worldguard_region_id, price = excluded.price, base_tax = excluded.base_tax,
-                tax_mode = excluded.tax_mode, tax_multiplier = excluded.tax_multiplier, tax_enabled = excluded.tax_enabled,
-                billing_period_days = excluded.billing_period_days, grace_period_hours = excluded.grace_period_hours,
-                owner_uuid = excluded.owner_uuid, owner_name = excluded.owner_name, purchase_date = excluded.purchase_date,
-                next_tax_payment = excluded.next_tax_payment, grace_period_expiry = excluded.grace_period_expiry,
-                advance_periods_paid = excluded.advance_periods_paid, schematic_file = excluded.schematic_file,
-                auto_reset_on_expire = excluded.auto_reset_on_expire, refund_percent_on_abandon = excluded.refund_percent_on_abandon,
-                updated_at = excluded.updated_at,
-                property_type = excluded.property_type, district_id = excluded.district_id,
-                rental_available = excluded.rental_available, rental_price = excluded.rental_price,
-                rental_period_unit = excluded.rental_period_unit, rental_deposit = excluded.rental_deposit,
-                active_rental_id = excluded.active_rental_id, home_world = excluded.home_world,
-                home_x = excluded.home_x, home_y = excluded.home_y, home_z = excluded.home_z,
-                home_yaw = excluded.home_yaw, home_pitch = excluded.home_pitch,
-                resell_price = excluded.resell_price, resell_available = excluded.resell_available,
-                auction_active = excluded.auction_active
-        """;
+                    INSERT INTO rift_plots (
+                        id, name, description, category, status, world, min_x, min_y, min_z, max_x, max_y, max_z,
+                        worldguard_region_id, price, base_tax, tax_mode, tax_multiplier, tax_enabled,
+                        billing_period_days, grace_period_hours, owner_uuid, owner_name, purchase_date,
+                        next_tax_payment, grace_period_expiry, advance_periods_paid, schematic_file,
+                        auto_reset_on_expire, refund_percent_on_abandon, created_at, updated_at,
+                        property_type, district_id, rental_available, rental_price, rental_period_unit,
+                        rental_deposit, active_rental_id, home_world, home_x, home_y, home_z, home_yaw, home_pitch,
+                        resell_price, resell_available, auction_active, settings_overrides
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        name = excluded.name, description = excluded.description, category = excluded.category,
+                        status = excluded.status, world = excluded.world, min_x = excluded.min_x, min_y = excluded.min_y,
+                        min_z = excluded.min_z, max_x = excluded.max_x, max_y = excluded.max_y, max_z = excluded.max_z,
+                        worldguard_region_id = excluded.worldguard_region_id, price = excluded.price, base_tax = excluded.base_tax,
+                        tax_mode = excluded.tax_mode, tax_multiplier = excluded.tax_multiplier, tax_enabled = excluded.tax_enabled,
+                        billing_period_days = excluded.billing_period_days, grace_period_hours = excluded.grace_period_hours,
+                        owner_uuid = excluded.owner_uuid, owner_name = excluded.owner_name, purchase_date = excluded.purchase_date,
+                        next_tax_payment = excluded.next_tax_payment, grace_period_expiry = excluded.grace_period_expiry,
+                        advance_periods_paid = excluded.advance_periods_paid, schematic_file = excluded.schematic_file,
+                        auto_reset_on_expire = excluded.auto_reset_on_expire, refund_percent_on_abandon = excluded.refund_percent_on_abandon,
+                        updated_at = excluded.updated_at,
+                        property_type = excluded.property_type, district_id = excluded.district_id,
+                        rental_available = excluded.rental_available, rental_price = excluded.rental_price,
+                        rental_period_unit = excluded.rental_period_unit, rental_deposit = excluded.rental_deposit,
+                        active_rental_id = excluded.active_rental_id, home_world = excluded.home_world,
+                        home_x = excluded.home_x, home_y = excluded.home_y, home_z = excluded.home_z,
+                        home_yaw = excluded.home_yaw, home_pitch = excluded.home_pitch,
+                        resell_price = excluded.resell_price, resell_available = excluded.resell_available,
+                        auction_active = excluded.auction_active, settings_overrides = excluded.settings_overrides
+                """;
 
         boolean isSqlite = databaseManager.getStorageType() == pl.riftplots.storage.StorageType.SQLITE;
         String query = isSqlite ? sqliteSql : sql;
@@ -208,6 +208,7 @@ public class SqlPlotRepository implements PlotRepository {
                 ps.setBigDecimal(45, plot.getResellPrice());
                 ps.setBoolean(46, plot.isResellAvailable());
                 ps.setBoolean(47, plot.isAuctionActive());
+                ps.setString(48, String.join(",", plot.getSettingOverrides().stream().map(Enum::name).toList()));
 
                 ps.executeUpdate();
             }
@@ -373,6 +374,9 @@ public class SqlPlotRepository implements PlotRepository {
         plot.setResellPrice(resPrice != null ? resPrice : BigDecimal.ZERO);
         plot.setResellAvailable(rs.getBoolean("resell_available"));
         plot.setAuctionActive(rs.getBoolean("auction_active"));
+        String overrides = rs.getString("settings_overrides");
+        if (overrides != null)
+            plot.setSettingOverrides(overrides.isEmpty() ? java.util.Set.of() : java.util.Arrays.stream(overrides.split(",")).map(PropertySetting::valueOf).collect(java.util.stream.Collectors.toSet()));
 
         return plot;
     }

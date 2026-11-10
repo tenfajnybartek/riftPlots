@@ -116,4 +116,17 @@ public class RentalAgreement {
     public boolean isActive() {
         return status == RentalStatus.ACTIVE && Instant.now().isBefore(endDate);
     }
+
+    public RentalAgreement copy() {
+        return new RentalAgreement(id, plotId, ownerUuid, tenantUuid, tenantName, rentPrice, periodUnit, deposit,
+                startDate, endDate, autoRenew, status);
+    }
+
+    public void restore(RentalAgreement state) {
+        if (this == state) return;
+        if (!id.equals(state.id)) throw new IllegalArgumentException("Different agreement ID");
+        endDate = state.endDate;
+        autoRenew = state.autoRenew;
+        status = state.status;
+    }
 }

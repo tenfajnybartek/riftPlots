@@ -6,6 +6,7 @@
 
 - [Instalacja](Instalacja.md)
 - [Szybki start](Szybki-start.md)
+- [Nowości P1–P2](Nowosci-P1-P2.md)
 - [Poradnik gracza](Poradnik-gracza.md)
 - [Poradnik administratora](Poradnik-administratora.md)
 

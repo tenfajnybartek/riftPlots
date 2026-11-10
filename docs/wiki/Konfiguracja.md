@@ -20,7 +20,7 @@ Pełne pliki dostarczane z pluginem znajdują się w [zasobach repozytorium](htt
 /plots admin reload
 ```
 
-Odświeża ustawienia, wiadomości, typy, dzielnice i tabliczki. Wybór backendu nadal wymaga restartu. Zapisana cena, podatek, okres i polityka resetu konkretnej działki nie są masowo zastępowane nowymi globalnymi wartościami domyślnymi.
+Odświeża ustawienia, wiadomości, typy, dzielnice i tabliczki. Wybór backendu nadal wymaga restartu. Ręczne nadpisania i warunki posiadanych działek pozostają zachowane. Dostępne działki aktualizują parametry dziedziczone z typu. Polityka resetu pozostaje zapisana dla działki.
 
 Stosuj poprawne wcięcia YAML i nie dubluj tych samych sekcji. Fragmenty na tej stronie są przykładami wybranych ustawień; nie zawsze zastępują cały plik.
 
@@ -45,14 +45,14 @@ general:
 
 | Klucz pod `economy` | Domyślnie | Znaczenie |
 | :--- | :--- | :--- |
-| `default-price` | `25000.0` | Cena nowo tworzonej działki. |
-| `default-base-tax` | `1500.0` | Podstawa podatku. |
-| `default-tax-mode` | `FIXED` | Tryb kalkulacji. |
-| `default-tax-multiplier` | `1.0` | Mnożnik dla modelu działki. |
-| `default-billing-period-days` | `7` | Dni okresu rozliczeniowego. |
+| `default-price` | `25000.0` | Wartość startowa przed zastosowaniem ceny typu. |
+| `default-base-tax` | `1500.0` | Wartość startowa przed zastosowaniem podatku typu. |
+| `default-tax-mode` | `FIXED` | Tryb startowy; nowa działka dziedziczy tryb typu. |
+| `default-tax-multiplier` | `1.0` | Mnożnik startowy; nowa działka dziedziczy mnożnik typu. |
+| `default-billing-period-days` | `7` | Okres startowy; nowa działka dziedziczy okres typu. |
 | `default-grace-period-hours` | `6` | Godziny karencji. |
 | `max-advance-periods` | `4` | Dodatkowe okresy opłacane z góry. |
-| `default-abandon-refund-percent` | `50.0` | Procent zapisanej ceny zwracany przy oddaniu. |
+| `default-abandon-refund-percent` | `50.0` | Procent startowy; nowa działka dziedziczy `refund-percent` typu. |
 
 Obliczenia i progi opisuje [rozdział o podatkach](Podatki.md). Procent zwrotu dotyczy wartości działki, nie sumy materiałów gracza.
 
@@ -60,6 +60,7 @@ Obliczenia i progi opisuje [rozdział o podatkach](Podatki.md). Procent zwrotu d
 | :--- | :--- |
 | `check-interval-seconds` | `60`; kod przyjmuje minimum 10 sekund. |
 | `tax-reminder-hours` | `[48, 24, 12, 2, 1]` |
+| `grace-warning-interval-seconds` | `300`; minimum 60, gdy klucz dodasz do konfiguracji. |
 
 Scheduler obsługuje również wygasanie najmu i kończenie aukcji. Zwiększenie interwału wpływa więc także na te sprawdzenia; kup teraz wywołuje finalizację bez oczekiwania na cykl.
 
@@ -85,8 +86,32 @@ Porcjowanie ogranicza pracę pojedynczej porcji, ale nie jest gwarancją określ
 | `auction.anti-snipe-extension-seconds` | `120` |
 | `auction.default-min-bid-increment` | `100.0` |
 | `auction.default-duration-minutes` | `30` |
+| `auction.escrow-enabled` | `false` |
 
 Prowizje są ograniczone do 0–100%. Komenda rozpoczynająca aukcję nadal wymaga jawnego podania przebicia i czasu — same pola wartości domyślnych nie czynią tych argumentów opcjonalnymi.
+
+Escrow rezerwuje środki podczas licytowania w nowych aukcjach. Tryb jest zapisany w konkretnej aukcji, więc zmiana konfiguracji nie przestawia aktywnego rozliczenia. [Zasady aukcji](Aukcje.md).
+
+## Najem, prywatność i wiadomości
+
+| Klucz | Domyślnie | Znaczenie |
+| :--- | :--- | :--- |
+| `rental.max-periods` | `365` | Limit okresów przy wynajmie; zakres 1–3650. |
+| `privacy.public-history` | `false` | Historię lokalu widzi właściciel i `riftplots.admin.history`. |
+| `notifications.retention-days` | `30` | Retencja wysłanych wiadomości przy zapisie historii. |
+| `notifications.max-history-per-player` | `200` | Limit wysłanych wpisów gracza; niewysłane nie są obcinane. |
+
+Auto-odnowienie wybiera najemca, domyślnie jest wyłączone. Oferty właściciela wymagają jawnie nadanego `riftplots.rent.offer`, którego domyślna wartość to `false`. [Najem](Wynajem.md) i [dziennik oraz wiadomości](Nowosci-P1-P2.md#historia-wiadomości-i-diagnostyka).
+
+## Granice 3D
+
+| Klucz pod `visualization` | Domyślnie | Ograniczenia |
+| :--- | ---: | :--- |
+| `border-duration-seconds` | `10` | 3–30 sekund. |
+| `border-cooldown-seconds` | `10` | 5–120 sekund. |
+| `border-points` | `120` | 24–240 punktów, dzielonych między 12 krawędzi. |
+
+Podgląd `/plots border [id]` jest widoczny tylko dla proszącego gracza i znika po czasie lub wylogowaniu.
 
 ## Teleportacja i budżet
 

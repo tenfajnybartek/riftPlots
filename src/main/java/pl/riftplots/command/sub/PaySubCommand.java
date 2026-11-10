@@ -50,44 +50,12 @@ public class PaySubCommand implements SubCommand {
             return true;
         }
 
-        Plot targetPlot = null;
-        int periods = 1;
-
-        if (args.length > 0) {
-            String plotId = args[0];
-            Optional<Plot> opt = plotManager.getPlot(plotId);
-            if (opt.isPresent()) {
-                targetPlot = opt.get();
-                if (args.length > 1) {
-                    try {
-                        periods = Math.max(1, Integer.parseInt(args[1]));
-                    } catch (NumberFormatException ignored) {}
-                }
-            } else {
-                try {
-                    periods = Math.max(1, Integer.parseInt(args[0]));
-                } catch (NumberFormatException ignored) {}
-            }
+        try {
+            var billing = pl.riftplots.command.BillingArguments.resolve(player, args, plotManager);
+            paymentService.payTax(player, billing.plot(), billing.periods());
+        } catch (IllegalArgumentException e) {
+            player.sendMessage(net.kyori.adventure.text.Component.text(e.getMessage()));
         }
-
-        if (targetPlot == null) {
-            Optional<Plot> opt = plotManager.getPlotAt(
-                    player.getWorld().getName(),
-                    player.getLocation().getBlockX(),
-                    player.getLocation().getBlockY(),
-                    player.getLocation().getBlockZ()
-            );
-            if (opt.isPresent()) {
-                targetPlot = opt.get();
-            }
-        }
-
-        if (targetPlot == null) {
-            AdventureUtil.sendMessage(player, "<red>Podaj identyfikator działki lub stań na jej terenie!</red>");
-            return true;
-        }
-
-        paymentService.payTax(player, targetPlot, periods);
         return true;
     }
 

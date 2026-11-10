@@ -123,4 +123,24 @@ class SqliteStorageTest {
         backend.getPlotSignRepository().delete("sign_1");
         assertTrue(backend.getPlotSignRepository().findById("sign_1").isEmpty());
     }
+
+    @Test
+    void historyPagesReachPastTheOldHundredRecordLimitWithStableOrdering() {
+        var player = UUID.randomUUID();
+        var repository = backend.getTransactionRepository();
+        for (int i = 0; i < 125; i++)
+            repository.save(new TransactionRecord(String.format("record_%03d", i), "plot", player,
+                    "Player", TransactionType.TAX, BigDecimal.TEN, TransactionStatus.SUCCESS, Instant.EPOCH, "History"));
+        var first = repository.findByPlotId("PLOT", 0, 10);
+        var last = repository.findByPlotId("plot", 12, 10);
+        assertEquals("record_124", first.getFirst().getId());
+        assertEquals(5, last.size());
+        assertEquals("record_000", last.getLast().getId());
+        assertEquals(first.stream().map(TransactionRecord::getId).toList(), repository.findByPlayer(player, 0, 10).stream().map(TransactionRecord::getId).toList());
+        assertTrue(repository.findAll(13, 10).isEmpty());
+        var plot = TestFixtures.plot(null);
+        plot.setSettingOverrides(Set.of(PropertySetting.PRICE));
+        backend.getPlotRepository().save(plot);
+        assertEquals(Set.of(PropertySetting.PRICE), backend.getPlotRepository().findById(plot.getId()).orElseThrow().getSettingOverrides());
+    }
 }

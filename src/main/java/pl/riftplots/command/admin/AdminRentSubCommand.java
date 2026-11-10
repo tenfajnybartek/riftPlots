@@ -62,9 +62,9 @@ public class AdminRentSubCommand implements SubCommand {
                 return true;
             }
             try {
-                BigDecimal price = new BigDecimal(args[2]);
+                BigDecimal price = pl.riftplots.util.Money.parse(args[2]);
                 String unit = pl.riftplots.domain.rental.RentalPeriodUnit.valueOf(args[3].toUpperCase(java.util.Locale.ROOT)).name();
-                BigDecimal deposit = args.length > 4 ? new BigDecimal(args[4]) : BigDecimal.ZERO;
+                BigDecimal deposit = args.length > 4 ? pl.riftplots.util.Money.parse(args[4]) : BigDecimal.ZERO;
                 if (price.signum() < 0 || deposit.signum() < 0 || plot.isRented() || plot.isAuctionActive()
                         || (plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.AVAILABLE
                         && plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.OWNED)) {

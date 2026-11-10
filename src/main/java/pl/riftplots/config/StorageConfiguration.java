@@ -4,6 +4,24 @@ import org.bukkit.configuration.file.FileConfiguration;
 import pl.riftplots.storage.StorageType;
 
 public class StorageConfiguration {
+    public StorageConfiguration copy() {
+        StorageConfiguration copy = new StorageConfiguration();
+        copy.storageType = storageType;
+        copy.sqliteFileName = sqliteFileName;
+        copy.mysqlHost = mysqlHost;
+        copy.mysqlPort = mysqlPort;
+        copy.mysqlDatabase = mysqlDatabase;
+        copy.mysqlUsername = mysqlUsername;
+        copy.mysqlPassword = mysqlPassword;
+        copy.mysqlUseSsl = mysqlUseSsl;
+        copy.poolMaxSize = poolMaxSize;
+        copy.poolMinIdle = poolMinIdle;
+        copy.poolIdleTimeout = poolIdleTimeout;
+        copy.poolConnectionTimeout = poolConnectionTimeout;
+        copy.poolMaxLifetime = poolMaxLifetime;
+        return copy;
+    }
+
     private StorageType storageType;
 
     private String sqliteFileName;

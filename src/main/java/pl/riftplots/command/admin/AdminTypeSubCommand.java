@@ -32,7 +32,7 @@ public class AdminTypeSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin type <list|set <działka> <typ>|info <typ>>";
+        return "plots admin type <list|set <działka> <typ>|info <typ>|apply-defaults <id> [confirm]>";
     }
 
     @Override
@@ -42,6 +42,33 @@ public class AdminTypeSubCommand implements SubCommand {
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
+        if (args.length >= 2 && args[0].equalsIgnoreCase("apply-defaults")) {
+            Plot plot = plotManager.getPlot(args[1]).orElse(null);
+            if (plot == null) {
+                sender.sendMessage("Działka nie istnieje.");
+                return true;
+            }
+            var type = typeManager.getType(plot.getPropertyType());
+            if (args.length != 3 || !args[2].equalsIgnoreCase("confirm")) {
+                var preview = plot.copy();
+                preview.applyTypeDefaults(type);
+                sender.sendMessage(net.kyori.adventure.text.Component.text("Cena bazowa: " + plot.getPrice() + " -> " + type.getDefaultPrice()
+                        + "; mnożnik cen dzielnicy: " + plotManager.getDistrictPriceMultiplier(plot)
+                        + "; cena z dzielnicą: " + plotManager.getPurchasePrice(preview) + "; podatek bazowy: " + plot.getBaseTax() + " -> " + type.getDefaultBaseTax()
+                        + "; tryb: " + plot.getTaxMode() + " -> " + type.getDefaultTaxMode()
+                        + "; mnożnik podatku: " + plot.getTaxMultiplier() + " -> " + type.getDefaultTaxMultiplier()
+                        + "; okres: " + plot.getBillingPeriodDays() + " -> " + type.getDefaultBillingPeriodDays() + "; zwrot: " + type.getRefundPercent() + "%; flagi: " + type.getDefaultFlags()
+                        + ". Zastąpi indywidualne ustawienia. Potwierdź: /plots admin type apply-defaults " + plot.getId() + " confirm"));
+                return true;
+            }
+            try {
+                plotManager.applyTypeDefaults(plot);
+                sender.sendMessage("Zastosowano domyślne parametry typu. Aktywne umowy nie są zmieniane.");
+            } catch (IllegalArgumentException e) {
+                sender.sendMessage(e.getMessage());
+            }
+            return true;
+        }
         if (args.length == 0 || "list".equalsIgnoreCase(args[0])) {
             AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== TYPY NIERUCHOMOŚCI ===</b></gradient>");
             for (PropertyType t : typeManager.getAllTypes()) {
@@ -105,7 +132,7 @@ public class AdminTypeSubCommand implements SubCommand {
     @Override
     public List<String> tabComplete(CommandSender sender, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "set", "info");
+            return List.of("list", "set", "info", "apply-defaults");
         } else if (args.length == 2 && "set".equalsIgnoreCase(args[0])) {
             return plotManager.getAllPlots().stream().map(Plot::getId).toList();
         } else if (args.length == 3 && "set".equalsIgnoreCase(args[0])) {

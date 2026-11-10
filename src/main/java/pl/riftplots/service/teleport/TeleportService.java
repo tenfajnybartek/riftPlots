@@ -66,7 +66,8 @@ public class TeleportService {
             return false;
         }
 
-        if (!plot.isOwner(player.getUniqueId()) && !plot.isMember(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) {
+        if (!plot.isOwner(player.getUniqueId()) && !(plotManager.hasUsableMembership(plot, player.getUniqueId())
+                && plot.hasPermission(player.getUniqueId(), pl.riftplots.domain.plot.PlotPermission.TELEPORT)) && !player.hasPermission("riftplots.admin.bypass")) {
             player.sendMessage(messageConfig.get("plot.not-member"));
             return false;
         }

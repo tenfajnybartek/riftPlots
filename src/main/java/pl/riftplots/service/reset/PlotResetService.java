@@ -74,62 +74,110 @@ public class PlotResetService {
         }
 
         String plotId = plot.getId().toLowerCase();
+        String originatingOperation = plotManager.currentOperationId();
+        if (plotManager.financiallyBlocked(plotId, originatingOperation)) {
+            if (callback != null) callback.accept(false);
+            return false;
+        }
         if (!activeResets.add(plotId)) {
             if (callback != null) callback.accept(false);
             return false;
         }
 
-        File schematicFile = snapshotService.getSchematicFile(plot.getId());
-        if (schematicFile == null || !schematicFile.isFile() || schematicFile.length() == 0) {
-            plugin.getLogger().severe("Brak schematu działki " + plotId + ". Reset przerwany; działka została wyłączona.");
-            plot.setStatus(PlotStatus.DISABLED);
-            plotManager.savePlot(plot);
-            activeResets.remove(plotId);
-            if (callback != null) callback.accept(false);
-            return false;
+        boolean scheduled = false;
+        try {
+            File schematicFile = snapshotService.getSchematicFile(plot.getId());
+            if (schematicFile == null || !schematicFile.isFile() || schematicFile.length() == 0) {
+                plugin.getLogger().severe("Brak schematu działki " + plotId + ". Reset przerwany; działka została wyłączona.");
+                plot.setStatus(PlotStatus.DISABLED);
+                plotManager.savePlot(plot);
+                activeResets.remove(plotId);
+                if (callback != null) callback.accept(false);
+                return false;
+            }
+
+            PlotResetStartEvent startEvent = new PlotResetStartEvent(plot);
+            Bukkit.getPluginManager().callEvent(startEvent);
+            if (startEvent.isCancelled()) {
+                activeResets.remove(plotId);
+                if (callback != null) callback.accept(false);
+                return false;
+            }
+
+            java.util.UUID originalOwner = plot.getOwnerUuid();
+            PlotBounds originalBounds = plot.getBounds();
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    Clipboard clipboard = worldEditHook.loadSnapshot(schematicFile);
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        boolean accepted = false;
+                        try {
+                            String problem = validateClipboard(plot, clipboard);
+                            if (problem != null || plotManager.financiallyBlocked(plotId, originatingOperation) || !Objects.equals(originalOwner, plot.getOwnerUuid())
+                                    || !originalBounds.equals(plot.getBounds())) {
+                                plugin.getLogger().warning("Reset " + plotId + " odrzucony: " + (problem != null ? problem : "zmieniony stan działki"));
+                                if (callback != null) callback.accept(false);
+                                return;
+                            }
+                            if (rentalService != null && !rentalService.terminateRental(plotId, true, "Reset nieruchomości")) {
+                                if (callback != null) callback.accept(false);
+                                return;
+                            }
+                            if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plotId);
+                            plot.clearOwnership();
+                            plot.setStatus(PlotStatus.RESETTING);
+                            plotManager.savePlot(plot);
+                            if (signService != null) signService.updateSignsForPlot(plot);
+                            pasteClipboard(plot, clipboard, callback);
+                            accepted = true;
+                        } catch (RuntimeException e) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Nie można rozpocząć resetu " + plotId, e);
+                            if (callback != null) callback.accept(false);
+                        } finally {
+                            if (!accepted) activeResets.remove(plotId);
+                        }
+                    });
+                } catch (Exception e) {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        try {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Nie można odczytać schematu " + plotId, e);
+                            if (callback != null) callback.accept(false);
+                        } finally {
+                            activeResets.remove(plotId);
+                        }
+                    });
+                }
+            });
+            scheduled = true;
+            return true;
+        } finally {
+            if (!scheduled) activeResets.remove(plotId);
         }
+    }
 
-        PlotResetStartEvent startEvent = new PlotResetStartEvent(plot);
-        Bukkit.getPluginManager().callEvent(startEvent);
-        if (startEvent.isCancelled()) {
-            activeResets.remove(plotId);
-            if (callback != null) callback.accept(false);
-            return false;
+    public String validateClipboard(Plot plot, Clipboard clipboard) {
+        if (clipboard == null) return "Nie można odczytać schematu.";
+        PlotBounds bounds = plot.getBounds();
+        if (Bukkit.getWorld(bounds.getWorldName()) == null) return "Świat działki nie jest załadowany.";
+        var region = clipboard.getRegion();
+        return region.getWidth() != bounds.getWidthX() || region.getHeight() != bounds.getHeightY()
+                || region.getLength() != bounds.getLengthZ() ? "Wymiary schematu nie pasują do granic działki." : null;
+    }
+
+    public void preview(Plot plot, Consumer<String> callback) {
+        File file = snapshotService.getSchematicFile(plot.getId());
+        if (file == null || !file.isFile()) {
+            callback.accept("Brak schematu.");
+            return;
         }
-
-        if (rentalService != null && !rentalService.terminateRental(plotId, true, "Reset nieruchomości")) {
-            activeResets.remove(plotId);
-            if (callback != null) callback.accept(false);
-            return false;
-        }
-        if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plotId);
-
-        plot.clearOwnership();
-        plot.setStatus(PlotStatus.RESETTING);
-
-        plotManager.savePlot(plot);
-
-        if (signService != null) {
-            signService.updateSignsForPlot(plot);
-        }
-
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                Clipboard clipboard = worldEditHook.loadSnapshot(schematicFile);
-                if (clipboard == null) {
-                    Bukkit.getScheduler().runTask(plugin, () -> finishReset(plot, false, callback));
-                    return;
-                }
-
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    pasteClipboard(plot, clipboard, callback);
-                });
+                Clipboard clipboard = worldEditHook.loadSnapshot(file);
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(validateClipboard(plot, clipboard)));
             } catch (Exception e) {
-                e.printStackTrace();
-                Bukkit.getScheduler().runTask(plugin, () -> finishReset(plot, false, callback));
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept("Nie można odczytać schematu: " + e.getMessage()));
             }
         });
-        return true;
     }
 
     private void pasteClipboard(Plot plot, Clipboard clipboard, Consumer<Boolean> callback) {

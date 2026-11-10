@@ -62,7 +62,7 @@ public class AdminSetTaxSubCommand implements SubCommand {
 
         BigDecimal tax;
         try {
-            tax = new BigDecimal(args[1]);
+            tax = pl.riftplots.util.Money.parse(args[1]);
             if (tax.compareTo(BigDecimal.ZERO) < 0) {
                 AdventureUtil.sendMessage(sender, "<red>Podatek nie może być ujemny!</red>");
                 return true;

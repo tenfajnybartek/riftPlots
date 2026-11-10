@@ -1,52 +1,37 @@
 package pl.riftplots.gui;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import pl.riftplots.domain.plot.Plot;
 import pl.riftplots.domain.plot.PlotMember;
 import pl.riftplots.util.AdventureUtil;
-import pl.riftplots.util.TimeUtil;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Comparator;
 
 public class PlotMembersGUI {
-
     public void open(Player player, Plot plot) {
-        PlotGUIHolder holder = new PlotGUIHolder("PLOT_MEMBERS", plot.getId());
-        Inventory inv = Bukkit.createInventory(holder, 45, AdventureUtil.parse("<aqua><b>Członkowie: " + plot.getName() + "</b></aqua>"));
-        holder.setInventory(inv);
+        open(player, plot, 0);
+    }
 
-        int slot = 0;
-        for (PlotMember member : plot.getMembers().values()) {
-            if (slot >= 36) {
-                break;
-            }
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-            ItemMeta meta = head.getItemMeta();
-            meta.displayName(AdventureUtil.parse("<aqua><b>" + member.getPlayerName() + "</b></aqua>"));
-            List<Component> lore = new ArrayList<>();
-            lore.add(AdventureUtil.parse("<gray>Rola: </gray><yellow>" + member.getRole() + "</yellow>"));
-            lore.add(AdventureUtil.parse("<gray>Dodano: </gray><white>" + TimeUtil.formatInstant(member.getAddedAt()) + "</white>"));
-            lore.add(AdventureUtil.parse("<gray>Uprawnienia: </gray><gold>" + member.getPermissions().size() + "</gold>"));
-            lore.add(Component.empty());
-            lore.add(AdventureUtil.parse("<red>Kliknij, aby usunąć członka!</red>"));
-            meta.lore(lore);
-            head.setItemMeta(meta);
-            inv.setItem(slot++, head);
+    public void open(Player player, Plot plot, int requestedPage) {
+        var members = plot.getMembers().values().stream().sorted(Comparator.comparing(PlotMember::getPlayerName)).toList();
+        int page = Math.clamp(requestedPage, 0, Math.max(0, (members.size() - 1) / 36));
+        var holder = new PlotGUIHolder("PLOT_MEMBERS", plot.getId());
+        holder.setPage(page);
+        var inventory = Bukkit.createInventory(holder, 45, AdventureUtil.parse("<aqua>Członkowie · " + (page + 1) + "</aqua>"));
+        holder.setInventory(inventory);
+        var shown = members.stream().skip((long) page * 36).limit(36).toList();
+        for (int i = 0; i < shown.size(); i++) {
+            var member = shown.get(i);
+            var item = GuiData.item(Material.PLAYER_HEAD, member.getPlayerName(), "Rola: " + member.getRole(),
+                    "Lewy przycisk: edytor dostępu", "Prawy przycisk: usuń członka", "Aktywny najem kończy się przez umowę.");
+            GuiData.set(item, "member", member.getPlayerUuid().toString());
+            inventory.setItem(i, item);
         }
-
-        ItemStack backItem = new ItemStack(Material.ARROW);
-        ItemMeta backMeta = backItem.getItemMeta();
-        backMeta.displayName(AdventureUtil.parse("<yellow><b>Powrót</b></yellow>"));
-        backItem.setItemMeta(backMeta);
-        inv.setItem(40, backItem);
-
-        player.openInventory(inv);
+        if (page > 0) inventory.setItem(36, GuiData.item(Material.ARROW, "Poprzednia strona"));
+        if ((page + 1L) * 36 < members.size()) inventory.setItem(44, GuiData.item(Material.ARROW, "Następna strona"));
+        inventory.setItem(40, GuiData.item(Material.ARROW, "Powrót"));
+        player.openInventory(inventory);
     }
 }

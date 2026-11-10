@@ -1,0 +1,6 @@
+name: RiftPlotsProbe
+version: 1.0
+main: pl.riftplots.integrationprobe.IntegrationProbe
+api-version: '26.3'
+depend: [Vault, WorldEdit, WorldGuard]
+loadbefore: [riftPlots]

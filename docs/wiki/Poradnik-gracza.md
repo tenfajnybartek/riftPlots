@@ -4,13 +4,15 @@
 
 ## Znajdź swój lokal
 
-Wpisz `/plots`, aby otworzyć menu własnych nieruchomości. Przycisk ofert sprzedaży prowadzi do dostępnych lokali. Możesz też spotkać tabliczkę w mieście lub otrzymać identyfikator lokalu od administracji.
+Wpisz `/plots`, aby otworzyć rynek z zakładkami **Moje**, **Dostępne**, **Wynajem** i **Aukcje**. Strony mieszczą po 45 lokali; dolny pasek zawiera sortowanie i filtry typu oraz dzielnicy. Możesz też spotkać tabliczkę w mieście lub otrzymać ID lokalu od administracji.
 
 ```text
 /plots info rynek_1
 ```
 
 Przed zakupem sprawdź cenę, podatek, długość okresu i status. Cena zakupu jest jednorazowa; podatek dotyczy kolejnych terminów korzystania z własności.
+
+`/plots border rynek_1` pokazuje przez krótki czas granice 3D lokalu tylko Tobie. Podgląd można uruchomić również z okna potwierdzenia zakupu.
 
 ## Kup nieruchomość
 
@@ -45,6 +47,8 @@ Domyślnie powrót kosztuje 50 jednostek waluty i ma 10 sekund odnowienia. Serwe
 
 Typ nieruchomości może ograniczać liczbę współużytkowników. Aktywnego najemcy nie usuwa się komendą `untrust` — jego dostęp wynika z umowy.
 
+Właściciel może zmieniać rolę i pojedyncze prawa w panelu członków z `riftplots.members.edit`. Nowi członkowie mają też `TELEPORT`; starsze zapisane listy praw pozostają zachowane. Rola `MANAGER` daje pełne prawa działki, a uprawnienia `TENANT` wynikają z umowy i nie podlegają tej edycji.
+
 ## Pilnuj podatku
 
 ```text
@@ -63,7 +67,7 @@ Po terminie rozpoczyna się karencja. Po jej bezskutecznym upływie możesz stra
 /plots rent apartament_4 7
 ```
 
-Najemca nie staje się właścicielem. Otrzymuje jednak na czas umowy również budowanie i niszczenie. Pierwsza opłata obejmuje czynsz za wskazaną liczbę okresów oraz kaucję. Komenda włącza automatyczne odnawianie o jeden kolejny okres. [Przeczytaj warunki najmu](Wynajem.md).
+Najemca nie staje się właścicielem. Otrzymuje na czas umowy również budowanie i niszczenie. Pierwsza opłata obejmuje czynsz za wskazaną liczbę okresów oraz kaucję. Auto-odnowienie jest domyślnie wyłączone; wybierasz je w GUI albo przez `rent autorenew <id> on|off`. `rent info <id>` pokazuje umowę, a `rent cancel <id>` wyświetla zasady wcześniejszego zakończenia przed potwierdzeniem. [Warunki najmu](Wynajem.md).
 
 ## Sprzedaż, aukcja lub oddanie
 
@@ -75,4 +79,4 @@ Najemca nie staje się właścicielem. Otrzymuje jednak na czas umowy również 
 
 Oddanie może uruchomić reset i usunąć Twoje zmiany w budynku. Zwykłego porzucenia nie wykonasz przy aktywnym najmie lub aukcji. Zwrot jest liczony od zapisanej ceny działki i jej procentu zwrotu — nie od wartości wszystkich włożonych materiałów ani ceny zapłaconej na rynku wtórnym.
 
-Jeżeli widzisz błąd ekonomii, zapisz czas, identyfikator działki i wykonaną komendę. Przekaż je administracji zamiast wielokrotnie ponawiać transakcję bez sprawdzenia salda.
+`/plots history all [strona]` pokazuje Twoje operacje i stan zwrotów. `/plots notifications [strona]` otwiera zapisane wiadomości. Historia cudzej działki jest domyślnie prywatna. Jeśli widzisz błąd ekonomii, zapisz ID operacji, ID lokalu i czas; administracja może sprawdzić trwały dziennik.

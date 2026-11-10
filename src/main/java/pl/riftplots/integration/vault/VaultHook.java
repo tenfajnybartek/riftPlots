@@ -12,6 +12,11 @@ import java.util.Objects;
 public class VaultHook {
     private final Plugin plugin;
     private Economy economy;
+    private pl.riftplots.service.transaction.OperationJournal journal;
+
+    public void setOperationJournal(pl.riftplots.service.transaction.OperationJournal journal) {
+        this.journal = journal;
+    }
 
     public VaultHook(Plugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin cannot be null");
@@ -49,7 +54,8 @@ public class VaultHook {
         if (!isAvailable()) {
             throw new IllegalStateException("Vault economy provider is not available!");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (!isValidAmount(amount)) return false;
+        if (amount.signum() == 0) {
             return true;
         }
         return economy.has(player, amount.doubleValue());
@@ -59,22 +65,36 @@ public class VaultHook {
         if (!isAvailable()) {
             throw new IllegalStateException("Vault economy provider is not available!");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (!isValidAmount(amount)) return false;
+        if (amount.signum() == 0) {
             return true;
         }
-        EconomyResponse response = economy.withdrawPlayer(player, amount.doubleValue());
-        return response.transactionSuccess();
+        if (journal != null && journal.isRunning()) {
+            return journal.effect("WITHDRAW", player.getUniqueId(), amount,
+                    () -> economy.withdrawPlayer(player, amount.doubleValue()).transactionSuccess());
+        }
+        return economy.withdrawPlayer(player, amount.doubleValue()).transactionSuccess();
     }
 
     public boolean deposit(OfflinePlayer player, BigDecimal amount) {
         if (!isAvailable()) {
             throw new IllegalStateException("Vault economy provider is not available!");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (!isValidAmount(amount)) return false;
+        if (amount.signum() == 0) {
             return true;
         }
-        EconomyResponse response = economy.depositPlayer(player, amount.doubleValue());
-        return response.transactionSuccess();
+        if (journal != null && journal.isRunning()) {
+            return journal.effect("DEPOSIT", player.getUniqueId(), amount,
+                    () -> economy.depositPlayer(player, amount.doubleValue()).transactionSuccess());
+        }
+        return economy.depositPlayer(player, amount.doubleValue()).transactionSuccess();
+    }
+
+    private boolean isValidAmount(BigDecimal amount) {
+        if (amount == null || amount.signum() < 0) return false;
+        double value = amount.doubleValue();
+        return Double.isFinite(value) && (amount.signum() == 0 || value > 0.0);
     }
 
     public String format(BigDecimal amount) {

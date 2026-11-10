@@ -53,6 +53,32 @@ public class Plot {
     private BigDecimal resellPrice = BigDecimal.ZERO;
     private boolean resellAvailable;
     private boolean auctionActive;
+    // Old records default to explicit values so upgrading does not reprice existing contracts.
+    private final Set<PropertySetting> settingOverrides = EnumSet.allOf(PropertySetting.class);
+
+    public Set<PropertySetting> getSettingOverrides() {
+        return Collections.unmodifiableSet(settingOverrides);
+    }
+
+    public void setSettingOverrides(Set<PropertySetting> settings) {
+        settingOverrides.clear();
+        settingOverrides.addAll(settings);
+    }
+
+    public boolean overrides(PropertySetting setting) {
+        return settingOverrides.contains(setting);
+    }
+
+    public void applyTypeDefaults(pl.riftplots.domain.type.PropertyType type) {
+        price = type.getDefaultPrice();
+        baseTax = type.getDefaultBaseTax();
+        taxMode = type.getDefaultTaxMode();
+        taxMultiplier = type.getDefaultTaxMultiplier();
+        billingPeriodDays = type.getDefaultBillingPeriodDays();
+        refundPercentOnAbandon = type.getRefundPercent();
+        settingOverrides.clear();
+        touch();
+    }
 
     private final Instant createdAt;
     private Instant updatedAt;
@@ -178,6 +204,7 @@ public class Plot {
     }
 
     public void setPrice(BigDecimal price) {
+        settingOverrides.add(PropertySetting.PRICE);
         this.price = price != null ? price.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         touch();
     }
@@ -187,6 +214,7 @@ public class Plot {
     }
 
     public void setBaseTax(BigDecimal baseTax) {
+        settingOverrides.add(PropertySetting.BASE_TAX);
         this.baseTax = baseTax != null ? baseTax.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         touch();
     }
@@ -196,6 +224,7 @@ public class Plot {
     }
 
     public void setTaxMode(TaxMode taxMode) {
+        settingOverrides.add(PropertySetting.TAX_MODE);
         this.taxMode = taxMode != null ? taxMode : TaxMode.FIXED;
         touch();
     }
@@ -205,6 +234,7 @@ public class Plot {
     }
 
     public void setTaxMultiplier(double taxMultiplier) {
+        settingOverrides.add(PropertySetting.TAX_MULTIPLIER);
         this.taxMultiplier = taxMultiplier > 0 ? taxMultiplier : 1.0;
         touch();
     }
@@ -223,6 +253,7 @@ public class Plot {
     }
 
     public void setBillingPeriodDays(int billingPeriodDays) {
+        settingOverrides.add(PropertySetting.BILLING_PERIOD);
         this.billingPeriodDays = billingPeriodDays > 0 ? billingPeriodDays : 7;
         touch();
     }
@@ -360,6 +391,7 @@ public class Plot {
     }
 
     public void setRefundPercentOnAbandon(double refundPercentOnAbandon) {
+        settingOverrides.add(PropertySetting.REFUND_PERCENT);
         this.refundPercentOnAbandon = refundPercentOnAbandon;
         touch();
     }
@@ -541,5 +573,64 @@ public class Plot {
 
     public void touch() {
         this.updatedAt = Instant.now();
+    }
+
+    public Plot copy() {
+        Plot copy = new Plot(id, name, description, category, status, bounds, worldGuardRegionId, price, baseTax,
+                taxMode, taxMultiplier, taxEnabled, billingPeriodDays, gracePeriodHours, ownerUuid, ownerName,
+                List.of(), purchaseDate, nextTaxPayment, gracePeriodExpiry, advancePeriodsPaid, schematicFile,
+                autoResetOnExpire, refundPercentOnAbandon, createdAt, updatedAt);
+        copy.restore(this);
+        return copy;
+    }
+
+    public void restore(Plot state) {
+        if (this == state) return;
+        if (!id.equals(state.id)) throw new IllegalArgumentException("Different plot ID");
+        name = state.name;
+        description = state.description;
+        category = state.category;
+        status = state.status;
+        bounds = state.bounds;
+        worldGuardRegionId = state.worldGuardRegionId;
+        price = state.price;
+        baseTax = state.baseTax;
+        taxMode = state.taxMode;
+        taxMultiplier = state.taxMultiplier;
+        taxEnabled = state.taxEnabled;
+        billingPeriodDays = state.billingPeriodDays;
+        gracePeriodHours = state.gracePeriodHours;
+        ownerUuid = state.ownerUuid;
+        ownerName = state.ownerName;
+        members.clear();
+        for (PlotMember member : state.members.values())
+            members.put(member.getPlayerUuid(), new PlotMember(
+                    member.getPlayerUuid(), member.getPlayerName(), member.getRole(), member.getPermissions(), member.getAddedAt()));
+        purchaseDate = state.purchaseDate;
+        nextTaxPayment = state.nextTaxPayment;
+        gracePeriodExpiry = state.gracePeriodExpiry;
+        advancePeriodsPaid = state.advancePeriodsPaid;
+        schematicFile = state.schematicFile;
+        autoResetOnExpire = state.autoResetOnExpire;
+        refundPercentOnAbandon = state.refundPercentOnAbandon;
+        propertyType = state.propertyType;
+        districtId = state.districtId;
+        rentalAvailable = state.rentalAvailable;
+        rentalPrice = state.rentalPrice;
+        rentalPeriodUnit = state.rentalPeriodUnit;
+        rentalDeposit = state.rentalDeposit;
+        activeRentalId = state.activeRentalId;
+        homeWorld = state.homeWorld;
+        homeX = state.homeX;
+        homeY = state.homeY;
+        homeZ = state.homeZ;
+        homeYaw = state.homeYaw;
+        homePitch = state.homePitch;
+        resellPrice = state.resellPrice;
+        resellAvailable = state.resellAvailable;
+        auctionActive = state.auctionActive;
+        updatedAt = state.updatedAt;
+        settingOverrides.clear();
+        settingOverrides.addAll(state.settingOverrides);
     }
 }

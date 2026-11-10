@@ -62,7 +62,7 @@ public class AdminSetPriceSubCommand implements SubCommand {
 
         BigDecimal price;
         try {
-            price = new BigDecimal(args[1]);
+            price = pl.riftplots.util.Money.parse(args[1]);
             if (price.compareTo(BigDecimal.ZERO) < 0) {
                 AdventureUtil.sendMessage(sender, "<red>Cena nie może być ujemna!</red>");
                 return true;

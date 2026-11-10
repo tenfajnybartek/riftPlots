@@ -60,8 +60,8 @@ public class AdminDeleteSubCommand implements SubCommand {
             sender.sendMessage(messageConfig.get("transfer.not-ready"));
             return true;
         }
-        signService.removeSignsForPlot(id);
         plotManager.deletePlot(id);
+        signService.removeSignsForPlot(id);
 
         sender.sendMessage(messageConfig.get("admin.deleted", Map.of("plot_id", id)));
         return true;

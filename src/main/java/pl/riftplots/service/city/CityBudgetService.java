@@ -22,6 +22,11 @@ public class CityBudgetService {
     private BigDecimal currentBalance = BigDecimal.valueOf(100000);
     private final List<CityTransaction> transactions = new ArrayList<>();
     private long lastTimestamp;
+    private java.util.function.BooleanSupplier writeAllowed = () -> true;
+
+    public void setWriteAllowed(java.util.function.BooleanSupplier allowed) {
+        writeAllowed = allowed;
+    }
 
     public CityBudgetService(File dataFolder, DatabaseManager databaseManager) {
         this(dataFolder, databaseManager, BigDecimal.valueOf(100000));
@@ -65,10 +70,16 @@ public class CityBudgetService {
     }
 
     private void saveToFile() {
+        saveToFile(currentBalance, null);
+    }
+
+    private void saveToFile(BigDecimal balance, CityTransaction appended) {
         try {
             YamlConfiguration config = new YamlConfiguration();
-            config.set("balance", currentBalance.toPlainString());
-            for (CityTransaction transaction : transactions) {
+            config.set("balance", balance.toPlainString());
+            List<CityTransaction> savedTransactions = new ArrayList<>(transactions);
+            if (appended != null) savedTransactions.add(appended);
+            for (CityTransaction transaction : savedTransactions) {
                 String path = "transactions." + transaction.getId();
                 config.set(path + ".type", transaction.getType().name());
                 config.set(path + ".amount", transaction.getAmount().toPlainString());
@@ -79,7 +90,7 @@ public class CityBudgetService {
                 config.set(path + ".description", transaction.getDescription());
             }
             budgetFile.getParentFile().mkdirs();
-            config.save(budgetFile);
+            YamlDataFile.save(config, budgetFile);
         } catch (IOException e) {
             throw new IllegalStateException("Storage operation failed", e);
         }
@@ -99,23 +110,25 @@ public class CityBudgetService {
     }
 
     public synchronized void recordTransaction(CityTransactionType type, BigDecimal amount, String plotId, UUID playerUuid, String description) {
+        if (!writeAllowed.getAsBoolean()) throw new IllegalStateException("Trwa migracja danych");
+        Objects.requireNonNull(type, "Transaction type cannot be null");
         if (amount == null) {
             amount = BigDecimal.ZERO;
         }
 
+        BigDecimal nextBalance;
         if (type == CityTransactionType.TAX_INCOME || type == CityTransactionType.PURCHASE_INCOME
                 || type == CityTransactionType.RENTAL_FEE || type == CityTransactionType.AUCTION_FEE) {
-            currentBalance = currentBalance.add(amount);
+            nextBalance = currentBalance.add(amount);
         } else if (type == CityTransactionType.REFUND_EXPENSE || type == CityTransactionType.MAINTENANCE_EXPENSE) {
-            currentBalance = currentBalance.subtract(amount);
+            nextBalance = currentBalance.subtract(amount);
         } else {
-            currentBalance = currentBalance.add(amount);
+            nextBalance = currentBalance.add(amount);
         }
 
-        lastTimestamp = Math.max(System.currentTimeMillis(), lastTimestamp + 1);
-        CityTransaction tx = new CityTransaction(UUID.randomUUID().toString(), type, amount, currentBalance,
-                Instant.ofEpochMilli(lastTimestamp), plotId, playerUuid, description);
-        transactions.add(tx);
+        long timestamp = Math.max(System.currentTimeMillis(), lastTimestamp + 1);
+        CityTransaction tx = new CityTransaction(UUID.randomUUID().toString(), type, amount, nextBalance,
+                Instant.ofEpochMilli(timestamp), plotId, playerUuid, description);
 
         if (databaseManager != null) {
             try (Connection conn = databaseManager.getConnection();
@@ -133,8 +146,11 @@ public class CityBudgetService {
                 throw new IllegalStateException("Storage operation failed", e);
             }
         } else {
-            saveToFile();
+            saveToFile(nextBalance, tx);
+            transactions.add(tx);
         }
+        currentBalance = nextBalance;
+        lastTimestamp = timestamp;
     }
 
     public synchronized BigDecimal getBalance() {

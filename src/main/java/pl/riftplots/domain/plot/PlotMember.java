@@ -26,7 +26,8 @@ public class PlotMember {
         EnumSet<PlotPermission> defaultPerms = EnumSet.of(
                 PlotPermission.INTERACT,
                 PlotPermission.DOORS,
-                PlotPermission.CONTAINERS
+                PlotPermission.CONTAINERS,
+                PlotPermission.TELEPORT
         );
         return new PlotMember(playerUuid, playerName, PlotMemberRole.MEMBER, defaultPerms, Instant.now());
     }

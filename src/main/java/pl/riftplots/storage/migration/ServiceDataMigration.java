@@ -32,7 +32,9 @@ final class ServiceDataMigration {
             dataset("rift_auctions", "auctions.yml", "auctions", "plot_id:plotId", "seller_uuid:sellerUuid",
                     "starting_price:startingPrice:d", "min_bid_increment:minBidIncrement:d", "current_bid:currentBid:d",
                     "current_bidder_uuid:currentBidderUuid", "current_bidder_name:currentBidderName", "start_time:startTime:l",
-                    "end_time:endTime:l", "buyout_price:buyoutPrice:d", "status:status"),
+                    "end_time:endTime:l", "buyout_price:buyoutPrice:d", "status:status", "escrow_enabled:escrow:b"),
+            dataset("rift_auction_bids", "auction_bids.yml", "bids", "auction_id:auctionId", "sequence:sequence:l",
+                    "bidder_uuid:bidderUuid", "bidder_name:bidderName", "amount:amount:d", "timestamp:timestamp:l"),
             dataset("rift_city_budget", "city_budget.yml", "transactions", "type:type", "amount:amount:d",
                     "balance_after:balanceAfter:d", "timestamp:timestamp:l", "plot_id:plotId", "player_uuid:playerUuid", "description:description"),
             dataset("rift_audit_logs", "audit_logs.yml", "logs", "plot_id:plotId", "operator_uuid:operatorUuid",
@@ -65,13 +67,32 @@ final class ServiceDataMigration {
         if (backend.getDatabaseManager() == null) {
             File file = new File(dataFolder, "data/" + dataset.file());
             if (file.exists()) yaml.load(file);
+            if (dataset.table().equals("rift_auction_bids")) {
+                var auctions = pl.riftplots.storage.yaml.YamlDataFile.load(new File(dataFolder, "data/auctions.yml"));
+                var section = auctions.getConfigurationSection("auctions");
+                if (section != null) for (String id : section.getKeys(false)) {
+                    var bids = section.getMapList(id + ".bids");
+                    if (bids.isEmpty()) continue;
+                    var existing = yaml.getConfigurationSection("bids");
+                    if (existing != null) for (String key : new ArrayList<>(existing.getKeys(false))) {
+                        if (id.equals(existing.getString(key + ".auctionId"))) yaml.set("bids." + key, null);
+                    }
+                    for (int i = 0; i < bids.size(); i++) {
+                        String path = "bids." + id + "_" + i;
+                        yaml.set(path + ".auctionId", id);
+                        yaml.set(path + ".sequence", i);
+                        for (var row : bids.get(i).entrySet()) yaml.set(path + "." + row.getKey(), row.getValue());
+                    }
+                }
+            }
             return yaml;
         }
         try (Connection connection = backend.getDatabaseManager().getConnection();
              var statement = connection.prepareStatement("SELECT * FROM " + dataset.table());
              var result = statement.executeQuery()) {
             while (result.next()) {
-                String path = dataset.root() + "." + result.getString("id");
+                String id = dataset.table().equals("rift_auction_bids") ? result.getString("auction_id") + "_" + result.getInt("sequence") : result.getString("id");
+                String path = dataset.root() + "." + id;
                 for (Field field : dataset.fields()) {
                     Object value = switch (field.type()) {
                         case 'l' -> result.getLong(field.column());
@@ -108,19 +129,20 @@ final class ServiceDataMigration {
         if (backend.getDatabaseManager() == null) {
             File file = new File(dataFolder, "data/" + dataset.file());
             file.getParentFile().mkdirs();
-            yaml.save(file);
+            pl.riftplots.storage.yaml.YamlDataFile.save(yaml, file);
             return;
         }
         var section = yaml.getConfigurationSection(dataset.root());
         if (section == null) return;
-        String columns = "id," + String.join(",", dataset.fields().stream().map(Field::column).toList());
-        String parameters = String.join(",", Collections.nCopies(dataset.fields().size() + 1, "?"));
+        boolean bids = dataset.table().equals("rift_auction_bids");
+        String columns = (bids ? "" : "id,") + String.join(",", dataset.fields().stream().map(Field::column).toList());
+        String parameters = String.join(",", Collections.nCopies(dataset.fields().size() + (bids ? 0 : 1), "?"));
         try (Connection connection = backend.getDatabaseManager().getConnection()) {
             connection.setAutoCommit(false);
             try (var statement = connection.prepareStatement("INSERT INTO " + dataset.table() + " (" + columns + ") VALUES (" + parameters + ")")) {
                 for (String id : section.getKeys(false)) {
-                    statement.setString(1, id);
-                    int index = 2;
+                    if (!bids) statement.setString(1, id);
+                    int index = bids ? 1 : 2;
                     for (Field field : dataset.fields()) {
                         String path = id + "." + field.key();
                         Object value = !section.contains(path) ? null : switch (field.type()) {

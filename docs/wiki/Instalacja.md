@@ -17,6 +17,8 @@ riftPlots korzysta z ekonomii serwera, regionów WorldGuard i schematów WorldEd
 
 Wersje kompilacyjne nie są obietnicą zgodności dowolnego zestawu pluginów. Sprawdź docelowy serwer testowy, zwłaszcza współpracę wersji WorldEdit i WorldGuard z wybranym Paper.
 
+Próbę integracyjną P1–P2 wykonano na **Paper 26.3 build 246, WorldEdit 7.4.6, WorldGuard 7.0.21 i Vault 1.7.3**, z kontrolowaną ekonomią testową. API Paper jest przypięte do `26.3.build.246-stable`. [Zakres testu i narzędzia](Nowosci-P1-P2.md#migracja-testy-i-backup).
+
 ## 1. Przygotuj JAR
 
 Jeżeli budujesz z kodu źródłowego, otwórz terminal w katalogu projektu:
@@ -73,3 +75,5 @@ Przetestuj `/plots` na koncie gracza i `/plots admin` na koncie administratora. 
 ## Aktualizacja istniejącego serwera
 
 Przed wymianą JAR-a zachowaj spójną kopię katalogu pluginu, schematów, danych oraz świata. Po aktualizacji sprawdź kilka własności, terminów podatkowych i umów. Kopie oraz odtwarzanie danych opisuje [osobny rozdział](Migracja-i-kopie-zapasowe.md).
+
+Wdrożenie P1–P2 używa schematu danych **2**. Starsze działki zachowują dotychczasowe stawki jako nadpisania, a zapisane prawa członków pozostają bez zmian. Nawet przy MySQL zachowaj lokalne `data/operations`, `data/refunds`, `data/notifications` i `data/transfers.yml`. Powrót do starszego JAR-a wymaga zgodnej kopii danych.

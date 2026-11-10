@@ -6,7 +6,7 @@
 
 Umowa najmu pozwala korzystać z przygotowanej nieruchomości bez zakupu jej własności. Właścicielem może być gracz; lokal bez właściciela traktowany jest jako miejski. Czynsz trafia odpowiednio do właściciela albo do budżetu miasta.
 
-Najemca otrzymuje rolę `TENANT` i prawa `BUILD`, `DESTROY`, `CONTAINERS`, `DOORS`, `INTERACT`. Nie uzyskuje przez to możliwości sprzedaży, porzucenia ani zarządzania własnością.
+Nowy najemca otrzymuje rolę `TENANT` i prawa `BUILD`, `DESTROY`, `CONTAINERS`, `DOORS`, `INTERACT`, `TELEPORT`. Nie uzyskuje przez to możliwości sprzedaży, porzucenia ani zarządzania własnością.
 
 ## Wystawienie lokalu
 
@@ -24,6 +24,8 @@ Administrator wpisuje:
 | `500` | Kaucja; można pominąć, wtedy wynosi zero. |
 
 Kwoty muszą być nieujemne. Lokal musi być w odpowiednim stanie, bez aktywnego najmu i aukcji. Typ i dzielnica muszą dopuszczać wynajem. Zwykła sprzedaż działki z ofertą najmu jest blokowana.
+
+Właściciel z jawnie nadanym `riftplots.rent.offer` może użyć `/plots rent offer apartament_4 250 DAY 500 confirm`. Uprawnienie ma domyślnie wartość `false`; nie wymaga osobnego przełącznika konfiguracji.
 
 | Jednostka | Długość |
 | :--- | :--- |
@@ -51,7 +53,7 @@ Kaucja nie jest czynszem właściciela. Jest przechowywana jako zobowiązanie um
 
 ## Automatyczne odnowienie
 
-Komenda gracza włącza automatyczne odnowienie. Po końcu opłaconego czasu scheduler próbuje pobrać czynsz za **jeden kolejny okres**. Nie pobiera ponownie kaucji i nie odnawia automatycznie na pierwotne siedem okresów.
+Auto-odnowienie jest domyślnie wyłączone. Włącz je świadomie przez `/plots rent autorenew <id> on`, argument `on` przy wynajmie lub przełącznik GUI. Po końcu opłaconego czasu scheduler próbuje pobrać czynsz za **jeden kolejny okres**. Nie pobiera ponownie kaucji i nie odnawia automatycznie na pierwotne siedem okresów.
 
 ```mermaid
 flowchart TD
@@ -73,13 +75,13 @@ Administrator może zakończyć najem i wyłączyć ofertę:
 /plots admin rent cancel apartament_4
 ```
 
-Po skutecznym rozliczeniu umowa jest zamykana, odwołanie do najmu czyszczone, a najemca usuwany z członków. Sam koniec najmu nie wkleja automatycznie schematu lokalu. Reset nieruchomości jest osobną operacją.
+Zakończenie umowy odbiera prawa najemcy i czyści powiązanie z lokalem niezależnie od wyniku wypłaty kaucji. Sam koniec najmu nie wkleja schematu. Najemca może użyć `/plots rent cancel apartament_4`, przeczytać zasady i dodać `confirm`; wcześniejsze zakończenie nie zwraca opłaconego czynszu.
 
-Jeżeli provider odrzuci zwrot kaucji, mechanizm zachowuje umowę do ponowienia zwrotu. Sprawdź ekonomię i zgłoszenie zamiast usuwać rekord umowy ręcznie. Reset nieruchomości również próbuje rozliczyć aktywny najem.
+Jeżeli provider odrzuci zwrot kaucji, umowa kończy się i dostęp wygasa, a zobowiązanie zostaje w trwałej kolejce. Niepewna wypłata wymaga uzgodnienia. [Zwroty i nowe komendy](Nowosci-P1-P2.md#zwroty-i-zakończenie-najmu).
 
 ## Aktualne granice funkcji
 
-- Ofertę najmu wystawia administrator, nie właściciel osobną komendą gracza.
-- Nie ma jeszcze komendy gracza wyłączającej auto-odnowienie ani samodzielnego rozwiązania umowy.
+- Właściciel może wystawić lokal przez `rent offer`, jeśli administracja nada mu uprawnienie.
+- Najemca ma `rent info`, `rent autorenew` i `rent cancel <id> confirm`; wcześniejsze zakończenie nie zwraca opłaconego czynszu.
 - `untrust` i usunięcie członka w GUI nie służą do odebrania dostępu aktywnemu najemcy.
 - Umowa najmu i podatek właściciela to oddzielne mechanizmy. Najem nie zamienia czynszu w podatek i nie przejmuje zobowiązań właściciela.

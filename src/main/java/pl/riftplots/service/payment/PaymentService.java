@@ -30,6 +30,18 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PaymentService {
+    private pl.riftplots.service.transaction.OperationJournal journal;
+
+    public void setOperationJournal(pl.riftplots.service.transaction.OperationJournal journal) {
+        this.journal = journal;
+    }
+
+    private pl.riftplots.service.transaction.RefundService refunds;
+
+    public void setRefundService(pl.riftplots.service.transaction.RefundService refunds) {
+        this.refunds = refunds;
+    }
+
     private final PluginConfiguration config;
     private final MessageConfiguration messageConfig;
     private final VaultHook vaultHook;
@@ -75,6 +87,13 @@ public class PaymentService {
     }
 
     public boolean buyPlot(Player player, Plot plot) {
+        if (player == null || plot == null) return false;
+        return journal == null ? buyPlotInternal(player, plot) : journal.execute("PURCHASE",
+                "purchase:" + plot.getId() + ":" + player.getUniqueId() + ":" + plot.getUpdatedAt().toEpochMilli(),
+                plot.getId(), player.getUniqueId(), plot.getPrice(), () -> buyPlotInternal(player, plot));
+    }
+
+    private boolean buyPlotInternal(Player player, Plot plot) {
         if (player == null || plot == null) {
             return false;
         }
@@ -106,16 +125,7 @@ public class PaymentService {
                 return false;
             }
 
-            BigDecimal price = plot.getPrice();
-            if (!vaultHook.has(player, price)) {
-                BigDecimal balance = vaultHook.getBalance(player);
-                player.sendMessage(messageConfig.get("plot.cannot-afford", Map.of(
-                        "price", config.formatMoney(price),
-                        "balance", config.formatMoney(balance)
-                )));
-                return false;
-            }
-
+            BigDecimal price = Optional.ofNullable(plotManager.getPurchasePrice(plot)).orElse(plot.getPrice());
             PlotBuyEvent event = new PlotBuyEvent(plot, player, price);
             Bukkit.getPluginManager().callEvent(event);
             if (event.isCancelled()) {
@@ -124,6 +134,12 @@ public class PaymentService {
 
             BigDecimal finalPrice = event.getPrice();
             if (finalPrice == null || finalPrice.signum() < 0) return false;
+            if (journal != null) journal.setCurrentAmount(finalPrice);
+            if (!vaultHook.has(player, finalPrice)) {
+                player.sendMessage(messageConfig.get("plot.cannot-afford", Map.of("price", config.formatMoney(finalPrice),
+                        "balance", config.formatMoney(vaultHook.getBalance(player)))));
+                return false;
+            }
             boolean withdrawn = vaultHook.withdraw(player, finalPrice);
             if (!withdrawn) {
                 player.sendMessage(messageConfig.get("general.economy-error"));
@@ -184,6 +200,14 @@ public class PaymentService {
     }
 
     public synchronized boolean payTax(Player player, Plot plot, int periods) {
+        if (player == null || plot == null) return false;
+        return journal == null ? payTaxInternal(player, plot, periods) : journal.execute("TAX",
+                "tax:" + plot.getId() + ":" + plot.getNextTaxPayment() + ":" + periods,
+                plot.getId(), player.getUniqueId(), taxCalculator.calculateTax(plot).multiply(BigDecimal.valueOf(Math.max(1, periods))),
+                () -> payTaxInternal(player, plot, periods));
+    }
+
+    private boolean payTaxInternal(Player player, Plot plot, int periods) {
         if (player == null || plot == null) {
             return false;
         }
@@ -215,15 +239,6 @@ public class PaymentService {
         BigDecimal singleTax = taxCalculator.calculateTax(plot);
         BigDecimal totalTax = singleTax.multiply(BigDecimal.valueOf(periods));
 
-        if (!vaultHook.has(player, totalTax)) {
-            BigDecimal balance = vaultHook.getBalance(player);
-            player.sendMessage(messageConfig.get("plot.cannot-afford", Map.of(
-                    "price", config.formatMoney(totalTax),
-                    "balance", config.formatMoney(balance)
-            )));
-            return false;
-        }
-
         PlotTaxPayEvent event = new PlotTaxPayEvent(plot, player, totalTax, periods);
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) {
@@ -232,6 +247,12 @@ public class PaymentService {
 
         BigDecimal finalAmount = event.getAmount();
         if (finalAmount == null || finalAmount.signum() < 0) return false;
+        if (journal != null) journal.setCurrentAmount(finalAmount);
+        if (!vaultHook.has(player, finalAmount)) {
+            player.sendMessage(messageConfig.get("plot.cannot-afford", Map.of("price", config.formatMoney(finalAmount),
+                    "balance", config.formatMoney(vaultHook.getBalance(player)))));
+            return false;
+        }
         boolean withdrawn = vaultHook.withdraw(player, finalAmount);
         if (!withdrawn) {
             player.sendMessage(messageConfig.get("general.economy-error"));
@@ -286,6 +307,13 @@ public class PaymentService {
     }
 
     public synchronized boolean abandonPlot(Player player, Plot plot) {
+        if (player == null || plot == null) return false;
+        return journal == null ? abandonPlotInternal(player, plot) : journal.execute("ABANDON",
+                "abandon:" + plot.getId() + ":" + plot.getOwnerUuid() + ":" + plot.getPurchaseDate(),
+                plot.getId(), player.getUniqueId(), calculateAbandonRefund(plot), () -> abandonPlotInternal(player, plot));
+    }
+
+    private boolean abandonPlotInternal(Player player, Plot plot) {
         if (player == null || plot == null) {
             return false;
         }
@@ -303,6 +331,32 @@ public class PaymentService {
         BigDecimal refund = calculateAbandonRefund(plot);
         UUID ownerUuid = plot.getOwnerUuid();
         org.bukkit.OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUuid);
+        if (refunds != null && journal != null) {
+            String operationId = journal.currentId();
+            String refundKey = "abandon:" + operationId;
+            refunds.prepare(refundKey, "ABANDON", plot.getId(), operationId, ownerUuid, refund, "Zwrot za porzucenie działki");
+            if (plot.isAutoResetOnExpire()) {
+                journal.deferCurrent();
+                boolean accepted = resetService.startReset(plot, success -> {
+                    boolean released = !plot.isOwner(ownerUuid);
+                    journal.finishDeferred(operationId, released);
+                    if (!released) refunds.cancelPrepared(refundKey);
+                    refunds.retryPending();
+                });
+                if (!accepted) {
+                    journal.finishDeferred(operationId, false);
+                    refunds.cancelPrepared(refundKey);
+                    return false;
+                }
+                player.sendMessage(AdventureUtil.parse("<yellow>Zlecono oddanie działki. Zwrot zostanie rozliczony po zwolnieniu nieruchomości.</yellow>"));
+                return true;
+            }
+            plot.clearOwnership();
+            plot.setStatus(PlotStatus.AVAILABLE);
+            plotManager.savePlot(plot);
+            player.sendMessage(AdventureUtil.parse("<green>Oddano działkę. Stan zwrotu sprawdzisz przez /plots history.</green>"));
+            return true;
+        }
         if (plot.isAutoResetOnExpire()) {
             if (!resetService.startReset(plot, null)) return false;
         } else {

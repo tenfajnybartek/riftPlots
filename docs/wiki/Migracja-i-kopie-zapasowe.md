@@ -19,7 +19,7 @@ Zapis własności i saldo ekonomii mogą wymagać wspólnego punktu odtworzenia.
 
 Migracja obejmuje zapisane działki i ich członków, profile, transakcje finansowe, tabliczki, umowy najmu, aktualny stan aukcji, budżet i audyt. Schematy pozostają we wspólnym katalogu `schematics/` i nie wymagają konwersji backendu.
 
-Nie są przenoszone ulotne oferty transferu i kolejka powiadomień z pamięci. Migracja nie tworzy synchronizacji dwóch baz do dalszej wspólnej pracy.
+Trwałe lokalne pliki ofert transferu, wiadomości, operacji i zwrotów pozostają we wspólnym `data/`. Historia przebić jest przenoszona razem z aukcjami. Migracja nie tworzy synchronizacji dwóch baz.
 
 ## Warunki uruchomienia
 
@@ -50,7 +50,7 @@ Uzupełnij dane połączenia docelowego backendu w `storage.yml`. **Nie przełą
 /plots admin migrate SQLITE MYSQL
 ```
 
-Operacja działa synchronicznie na wątku serwera, dzięki czemu lokalne komendy i scheduler nie zmieniają danych podczas kopii. Duża baza może w tym czasie zatrzymać obsługę ticków. To zadanie na okno serwisowe.
+Operacja działa w uporządkowanej kolejce I/O. Komendy zmieniające stan, scheduler i nowe logowania są wstrzymane na czas przełączenia. Bukkit i zmiany świata pozostają na wątku serwera.
 
 ### 4. Sprawdź wynik
 
@@ -60,7 +60,7 @@ Przy niepowodzeniu częściowe dane mogą pozostać w celu. Nie ponawiaj kopiowa
 
 ### 5. Przełącz i uruchom
 
-Zatrzymaj serwer, zmień `storage.type` na docelowy backend i uruchom serwer ponownie. Zmiany wykonane na źródle po zakończeniu kopiowania nie pojawią się w celu, dlatego nie otwieraj pośrednio serwera dla nowych transakcji.
+Po sukcesie plugin zapisuje docelowy `storage.type` i utrzymuje blokadę zmian do restartu. Uruchom serwer ponownie. `admin migrate resume confirm` wraca do źródła; docelowa kopia staje się wtedy nieaktualna. [Narzędzie backupu i odtwarzania](Nowosci-P1-P2.md#migracja-testy-i-backup).
 
 ### 6. Weryfikuj przed otwarciem
 

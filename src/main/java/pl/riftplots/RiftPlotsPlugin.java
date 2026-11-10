@@ -63,6 +63,20 @@ public class RiftPlotsPlugin extends JavaPlugin {
     private pl.riftplots.service.transfer.PlotTransferService transferService;
     private pl.riftplots.service.auction.AuctionService auctionService;
     private pl.riftplots.service.teleport.TeleportService teleportService;
+    private pl.riftplots.service.transaction.OperationJournal operationJournal;
+    private pl.riftplots.service.transaction.RefundService refundService;
+    private pl.riftplots.service.visualization.BorderService borderService;
+    private final pl.riftplots.service.io.MaintenanceGate maintenance = new pl.riftplots.service.io.MaintenanceGate();
+    private final pl.riftplots.service.io.OrderedIoQueue ioQueue = new pl.riftplots.service.io.OrderedIoQueue();
+
+    public pl.riftplots.service.io.MaintenanceGate getMaintenance() {
+        return maintenance;
+    }
+
+    public pl.riftplots.service.io.OrderedIoQueue getIoQueue() {
+        return ioQueue;
+    }
+
     private pl.riftplots.storage.migration.DataMigrationService migrationService;
 
     private PlotTaxScheduler taxScheduler;
@@ -105,6 +119,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
         );
         taxScheduler.setRentalService(rentalService);
         taxScheduler.setAuctionService(auctionService);
+        taxScheduler.setWriteAllowed(() -> !maintenance.isActive());
         taxScheduler.start();
 
         signService.updateAllSigns();
@@ -114,6 +129,12 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (borderService != null) borderService.close();
+        try {
+            ioQueue.close();
+        } catch (RuntimeException e) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Błąd zamykania kolejki danych", e);
+        }
         if (taxScheduler != null) {
             taxScheduler.stop();
         }
@@ -139,6 +160,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
         if (typeManager != null) typeManager.load();
         if (districtManager != null) districtManager.load();
+        if (plotManager != null) plotManager.refreshInheritedDefaults();
 
         if (taxScheduler != null) {
             taxScheduler.start();
@@ -234,7 +256,13 @@ public class RiftPlotsPlugin extends JavaPlugin {
     }
 
     private void setupServices() {
+        operationJournal = new pl.riftplots.service.transaction.OperationJournal(getDataFolder());
+        operationJournal.initialize();
+        operationJournal.setWriteAllowed(() -> !maintenance.isActive());
+        vaultHook.setOperationJournal(operationJournal);
         plotManager = new PlotManager(storageBackend.getPlotRepository(), worldGuardHook);
+        plotManager.setWriteAllowed(() -> !maintenance.isActive());
+        plotManager.setOperationJournal(operationJournal);
         plotManager.loadAll();
 
         typeManager = new pl.riftplots.domain.type.PropertyTypeManager(getDataFolder());
@@ -247,38 +275,71 @@ public class RiftPlotsPlugin extends JavaPlugin {
         taxCalculator = new TaxCalculator(districtManager);
         snapshotService = new PlotSnapshotService(getDataFolder(), worldEditHook);
         resetService = new PlotResetService(this, pluginConfig, plotManager, snapshotService, worldEditHook);
+        plotManager.setResetPending(resetService::isResetting);
 
         signService = new PlotSignService(pluginConfig, storageBackend.getPlotSignRepository(), plotManager, taxCalculator);
         resetService.setSignService(signService);
         plotManager.setUpdateListener(signService::updateSignsForPlot);
 
-        notificationService = new pl.riftplots.service.notification.NotificationService();
+        notificationService = new pl.riftplots.service.notification.NotificationService(getDataFolder(),
+                getConfig().getInt("notifications.retention-days", 30), getConfig().getInt("notifications.max-history-per-player", 200));
 
         pl.riftplots.storage.sql.DatabaseManager dbMgr = storageBackend.getDatabaseManager();
 
         budgetService = new pl.riftplots.service.city.CityBudgetService(getDataFolder(), dbMgr, pluginConfig.getCityBudgetInitialBalance());
         budgetService.initialize();
+        budgetService.setWriteAllowed(() -> !maintenance.isActive());
+        refundService = new pl.riftplots.service.transaction.RefundService(getDataFolder(), operationJournal, vaultHook);
+        refundService.initialize();
+        refundService.setReceipt(refund -> {
+            if (refund.kind().equals("ABANDON")) budgetService.recordTransaction(
+                    pl.riftplots.domain.city.CityTransactionType.REFUND_EXPENSE, refund.amount(), refund.plotId(), refund.player(),
+                    refund.reason() + " [op:" + operationJournal.currentId() + "]");
+            storageBackend.getTransactionRepository().save(pl.riftplots.domain.payment.TransactionRecord.create(
+                    refund.plotId(), refund.player(), "Refund", pl.riftplots.domain.payment.TransactionType.REFUND,
+                    refund.amount(), pl.riftplots.domain.payment.TransactionStatus.SUCCESS,
+                    refund.reason() + " [op:" + operationJournal.currentId() + "]"));
+        });
 
         auditService = new pl.riftplots.service.audit.AuditService(getDataFolder(), dbMgr, plotManager);
+        auditService.setWriteAllowed(() -> !maintenance.isActive());
+        plotManager.setAuditService(auditService);
 
         rentalService = new pl.riftplots.service.rental.RentalService(
                 getDataFolder(), dbMgr, plotManager, vaultHook,
                 typeManager, districtManager, notificationService, budgetService,
                 pluginConfig, messageConfig
         );
+        rentalService.setOperationJournal(operationJournal);
+        rentalService.setRefundService(refundService);
+        refundService.setEligibility(refund -> {
+            if (refund.kind().equals("RENTAL_DEPOSIT")) return rentalService.getActiveRental(refund.plotId())
+                    .filter(agreement -> agreement.getId().equals(refund.releaseId())).isEmpty();
+            if (refund.kind().equals("ABANDON")) return operationJournal.find(refund.releaseId())
+                    .filter(entry -> entry.status() == pl.riftplots.service.transaction.OperationJournal.Status.COMPLETED).isPresent();
+            if (refund.kind().startsWith("AUCTION_")) return operationJournal.find(refund.releaseId())
+                    .filter(entry -> entry.status() == pl.riftplots.service.transaction.OperationJournal.Status.COMPLETED).isPresent();
+            return true;
+        });
         rentalService.initialize();
+        plotManager.setTenantAccess((id, player) -> rentalService.getActiveRental(id)
+                .filter(agreement -> agreement.isActive() && agreement.getTenantUuid().equals(player)).isPresent());
 
         transferService = new pl.riftplots.service.transfer.PlotTransferService(
                 plotManager, vaultHook, notificationService, budgetService,
                 auditService, storageBackend.getTransactionRepository(),
                 pluginConfig, messageConfig
         );
+        transferService.setOperationJournal(operationJournal);
+        transferService.initialize(getDataFolder());
 
         auctionService = new pl.riftplots.service.auction.AuctionService(
                 getDataFolder(), dbMgr, plotManager, vaultHook,
                 notificationService, budgetService, auditService,
                 pluginConfig, messageConfig
         );
+        auctionService.setOperationJournal(operationJournal);
+        auctionService.setRefundService(refundService);
         auctionService.initialize();
         resetService.setMarketServices(rentalService, auctionService);
 
@@ -292,17 +353,23 @@ public class RiftPlotsPlugin extends JavaPlugin {
                 storageBackend.getPlayerProfileRepository(), resetService
         );
         paymentService.setSignService(signService);
+        paymentService.setOperationJournal(operationJournal);
+        paymentService.setRefundService(refundService);
         paymentService.setBudgetService(budgetService);
         paymentService.setAuditService(auditService);
         signService.setPaymentService(paymentService);
 
         protectionService = new PlotProtectionService(plotManager);
+        borderService = new pl.riftplots.service.visualization.BorderService(this);
     }
 
     private void setupGUI() {
         listGUI = new PlotListGUI(pluginConfig, plotManager, taxCalculator);
+        listGUI.market().setAuctions(auctionService);
         detailsGUI = new PlotDetailsGUI(pluginConfig, taxCalculator, paymentService);
         confirmBuyGUI = new PlotConfirmBuyGUI(pluginConfig);
+        confirmBuyGUI.setPriceResolver(plotManager::getPurchasePrice);
+        confirmBuyGUI.setTaxResolver(taxCalculator::calculateTax);
         membersGUI = new PlotMembersGUI();
     }
 
@@ -324,6 +391,10 @@ public class RiftPlotsPlugin extends JavaPlugin {
         );
 
         PluginCommand cmd = getCommand("plots");
+        plotCommand.setHistoryLedger(operationJournal, refundService);
+        plotCommand.setNotifications(notificationService);
+        plotCommand.setBorders(plotManager, borderService);
+        plotCommand.setMaintenance(maintenance);
         if (cmd != null) {
             cmd.setExecutor(plotCommand);
             cmd.setTabCompleter(new PlotTabCompleter(plotCommand));
@@ -335,12 +406,44 @@ public class RiftPlotsPlugin extends JavaPlugin {
         pm.registerEvents(new PlotProtectionListener(pluginConfig, messageConfig, protectionService), this);
         pm.registerEvents(new PlotPistonFluidListener(pluginConfig, plotManager), this);
         pm.registerEvents(new PlotSignListener(signService), this);
-        pm.registerEvents(new PlotSessionListener(pluginConfig, messageConfig, plotManager, taxCalculator, storageBackend.getPlayerProfileRepository(), notificationService), this);
-        pm.registerEvents(new PlotGUIListener(plotManager, paymentService, listGUI, detailsGUI, confirmBuyGUI, membersGUI), this);
+        var sessionListener = new PlotSessionListener(pluginConfig, messageConfig, plotManager, taxCalculator, storageBackend.getPlayerProfileRepository(), notificationService);
+        sessionListener.setWriteAllowed(() -> !maintenance.isActive());
+        pm.registerEvents(sessionListener, this);
+        var guiListener = new PlotGUIListener(plotManager, paymentService, listGUI, detailsGUI, confirmBuyGUI, membersGUI);
+        guiListener.setMarketServices(rentalService, auctionService, auditService);
+        pm.registerEvents(guiListener, this);
+        pm.registerEvents(new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler
+            public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+                borderService.forget(event.getPlayer().getUniqueId());
+            }
+
+            @org.bukkit.event.EventHandler
+            public void onLogin(org.bukkit.event.player.PlayerLoginEvent event) {
+                if (maintenance.isActive())
+                    event.disallow(org.bukkit.event.player.PlayerLoginEvent.Result.KICK_OTHER, "Trwa migracja danych miasta. Spróbuj po restarcie serwera.");
+            }
+        }, this);
     }
 
     public static RiftPlotsPlugin getInstance() {
         return instance;
+    }
+
+    public pl.riftplots.service.transaction.OperationJournal getOperationJournal() {
+        return operationJournal;
+    }
+
+    public pl.riftplots.service.transaction.RefundService getRefundService() {
+        return refundService;
+    }
+
+    public StorageBackend getStorageBackend() {
+        return storageBackend;
+    }
+
+    public WorldGuardHook getWorldGuardHook() {
+        return worldGuardHook;
     }
 
     public PluginConfiguration getPluginConfig() {

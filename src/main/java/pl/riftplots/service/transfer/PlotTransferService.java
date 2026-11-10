@@ -23,6 +23,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PlotTransferService {
+    private pl.riftplots.service.transaction.OperationJournal journal;
+
+    public void setOperationJournal(pl.riftplots.service.transaction.OperationJournal journal) {
+        this.journal = journal;
+    }
+
     private final PlotManager plotManager;
     private final VaultHook vaultHook;
     private final NotificationService notificationService;
@@ -33,6 +39,45 @@ public class PlotTransferService {
     private final pl.riftplots.config.MessageConfiguration messageConfig;
 
     private final Map<String, TransferOffer> activeOffers = new ConcurrentHashMap<>();
+    private java.io.File offersFile;
+
+    public synchronized void initialize(java.io.File dataFolder) {
+        offersFile = new java.io.File(dataFolder, "data/transfers.yml");
+        var yaml = pl.riftplots.storage.yaml.YamlDataFile.load(offersFile);
+        var section = yaml.getConfigurationSection("offers");
+        activeOffers.clear();
+        if (section == null) return;
+        for (String id : section.getKeys(false)) {
+            var row = section.getConfigurationSection(id);
+            var offer = new TransferOffer(id, row.getString("plot"), UUID.fromString(row.getString("seller")), row.getString("seller-name"),
+                    UUID.fromString(row.getString("buyer")), row.getString("buyer-name"), new BigDecimal(row.getString("price")),
+                    Instant.ofEpochMilli(row.getLong("created")), Instant.ofEpochMilli(row.getLong("expires")), TransferStatus.PENDING);
+            if (!offer.isExpired()) activeOffers.put(id, offer);
+        }
+    }
+
+    private void persistOffers() {
+        if (offersFile == null) return;
+        var yaml = new org.bukkit.configuration.file.YamlConfiguration();
+        yaml.set("format", 1);
+        for (var offer : activeOffers.values()) {
+            if (offer.isExpired() || offer.getStatus() != TransferStatus.PENDING) continue;
+            String path = "offers." + offer.getId();
+            yaml.set(path + ".plot", offer.getPlotId());
+            yaml.set(path + ".seller", offer.getSellerUuid().toString());
+            yaml.set(path + ".seller-name", offer.getSellerName());
+            yaml.set(path + ".buyer", offer.getBuyerUuid().toString());
+            yaml.set(path + ".buyer-name", offer.getBuyerName());
+            yaml.set(path + ".price", offer.getPrice().toPlainString());
+            yaml.set(path + ".created", offer.getCreatedAt().toEpochMilli());
+            yaml.set(path + ".expires", offer.getExpiresAt().toEpochMilli());
+        }
+        try {
+            pl.riftplots.storage.yaml.YamlDataFile.save(yaml, offersFile);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Nie można zapisać ofert transferu", e);
+        }
+    }
 
     public PlotTransferService(PlotManager plotManager,
                                VaultHook vaultHook,
@@ -53,7 +98,7 @@ public class PlotTransferService {
     }
 
     public synchronized Optional<TransferOffer> createOffer(Plot plot, Player seller, Player buyer, BigDecimal price, int validSeconds) {
-        if (plot == null || seller == null || buyer == null || price == null || price.signum() < 0
+        if (plot == null || seller == null || buyer == null || !pl.riftplots.util.Money.isSafe(price)
                 || seller.getUniqueId().equals(buyer.getUniqueId())) {
             return Optional.empty();
         }
@@ -69,12 +114,14 @@ public class PlotTransferService {
         }
 
         if (plot.getStatus() != PlotStatus.OWNED || plot.isRented() || plot.isAuctionActive()
+                || journal != null && journal.isBlocked(plot.getId())
                 || !plotManager.validateAcquisition(plot, buyer.getUniqueId()).isValid()) {
             seller.sendMessage(messageConfig.get("transfer.not-ready"));
             return Optional.empty();
         }
 
         int duration = validSeconds > 0 ? validSeconds : config.getTransferOfferDurationSeconds();
+        Map<String, TransferOffer> previous = new HashMap<>(activeOffers);
         activeOffers.values().removeIf(offer -> offer.isExpired()
                 || offer.getPlotId().equals(plot.getId()));
         TransferOffer offer = TransferOffer.create(
@@ -82,6 +129,13 @@ public class PlotTransferService {
                 buyer.getUniqueId(), buyer.getName(), price, duration
         );
         activeOffers.put(offer.getId(), offer);
+        try {
+            persistOffers();
+        } catch (RuntimeException e) {
+            activeOffers.clear();
+            activeOffers.putAll(previous);
+            throw e;
+        }
 
         notificationService.notifyPlayer(seller.getUniqueId(), messageConfig.getRaw("transfer.offer-sent", "{prefix}<green>Wyslano oferte!</green>")
                 .replace("{prefix}", config.getPrefix())
@@ -101,6 +155,14 @@ public class PlotTransferService {
     }
 
     public synchronized boolean acceptOffer(Player buyer, String offerId) {
+        if (buyer == null || offerId == null) return false;
+        TransferOffer offer = activeOffers.get(offerId);
+        if (offer == null) return false;
+        return journal == null ? acceptOfferInternal(buyer, offerId) : journal.execute("TRANSFER", "transfer:" + offerId,
+                offer.getPlotId(), buyer.getUniqueId(), offer.getPrice(), () -> acceptOfferInternal(buyer, offerId));
+    }
+
+    private boolean acceptOfferInternal(Player buyer, String offerId) {
         if (buyer == null || offerId == null) return false;
         TransferOffer offer = activeOffers.get(offerId);
         if (offer == null || !offer.getBuyerUuid().equals(buyer.getUniqueId())) {
@@ -144,8 +206,8 @@ public class PlotTransferService {
                 return false;
             }
 
-            BigDecimal feePercent = BigDecimal.valueOf(config.getTransferFeePercent() / 100.0);
-            BigDecimal adminFee = price.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal feePercent = BigDecimal.valueOf(config.getTransferFeePercent()).movePointLeft(2);
+            BigDecimal adminFee = price.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).min(price);
             BigDecimal sellerPayout = price.subtract(adminFee);
 
             org.bukkit.OfflinePlayer seller = org.bukkit.Bukkit.getOfflinePlayer(offer.getSellerUuid());
@@ -175,6 +237,7 @@ public class PlotTransferService {
         offer.setStatus(TransferStatus.ACCEPTED);
         activeOffers.remove(offerId);
         activeOffers.values().removeIf(other -> other.getPlotId().equals(plot.getId()));
+        persistOffers();
 
         notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.buyer-success", "{prefix}<green>Przejales wlasnosc dzialki!</green>")
                 .replace("{prefix}", config.getPrefix())
@@ -194,8 +257,14 @@ public class PlotTransferService {
         TransferOffer offer = activeOffers.get(offerId);
         if (offer != null && (offer.getSellerUuid().equals(seller.getUniqueId())
                 || offer.getBuyerUuid().equals(seller.getUniqueId()))) {
-            offer.setStatus(TransferStatus.CANCELLED);
             activeOffers.remove(offerId);
+            try {
+                persistOffers();
+            } catch (RuntimeException e) {
+                activeOffers.put(offerId, offer);
+                throw e;
+            }
+            offer.setStatus(TransferStatus.CANCELLED);
             seller.sendMessage(messageConfig.get("transfer.cancelled"));
         }
     }

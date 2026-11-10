@@ -26,6 +26,12 @@ public class PlotCommand implements CommandExecutor {
     private final AdminCommandDispatcher adminDispatcher;
     private final MessageConfiguration messageConfig;
     private final PlotListGUI listGUI;
+    private final PlotManager plotManager;
+    private pl.riftplots.service.io.MaintenanceGate maintenance;
+
+    public void setMaintenance(pl.riftplots.service.io.MaintenanceGate maintenance) {
+        this.maintenance = maintenance;
+    }
 
     public PlotCommand(PluginConfiguration config,
                        MessageConfiguration messageConfig,
@@ -42,6 +48,7 @@ public class PlotCommand implements CommandExecutor {
         this.messageConfig = messageConfig;
         this.adminDispatcher = adminDispatcher;
         this.listGUI = listGUI;
+        this.plotManager = plotManager;
 
         register(new HelpSubCommand());
         register(new ListSubCommand(plotManager, config, taxCalculator, listGUI));
@@ -68,8 +75,41 @@ public class PlotCommand implements CommandExecutor {
         subCommands.put(sub.getName().toLowerCase(), sub);
     }
 
+    public void setHistoryLedger(pl.riftplots.service.transaction.OperationJournal journal, pl.riftplots.service.transaction.RefundService refunds) {
+        ((HistorySubCommand) subCommands.get("history")).setLedger(journal, refunds);
+    }
+
+    public void setBorders(PlotManager plots, pl.riftplots.service.visualization.BorderService borders) {
+        register(new BorderSubCommand(plots, borders));
+    }
+
+    public void setNotifications(pl.riftplots.service.notification.NotificationService notifications) {
+        register(new NotificationsSubCommand(notifications));
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        var previous = plotManager.enterActor(sender);
+        try {
+            return executeCommand(sender, command, label, args);
+        } catch (RuntimeException e) {
+            java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE, "Nie udało się zakończyć polecenia /plots", e);
+            sender.sendMessage("Nie udało się zakończyć operacji. Administracja może sprawdzić jej status.");
+            return true;
+        } finally {
+            plotManager.restoreActor(previous);
+        }
+    }
+
+    private boolean executeCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (maintenance != null && maintenance.isActive()) {
+            boolean read = args.length > 0 && java.util.Set.of("help", "list", "info", "history", "notifications", "members", "gui").contains(args[0].toLowerCase(Locale.ROOT));
+            boolean admin = args.length > 1 && args[0].equalsIgnoreCase("admin") && java.util.Set.of("migrate", "health", "info", "list", "audit", "transactions").contains(args[1].toLowerCase(Locale.ROOT));
+            if (!read && !admin) {
+                sender.sendMessage("Zmiany są wstrzymane na czas przełączenia magazynu. Administracja zakończy migrację restartem.");
+                return true;
+            }
+        }
         if (!sender.hasPermission(PermissionConfiguration.USER_BASE)) {
             sender.sendMessage(messageConfig.get("general.no-permission"));
             return true;

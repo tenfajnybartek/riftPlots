@@ -87,7 +87,7 @@ public class InfoSubCommand implements SubCommand {
         AdventureUtil.sendMessage(sender, "<gray>Świat:</gray> <white>" + targetPlot.getBounds().getWorldName() + "</white>");
         AdventureUtil.sendMessage(sender, "<gray>Powierzchnia:</gray> <white>" + targetPlot.getBounds().getHorizontalArea() + " m² (" + targetPlot.getBounds().getWidthX() + "x" + targetPlot.getBounds().getLengthZ() + ")</white>");
         AdventureUtil.sendMessage(sender, "<gray>Właściciel:</gray> <yellow>" + (targetPlot.getOwnerName() != null ? targetPlot.getOwnerName() : "Brak (Do kupienia)") + "</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Cena zakupu:</gray> <green>" + config.formatMoney(targetPlot.getPrice()) + "</green>");
+        AdventureUtil.sendMessage(sender, "<gray>Cena zakupu:</gray> <green>" + config.formatMoney(plotManager.getPurchasePrice(targetPlot)) + "</green>");
         AdventureUtil.sendMessage(sender, "<gray>Podatek cykliczny:</gray> <gold>" + config.formatMoney(tax) + " / " + targetPlot.getBillingPeriodDays() + " dni (Tryb: " + targetPlot.getTaxMode() + ")</gold>");
 
         if (targetPlot.getOwnerUuid() != null) {

@@ -115,6 +115,7 @@ class ProtectionRegressionTest {
         when(world.getName()).thenReturn("world");
         var plots = mock(PlotManager.class);
         when(plots.getPlotAt("world", 1, 65, 1)).thenReturn(Optional.of(plot));
+        when(plots.hasUsableMembership(plot, tenantId)).thenReturn(true);
         var protection = new PlotProtectionService(plots);
         var location = new org.bukkit.Location(world, 1, 65, 1);
         assertTrue(protection.canInteract(tenant, location, PlotPermission.BUILD));
@@ -157,6 +158,49 @@ class ProtectionRegressionTest {
         }
         assertEquals(owner, plot.getOwnerUuid());
         assertEquals(PlotStatus.OWNED, plot.getStatus());
+    }
+
+    @Test
+    void invalidSchematicDimensionsRejectResetBeforeOwnershipOrRentalChanges() throws Exception {
+        Plot plot = TestFixtures.plot(UUID.randomUUID());
+        UUID owner = plot.getOwnerUuid();
+        var hook = mock(WorldEditHook.class);
+        var snapshots = new PlotSnapshotService(directory.toFile(), hook);
+        Files.write(snapshots.getSchematicFile(plot.getId()).toPath(), new byte[]{1});
+        var clipboard = mock(com.sk89q.worldedit.extent.clipboard.Clipboard.class);
+        var region = mock(com.sk89q.worldedit.regions.Region.class);
+        when(clipboard.getRegion()).thenReturn(region);
+        when(region.getWidth()).thenReturn(1);
+        when(hook.loadSnapshot(any())).thenReturn(clipboard);
+        var scheduler = mock(org.bukkit.scheduler.BukkitScheduler.class);
+        doAnswer(call -> {
+            ((Runnable) call.getArgument(1)).run();
+            return mock(org.bukkit.scheduler.BukkitTask.class);
+        }).when(scheduler).runTaskAsynchronously(any(Plugin.class), any(Runnable.class));
+        doAnswer(call -> {
+            ((Runnable) call.getArgument(1)).run();
+            return mock(org.bukkit.scheduler.BukkitTask.class);
+        }).when(scheduler).runTask(any(Plugin.class), any(Runnable.class));
+        var plugin = mock(Plugin.class);
+        when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
+        var plots = mock(PlotManager.class);
+        var rentals = mock(pl.riftplots.service.rental.RentalService.class);
+        var auctions = mock(pl.riftplots.service.auction.AuctionService.class);
+        var reset = new PlotResetService(plugin, TestFixtures.config(), plots, snapshots, hook);
+        reset.setMarketServices(rentals, auctions);
+        var callback = new java.util.concurrent.atomic.AtomicReference<Boolean>();
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+            bukkit.when(Bukkit::getPluginManager).thenReturn(mock(PluginManager.class));
+            bukkit.when(() -> Bukkit.getWorld("world")).thenReturn(mock(World.class));
+            assertTrue(reset.startReset(plot, callback::set));
+        }
+        assertEquals(Boolean.FALSE, callback.get());
+        assertFalse(reset.isResetting(plot.getId()));
+        assertEquals(owner, plot.getOwnerUuid());
+        assertEquals(PlotStatus.OWNED, plot.getStatus());
+        verify(plots, never()).savePlot(any());
+        verifyNoInteractions(rentals, auctions);
     }
 
     @Test

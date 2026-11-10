@@ -53,7 +53,7 @@ class StorageMigrationTest {
             new AuditService(sourceDirectory.toFile(), backend.getDatabaseManager(), null).log(plot.getId(), playerUuid, "Owner", "TEST", "Persisted");
             try (var connection = backend.getDatabaseManager().getConnection(); var statement = connection.createStatement()) {
                 statement.executeUpdate("INSERT INTO rift_rentals VALUES ('rental','test_plot',NULL,'" + playerUuid + "','Tenant',20,'DAY',30,1000,2000,1,'ACTIVE')");
-                statement.executeUpdate("INSERT INTO rift_auctions VALUES ('auction','another_plot',NULL,100,10,120,'" + playerUuid + "','Bidder',1000,2000,500,'ACTIVE')");
+                statement.executeUpdate("INSERT INTO rift_auctions (id,plot_id,seller_uuid,starting_price,min_bid_increment,current_bid,current_bidder_uuid,current_bidder_name,start_time,end_time,buyout_price,status) VALUES ('auction','another_plot',NULL,100,10,120,'" + playerUuid + "','Bidder',1000,2000,500,'ACTIVE')");
             }
         } finally {
             backend.shutdown();
@@ -111,6 +111,31 @@ class StorageMigrationTest {
         var migration = new DataMigrationService(directory.toFile(), storage());
         assertThrows(IllegalStateException.class, () -> migration.migrate(StorageType.SQLITE, StorageType.YAML));
         assertEquals(1, yaml.getPlotRepository().findAll().size());
+    }
+
+    @Test
+    void completeAuctionBidSequenceAndEscrowSurviveSqliteYamlRoundTrip() throws Exception {
+        var storage = storage();
+        var source = new SqliteStorageBackend(storage, directory.toFile()); source.initialize();
+        try {
+            source.getPlotRepository().save(TestFixtures.plot(null));
+            MySqlIntegrationTest.storeAuctionHistory(source, directory);
+            MySqlIntegrationTest.assertAuctionHistory(source, directory);
+        } finally { source.shutdown(); }
+        new DataMigrationService(directory.toFile(), storage).migrate(StorageType.SQLITE, StorageType.YAML);
+        var yaml = new YamlStorageBackend(directory.toFile()); yaml.initialize();
+        MySqlIntegrationTest.assertAuctionHistory(yaml, directory);
+        var targetDirectory = Files.createDirectory(directory.resolve("roundtrip"));
+        try (var paths = Files.walk(directory.resolve("data"))) {
+            for (var file : paths.filter(path -> path.toString().endsWith(".yml")).toList()) {
+                var target = targetDirectory.resolve(directory.relativize(file));
+                Files.createDirectories(target.getParent()); Files.copy(file, target);
+            }
+        }
+        new DataMigrationService(targetDirectory.toFile(), storage).migrate(StorageType.YAML, StorageType.SQLITE);
+        var target = new SqliteStorageBackend(storage, targetDirectory.toFile()); target.initialize();
+        try { MySqlIntegrationTest.assertAuctionHistory(target, targetDirectory); }
+        finally { target.shutdown(); }
     }
 
     @Test

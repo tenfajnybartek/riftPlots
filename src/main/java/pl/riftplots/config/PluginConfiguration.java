@@ -50,6 +50,26 @@ public class PluginConfiguration {
     private int teleportCooldownSeconds;
 
     private BigDecimal cityBudgetInitialBalance;
+    private int graceWarningIntervalSeconds;
+    private boolean publicHistory;
+    private int maxRentalPeriods;
+    private boolean auctionEscrowEnabled;
+
+    public boolean isAuctionEscrowEnabled() {
+        return auctionEscrowEnabled;
+    }
+
+    public int getGraceWarningIntervalSeconds() {
+        return graceWarningIntervalSeconds;
+    }
+
+    public boolean isPublicHistory() {
+        return publicHistory;
+    }
+
+    public int getMaxRentalPeriods() {
+        return maxRentalPeriods;
+    }
 
     private String signHeader;
     private String signRenewHeader;
@@ -114,6 +134,10 @@ public class PluginConfiguration {
         this.teleportCooldownSeconds = Math.max(0, config.getInt("teleport.cooldown-seconds", 10));
 
         this.cityBudgetInitialBalance = BigDecimal.valueOf(config.getDouble("city-budget.initial-balance", 100000.0));
+        this.graceWarningIntervalSeconds = Math.max(60, config.getInt("scheduler.grace-warning-interval-seconds", 300));
+        this.publicHistory = config.getBoolean("privacy.public-history", false);
+        this.maxRentalPeriods = Math.clamp(config.getInt("rental.max-periods", 365), 1, 3650);
+        this.auctionEscrowEnabled = config.getBoolean("auction.escrow-enabled", false);
     }
 
     public String getPrefix() {

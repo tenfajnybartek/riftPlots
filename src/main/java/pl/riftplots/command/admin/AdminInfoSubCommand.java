@@ -71,7 +71,10 @@ public class AdminInfoSubCommand implements SubCommand {
         AdventureUtil.sendMessage(sender, "<gray>Region WorldGuard: </gray><white>" + plot.getWorldGuardRegionId() + "</white>");
         AdventureUtil.sendMessage(sender, "<gray>Granice: </gray><white>" + plot.getBounds() + "</white>");
         AdventureUtil.sendMessage(sender, "<gray>Wymiary: </gray><white>" + plot.getBounds().getWidthX() + "x" + plot.getBounds().getHeightY() + "x" + plot.getBounds().getLengthZ() + " (Pow: " + plot.getBounds().getHorizontalArea() + " m², Chunki: " + plot.getBounds().getChunksCount() + ")</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Cena: </gray><green>" + config.formatMoney(plot.getPrice()) + "</green>");
+        AdventureUtil.sendMessage(sender, "<gray>Cena bazowa: </gray><green>" + config.formatMoney(plot.getPrice()) + "</green>");
+        sender.sendMessage(net.kyori.adventure.text.Component.text("Mnożnik cen dzielnicy: " + plotManager.getDistrictPriceMultiplier(plot)
+                + "; cena końcowa: " + config.formatMoney(plotManager.getPurchasePrice(plot))
+                + "; ręczne nadpisania: " + plot.getSettingOverrides()));
         AdventureUtil.sendMessage(sender, "<gray>Podatek bazowy: </gray><gold>" + config.formatMoney(plot.getBaseTax()) + "</gold>");
         AdventureUtil.sendMessage(sender, "<gray>Tryb podatku: </gray><yellow>" + plot.getTaxMode() + " (Mnożnik: " + plot.getTaxMultiplier() + ", Włączony: " + plot.isTaxEnabled() + ")</yellow>");
         AdventureUtil.sendMessage(sender, "<gray>Wyliczony podatek: </gray><gold>" + config.formatMoney(tax) + "</gold>");

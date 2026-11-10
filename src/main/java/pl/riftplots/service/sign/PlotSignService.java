@@ -128,7 +128,7 @@ public class PlotSignService {
             lines.add(AdventureUtil.parse(config.getSignHeader()));
             lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
             if (plot.isAvailableForPurchase()) {
-                lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(plot.getPrice()) + "</gold>"));
+                lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(Optional.ofNullable(plotManager.getPurchasePrice(plot)).orElse(plot.getPrice())) + "</gold>"));
                 lines.add(AdventureUtil.parse(config.getSignForSaleAction()));
             } else if (plot.isAuctionActive() || plot.isRentalAvailable() || plot.isRented()) {
                 lines.add(AdventureUtil.parse("<gray>" + (plot.isAuctionActive() ? "Aukcja" : "Wynajem") + "</gray>"));

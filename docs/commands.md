@@ -20,17 +20,25 @@ Każda komenda wymaga `riftplots.user` oraz odpowiedniego uprawnienia z tabeli. 
 | `/plots buy [id]` | `riftplots.user.buy` | Kupuje dostępną działkę. |
 | `/plots pay [id] [okresy]` | `riftplots.user.pay` | Opłaca jeden lub kilka okresów podatkowych. |
 | `/plots extend [id] [okresy]` | `riftplots.user.extend` | Wywołuje ten sam mechanizm opłacania podatku. |
-| `/plots history [id]` | `riftplots.user.history` | Historia finansowa działki; bez dopasowania działki — własna historia gracza. |
+| `/plots history [id\|all] [strona] [legacy]` | `riftplots.user.history` | Prywatna historia operacji i stan zwrotów; `legacy` pokazuje starsze transakcje. |
+| `/plots notifications [strona]` | `riftplots.user.history` | Zapisane wiadomości i potwierdzenia wysłania przez serwer. |
+| `/plots border [id]` | `riftplots.border` | Tymczasowy obrys 3D widoczny tylko dla gracza. |
 | `/plots trust <gracz> [id]` | `riftplots.user.trust` | Dodaje współużytkownika. |
 | `/plots untrust <gracz> [id]` | `riftplots.user.untrust` | Usuwa współużytkownika; nie usuwa aktywnego najemcy. |
 | `/plots members [id]` | `riftplots.user.members` | Lista współużytkowników. |
 | `/plots abandon [id] [confirm]` | `riftplots.user.abandon` | Prosi o potwierdzenie; z `confirm` oddaje nieruchomość. |
-| `/plots rent <id> [okresy]` | `riftplots.rent` | Wynajmuje lokal, domyślnie na jeden okres, z automatycznym odnowieniem. |
+| `/plots rent <id> [okresy] [on\|off]` | `riftplots.rent` | Wynajmuje lokal; domyślnie jeden okres i wyłączone odnowienie. |
+| `/plots rent info <id>` | `riftplots.rent` | Czynsz, kaucja, koniec i stan odnowienia umowy. |
+| `/plots rent autorenew <id> on\|off` | `riftplots.rent` | Zmienia automatyczne odnowienie bez skracania opłaconego czasu. |
+| `/plots rent cancel <id> [confirm]` | `riftplots.rent` | Pokazuje zasady, a po potwierdzeniu kończy własny najem. |
+| `/plots rent offer <id> <czynsz> <jednostka> <kaucja> confirm` | `riftplots.rent.offer` | Oferta własnego lokalu; uprawnienie trzeba nadać jawnie. |
 | `/plots transfer <gracz> <cena> [id]` | `riftplots.sell` | Wysyła ofertę sprzedaży online; cena `0` oznacza przekazanie. |
 | `/plots accept [id_oferty]` | `riftplots.user` | Akceptuje ofertę; bez ID wybiera jedną z otrzymanych ofert. |
 | `/plots deny <id_oferty>` | `riftplots.user` | Kupujący odrzuca ofertę, a sprzedający może ją anulować. |
 | `/plots auction [list]` | `riftplots.auction` | Lista aktywnych aukcji. |
 | `/plots auction bid <id> <kwota>` | `riftplots.auction` | Składa ofertę w aukcji. |
+| `/plots auction history <id> [strona]` | `riftplots.auction` | Trwała historia przebić, także po zakończeniu. |
+| `/plots auction buy <id> confirm` | `riftplots.auction` | Kup teraz w aktywnej aukcji. |
 | `/plots home [id]` | `riftplots.home` | Teleportuje właściciela lub współużytkownika na działkę. |
 | `/plots sethome [id]` | `riftplots.sethome` | Właściciel zapisuje punkt domowy wewnątrz granic działki. |
 
@@ -39,11 +47,11 @@ Każda komenda wymaga `riftplots.user` oraz odpowiedniego uprawnienia z tabeli. 
 | Rola | Domyślny zakres |
 | :--- | :--- |
 | Właściciel | Wszystkie uprawnienia działki. |
-| `MEMBER` dodany przez `trust` | `INTERACT`, `DOORS`, `CONTAINERS`. |
-| `TENANT` utworzony przy wynajmie | `BUILD`, `DESTROY`, `CONTAINERS`, `DOORS`, `INTERACT`. |
+| `MEMBER` dodany przez `trust` | `INTERACT`, `DOORS`, `CONTAINERS`, `TELEPORT`. |
+| `TENANT` utworzony przy wynajmie | `BUILD`, `DESTROY`, `CONTAINERS`, `DOORS`, `INTERACT`, `TELEPORT`. |
 | `MANAGER` w modelu/API | Wszystkie uprawnienia działki. Komenda `trust` nie nadaje tej roli. |
 
-Komendy nie udostępniają edytora pojedynczych uprawnień. Zakres członka można zmieniać przez model/API. Najem kończy się przez mechanizm umów, a nie usunięcie główki najemcy w GUI.
+Panel członków udostępnia edytor roli `MEMBER`/`MANAGER` i pojedynczych praw dla właściciela lub bypass z `riftplots.members.edit`. Dawne listy praw pozostają bez zmian. Najem kończy się przez mechanizm umów; edytor nie zmienia praw `TENANT`.
 
 ## Administracja
 
@@ -64,11 +72,13 @@ Dispatcher wymaga `riftplots.admin` oraz uprawnienia konkretnej komendy. Węzeł
 | `/plots admin setgrace <id> <godziny>` | `riftplots.admin.setgrace` | Czas karencji; `0` wyłącza dodatkowy czas. |
 | `/plots admin setowner <id> <gracz\|none>` | `riftplots.admin.setowner` | Administracyjnie ustawia lub usuwa właściciela. |
 | `/plots admin snapshot <id>` | `riftplots.admin.snapshot` | Zastępuje pierwotny schemat obecnym stanem budynku. |
-| `/plots admin reset <id>` | `riftplots.admin.reset` | Odbiera własność i przywraca działkę ze schematu. |
-| `/plots admin restore <id>` | `riftplots.admin.restore` | Uruchamia ten sam reset, również usuwając własność. |
+| `/plots admin reset <id> [confirm]` | `riftplots.admin.reset` | Pokazuje podgląd, po potwierdzeniu oddaje własność i odtwarza bloki. |
+| `/plots admin restore <id> [confirm]` | `riftplots.admin.restore` | Ten sam mechanizm podglądu i resetu. |
 | `/plots admin sign <id> [FOR_SALE\|STATUS\|RENEW]` | `riftplots.admin.sign` | Wiąże tabliczkę wskazywaną wzrokiem, do pięciu bloków. |
 | `/plots admin unsign` | `riftplots.admin.unsign` | Odpina wskazywaną tabliczkę. |
-| `/plots admin audit <id>` | `riftplots.admin.audit` | Wyświetla zarejestrowane transakcje finansowe działki. |
+| `/plots admin audit <id> [strona]` | `riftplots.admin.audit` | Audyt operacyjny ze zmianami stanu oraz transakcje. |
+| `/plots admin health [reset <id>]` | `riftplots.admin.health` | Diagnostyka bez zmiany danych i podgląd schematu. |
+| `/plots admin transactions …` | `riftplots.admin.transactions` | Oczekujące operacje, zwroty i ręczne uzgodnienie; [pełna składnia](wiki/Nowosci-P1-P2.md). |
 | `/plots admin disable <id>` | `riftplots.admin.disable` | Wyłącza działkę bez aktywnego resetu, najmu i aukcji. |
 | `/plots admin enable <id>` | `riftplots.admin.enable` | Włącza wyłączoną działkę; nie przerywa resetu. |
 | `/plots admin reload` | `riftplots.admin.reload` | Odświeża konfigurację, wiadomości, typy, dzielnice i tabliczki. |
@@ -82,11 +92,12 @@ Dispatcher wymaga `riftplots.admin` oraz uprawnienia konkretnej komendy. Węzeł
 | `/plots admin type list` | `riftplots.admin.type` |
 | `/plots admin type info <typ>` | `riftplots.admin.type` |
 | `/plots admin type set <id> <typ>` | `riftplots.admin.type` |
+| `/plots admin type apply-defaults <id> [confirm]` | `riftplots.admin.type` |
 | `/plots admin district list` | `riftplots.admin.district` |
 | `/plots admin district info <dzielnica>` | `riftplots.admin.district` |
 | `/plots admin district set <id> <dzielnica\|none>` | `riftplots.admin.district` |
 
-`type set` zmienia identyfikator typu, nie przepisuje jego domyślnej ceny, podatku ani okresu. Dzielnice są przypisaniem logicznym — nie tworzą dodatkowych regionów ani granic w świecie.
+`type set` zmienia typ; dostępne działki aktualizują parametry dziedziczone. Indywidualne nadpisania i warunki posiadanych nieruchomości pozostają zachowane. `apply-defaults` pokazuje zmiany i wymaga potwierdzenia. Dzielnice są przypisaniem logicznym — nie tworzą dodatkowych regionów.
 
 ### Wynajem, aukcje i finanse miasta
 
@@ -95,13 +106,14 @@ Dispatcher wymaga `riftplots.admin` oraz uprawnienia konkretnej komendy. Węzeł
 | `/plots admin rent offer <id> <czynsz> <HOUR\|DAY\|WEEK\|MONTH> [kaucja]` | `riftplots.admin` |
 | `/plots admin rent cancel <id>` | `riftplots.admin` |
 | `/plots admin auction start <id> <cena_startowa> <przebicie> <minuty> [kup_teraz]` | `riftplots.admin` |
+| `/plots admin auction cancel <id> confirm <powód>` | `riftplots.admin` |
 | `/plots admin budget balance` | `riftplots.admin.budget` |
 | `/plots admin budget history` | `riftplots.admin.budget` |
 | `/plots admin budget add <kwota> [powód]` | `riftplots.admin.budget` |
 | `/plots admin budget withdraw <kwota> [powód]` | `riftplots.admin.budget` |
 | `/plots admin migrate <YAML\|SQLITE\|MYSQL> <YAML\|SQLITE\|MYSQL>` | `riftplots.admin.migrate` |
 
-Oferta najmu i aukcja są wystawiane przez administratora. Przy aukcji nieruchomości gracza odbiorcą wypłaty jest jej obecny właściciel; nieruchomość bez właściciela sprzedaje miasto. `budget add` i `withdraw` są korektami wewnętrznej księgi miasta — nie przesyłają pieniędzy na konto administratora w Vault.
+Ofertę najmu wystawia administrator lub właściciel z `riftplots.rent.offer`. Aukcję rozpoczyna administrator. Przy aukcji nieruchomości gracza odbiorcą wypłaty jest jej obecny właściciel; nieruchomość bez właściciela sprzedaje miasto. `budget add` i `withdraw` są korektami wewnętrznej księgi miasta — nie przesyłają pieniędzy na konto administratora w Vault.
 
 ## Uprawnienie specjalne
 

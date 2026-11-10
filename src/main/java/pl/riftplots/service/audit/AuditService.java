@@ -21,7 +21,11 @@ public class AuditService {
     private final File auditFile;
     private final DatabaseManager databaseManager;
     private final PlotManager plotManager;
-    private final List<PlotAuditLog> inMemoryLogs = new ArrayList<>();
+    private java.util.function.BooleanSupplier writeAllowed = () -> true;
+
+    public void setWriteAllowed(java.util.function.BooleanSupplier allowed) {
+        writeAllowed = allowed;
+    }
 
     public AuditService(File dataFolder, DatabaseManager databaseManager, PlotManager plotManager) {
         this.auditFile = new File(dataFolder, "data/audit_logs.yml");
@@ -30,8 +34,8 @@ public class AuditService {
     }
 
     public synchronized void log(String plotId, UUID operatorUuid, String operatorName, String action, String details) {
+        if (!writeAllowed.getAsBoolean()) throw new IllegalStateException("Trwa migracja danych");
         PlotAuditLog entry = PlotAuditLog.create(plotId, operatorUuid, operatorName, action, details);
-        inMemoryLogs.add(entry);
 
         if (databaseManager != null) {
             try (Connection conn = databaseManager.getConnection();
@@ -63,20 +67,26 @@ public class AuditService {
             config.set(path + ".details", entry.getDetails());
             config.set(path + ".timestamp", entry.getTimestamp().toEpochMilli());
             auditFile.getParentFile().mkdirs();
-            config.save(auditFile);
+            YamlDataFile.save(config, auditFile);
         } catch (IOException e) {
             throw new IllegalStateException("Storage operation failed", e);
         }
     }
 
     public synchronized List<PlotAuditLog> getLogsForPlot(String plotId, int limit) {
+        return getLogsForPlot(plotId, 0, limit);
+    }
+
+    public synchronized List<PlotAuditLog> getLogsForPlot(String plotId, int page, int limit) {
+        if (page < 0) throw new IllegalArgumentException("Invalid audit page");
         if (plotId == null || limit <= 0) return Collections.emptyList();
         if (databaseManager != null) {
             List<PlotAuditLog> list = new ArrayList<>();
             try (Connection conn = databaseManager.getConnection();
-                 PreparedStatement ps = conn.prepareStatement("SELECT * FROM rift_audit_logs WHERE plot_id = ? ORDER BY timestamp DESC LIMIT ?")) {
+                 PreparedStatement ps = conn.prepareStatement("SELECT * FROM rift_audit_logs WHERE plot_id = ? ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?")) {
                 ps.setString(1, plotId.toLowerCase());
                 ps.setInt(2, limit);
+                ps.setLong(3, (long) page * limit);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         String id = rs.getString("id");
@@ -111,7 +121,8 @@ public class AuditService {
         }
         return fileLogs.stream()
                 .filter(l -> l.getPlotId().equalsIgnoreCase(plotId))
-                .sorted(Comparator.comparing(PlotAuditLog::getTimestamp).reversed())
+                .sorted(Comparator.comparing(PlotAuditLog::getTimestamp).thenComparing(PlotAuditLog::getId).reversed())
+                .skip((long) page * limit)
                 .limit(limit)
                 .toList();
     }

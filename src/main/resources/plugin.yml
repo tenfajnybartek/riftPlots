@@ -40,6 +40,8 @@ permissions:
       riftplots.auction: true
       riftplots.home: true
       riftplots.sethome: true
+      riftplots.border: true
+      riftplots.members.edit: true
 
   riftplots.admin:
     description: Pełne uprawnienia administracyjne do zarządzania działkami riftPlots
@@ -70,3 +72,25 @@ permissions:
       riftplots.admin.type: true
       riftplots.admin.budget: true
       riftplots.admin.migrate: true
+      riftplots.admin.transactions: true
+      riftplots.admin.health: true
+      riftplots.admin.history: true
+
+  riftplots.rent.offer:
+    description: Wystawianie własnego lokalu na wynajem
+    default: false
+  riftplots.border:
+    description: Podgląd granic 3D nieruchomości
+    default: true
+  riftplots.members.edit:
+    description: Edycja ról i uprawnień członków własnej działki
+    default: true
+  riftplots.admin.transactions:
+    description: Uzgadnianie operacji finansowych i obsługa zwrotów
+    default: op
+  riftplots.admin.health:
+    description: Diagnostyka magazynu, regionów i schematów
+    default: op
+  riftplots.admin.history:
+    description: Odczyt prywatnej historii wszystkich nieruchomości
+    default: op

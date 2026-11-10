@@ -15,6 +15,16 @@ import java.util.List;
 
 public class PlotConfirmBuyGUI {
     private final PluginConfiguration config;
+    private java.util.function.Function<Plot, java.math.BigDecimal> price = Plot::getPrice;
+    private java.util.function.Function<Plot, java.math.BigDecimal> tax = Plot::getBaseTax;
+
+    public void setPriceResolver(java.util.function.Function<Plot, java.math.BigDecimal> price) {
+        this.price = price;
+    }
+
+    public void setTaxResolver(java.util.function.Function<Plot, java.math.BigDecimal> tax) {
+        this.tax = tax;
+    }
 
     public PlotConfirmBuyGUI(PluginConfiguration config) {
         this.config = config;
@@ -30,11 +40,14 @@ public class PlotConfirmBuyGUI {
         confMeta.displayName(AdventureUtil.parse("<green><b>POTWIERDŹ ZAKUP</b></green>"));
         confMeta.lore(List.of(
                 AdventureUtil.parse("<gray>Działka: </gray><gold>" + plot.getName() + " (" + plot.getId() + ")</gold>"),
-                AdventureUtil.parse("<gray>Cena: </gray><green>" + config.formatMoney(plot.getPrice()) + "</green>"),
+                AdventureUtil.parse("<gray>Cena: </gray><green>" + config.formatMoney(price.apply(plot)) + "</green>"),
+                AdventureUtil.parse("<gray>Podatek: </gray><gold>" + config.formatMoney(tax.apply(plot)) + " co " + plot.getBillingPeriodDays() + " dni</gold>"),
+                AdventureUtil.parse("<gray>Dodatkowa prowizja kupującego: </gray><green>0</green>"),
                 Component.empty(),
                 AdventureUtil.parse("<yellow>Kliknij, aby sfinalizować zakup!</yellow>")
         ));
         confirmItem.setItemMeta(confMeta);
+        GuiData.set(confirmItem, "quote", price.apply(plot).toPlainString());
         inv.setItem(11, confirmItem);
 
         ItemStack cancelItem = new ItemStack(Material.RED_WOOL);
@@ -45,6 +58,7 @@ public class PlotConfirmBuyGUI {
         ));
         cancelItem.setItemMeta(cancelMeta);
         inv.setItem(15, cancelItem);
+        inv.setItem(22, GuiData.item(Material.GLOWSTONE_DUST, "Pokaż granice 3D", "Zamknij podgląd i obejrzyj obrys nieruchomości w świecie."));
 
         player.openInventory(inv);
     }

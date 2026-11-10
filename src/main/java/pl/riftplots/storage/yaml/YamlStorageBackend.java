@@ -26,6 +26,16 @@ public class YamlStorageBackend implements StorageBackend {
         File transactionsDir = new File(dataDir, "transactions");
         File playersDir = new File(dataDir, "players");
         File signsFile = new File(dataDir, "signs.yml");
+        File schemaFile = new File(dataDir, "schema.yml");
+        var schema = YamlDataFile.load(schemaFile);
+        if (schema.getInt("version", 1) > 2)
+            throw new IllegalStateException("Magazyn pochodzi z nowszej wersji riftPlots");
+        schema.set("version", 2);
+        try {
+            YamlDataFile.save(schema, schemaFile);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Cannot save storage schema version", e);
+        }
 
         if (!plotsDir.exists()) plotsDir.mkdirs();
         if (!transactionsDir.exists()) transactionsDir.mkdirs();

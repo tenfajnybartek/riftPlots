@@ -92,6 +92,7 @@ public class PropertyTypeManager {
             config.set(path + ".sales-allowed", type.isSalesAllowed());
             config.set(path + ".refund-percent", type.getRefundPercent());
             config.set(path + ".icon-material", type.getIconMaterial().name());
+            type.getDefaultFlags().forEach((flag, value) -> config.set(path + ".flags." + flag, value));
         }
         try {
             configFile.getParentFile().mkdirs();

@@ -42,6 +42,15 @@ public class AdminAuctionSubCommand implements SubCommand {
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
+        if (args.length >= 3 && args[0].equalsIgnoreCase("cancel")) {
+            if (args.length < 4 || !args[2].equalsIgnoreCase("confirm")) {
+                sender.sendMessage("Użycie: /plots admin auction cancel <id> confirm <powód>. Anulowanie obejmuje także aukcję z ofertami.");
+                return true;
+            }
+            auctionService.cancelAuction(args[1], sender.getName(), String.join(" ", Arrays.copyOfRange(args, 3, args.length)));
+            sender.sendMessage("Anulowano aukcję. Ewentualne zwroty trafiają do trwałej kolejki.");
+            return true;
+        }
         if (args.length < 5 || !"start".equalsIgnoreCase(args[0])) {
             sender.sendMessage("§cUżycie: /" + getUsage());
             return true;
@@ -56,10 +65,10 @@ public class AdminAuctionSubCommand implements SubCommand {
         Plot plot = opt.get();
 
         try {
-            BigDecimal startingPrice = new BigDecimal(args[2]);
-            BigDecimal minInc = new BigDecimal(args[3]);
+            BigDecimal startingPrice = pl.riftplots.util.Money.parse(args[2]);
+            BigDecimal minInc = pl.riftplots.util.Money.parse(args[3]);
             int minutes = Integer.parseInt(args[4]);
-            BigDecimal buyout = args.length > 5 ? new BigDecimal(args[5]) : null;
+            BigDecimal buyout = args.length > 5 ? pl.riftplots.util.Money.parse(args[5]) : null;
 
             boolean started = auctionService.startAuction(plot, plot.getOwnerUuid(), startingPrice, minInc, minutes, buyout);
             if (started) {
@@ -77,7 +86,7 @@ public class AdminAuctionSubCommand implements SubCommand {
     @Override
     public List<String> tabComplete(CommandSender sender, String[] args) {
         if (args.length == 1) {
-            return List.of("start");
+            return List.of("start", "cancel");
         } else if (args.length == 2) {
             return plotManager.getAllPlots().stream().map(Plot::getId).toList();
         }

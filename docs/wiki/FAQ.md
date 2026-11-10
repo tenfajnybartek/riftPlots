@@ -20,7 +20,7 @@ Nie. Vault musi mieć zarejestrowanego providera ekonomii. Bez niego riftPlots p
 
 ## Czy `trust` pozwala budować znajomym?
 
-Domyślnie nie. Nadaje interakcje, drzwi i pojemniki. `TENANT` ma dodatkowe prawa budowania i niszczenia, a model/API pozwala zarządzać pojedynczymi uprawnieniami. Nie ma jeszcze komendowego edytora wszystkich tych praw.
+Domyślnie nie. Nadaje interakcje, drzwi, pojemniki i teleportację. Właściciel może zmienić rolę oraz prawa w panelu członków z `riftplots.members.edit`. `TENANT` ma prawa wynikające z umowy.
 
 ## Czy wynajmujący zostaje właścicielem?
 
@@ -28,7 +28,7 @@ Najemca nie zostaje właścicielem. Jego prawa wynikają z umowy. Czynsz, kaucja
 
 ## Czy najem odnawia się automatycznie?
 
-Komenda `/plots rent` włącza odnowienie o jeden okres. Nie ma obecnie komendy gracza wyłączającej tę opcję; administracja może zakończyć najem przez `admin rent cancel`.
+Domyślnie odnowienie jest wyłączone. Najemca wybiera je w GUI lub przez `rent autorenew <id> on|off`. Może też zakończyć umowę przez `rent cancel <id> confirm`.
 
 ## Czy `MONTH` oznacza miesiąc kalendarzowy?
 
@@ -36,7 +36,7 @@ Nie. Oznacza 30 dni.
 
 ## Czy cena typu jest od razu ceną działki?
 
-Nie. Przypisanie typu nie kopiuje ceny ani pozostałych domyślnych stawek. Cenę ustalaj `setprice`, a rozliczenia odpowiednimi komendami. [Typy i dzielnice](Dzielnice-i-typy.md).
+Nowe działki dziedziczą cenę typu i mnożnik cen dzielnicy. `setprice` tworzy końcową cenę ręczną; starsze rekordy zachowują parametry. [Typy i dzielnice](Dzielnice-i-typy.md).
 
 ## Czy `CUSTOM` pomija mnożnik podatku dzielnicy?
 
@@ -52,11 +52,11 @@ Nie. Korzysta z mechanizmu resetu i usuwa własność. [Schematy i reset](Schema
 
 ## Czy koniec najmu resetuje budynek?
 
-Nie sam w sobie. Kończy umowę i odbiera dostęp po rozliczeniu; przywracanie schematu jest osobną operacją.
+Nie sam w sobie. Kończy umowę i odbiera dostęp niezależnie od wypłaty kaucji; przywracanie schematu jest osobną operacją.
 
 ## Czy aukcja rezerwuje pieniądze?
 
-Nie. Saldo jest sprawdzane przy ofercie, ale pobranie następuje przy rozliczeniu. Nieudana płatność anuluje aukcję bez automatycznego wyboru drugiego licytującego.
+Domyślnie nie. `auction.escrow-enabled: true` włącza rezerwację dla nowych aukcji. Bez niej pobranie następuje przy finalizacji; odmowa nie wybiera automatycznie drugiej osoby.
 
 ## Czy budżet miasta to konto bankowe Vault?
 
