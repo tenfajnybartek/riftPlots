@@ -91,8 +91,8 @@ public class PlotManager {
     };
 
     public PlotManager(PlotRepository repository, WorldGuardHook worldGuardHook) {
-        this.repository = Objects.requireNonNull(repository, "repository cannot be null");
-        this.worldGuardHook = Objects.requireNonNull(worldGuardHook, "worldGuardHook cannot be null");
+        this.repository = Objects.requireNonNull(repository, pl.riftplots.config.Texts.raw("text.plot-manager.repository-cannot-be-null"));
+        this.worldGuardHook = Objects.requireNonNull(worldGuardHook, pl.riftplots.config.Texts.raw("text.plot-manager.worldguardhook-cannot-be-null"));
     }
 
     public void loadAll() {
@@ -149,24 +149,27 @@ public class PlotManager {
     }
 
     public PlotValidationResult validateAcquisition(Plot plot, UUID buyerUuid) {
-        if (plot == null || buyerUuid == null) return PlotValidationResult.error("Nieprawidłowy kupujący lub działka.");
-        if (isResetPending(plot.getId())) return PlotValidationResult.error("Działka jest przygotowywana do resetu.");
+        if (plot == null || buyerUuid == null)
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.nieprawidowy-kupujacy-lub-dziaka"));
+        if (isResetPending(plot.getId()))
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.dziaka-jest-przygotowywana-do-resetu"));
         if (financiallyBlocked(plot.getId(), currentOperationId()))
-            return PlotValidationResult.error("Operacja tej nieruchomości wymaga uzgodnienia przez administrację.");
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.operacja-tej-nieruchomosci-wymaga-uzgodnienia-przez-administracje"));
         if (typeManager != null && !typeManager.getType(plot.getPropertyType()).isSalesAllowed()) {
-            return PlotValidationResult.error("Ten typ nieruchomości nie pozwala na sprzedaż.");
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.ten-typ-nieruchomosci-nie-pozwala-na-sprzedaz"));
         }
         if (districtManager != null && plot.getDistrictId() != null) {
             var district = districtManager.getDistrict(plot.getDistrictId());
-            if (district.isEmpty()) return PlotValidationResult.error("Przypisana dzielnica nie istnieje.");
+            if (district.isEmpty())
+                return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.przypisana-dzielnica-nie-istnieje"));
             var rules = district.get();
             if (!rules.isSalesEnabled() || !rules.isTypeAllowed(plot.getPropertyType())) {
-                return PlotValidationResult.error("Dzielnica nie pozwala na sprzedaż tego typu nieruchomości.");
+                return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.dzielnica-nie-pozwala-na-sprzedaz-tego-typu"));
             }
             long count = getPlotsByOwner(buyerUuid).stream()
                     .filter(p -> !p.getId().equals(plot.getId()) && Objects.equals(p.getDistrictId(), plot.getDistrictId())).count();
             if (rules.getMaxPlotsPerPlayer() > 0 && count >= rules.getMaxPlotsPerPlayer()) {
-                return PlotValidationResult.error("Osiągnięto limit działek w tej dzielnicy.");
+                return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.osiagnieto-limit-dziaek-w-tej-dzielnicy"));
             }
         }
         return PlotValidationResult.ok();
@@ -181,7 +184,7 @@ public class PlotManager {
             return plot.getPrice();
         var price = typeManager.getType(plot.getPropertyType()).getDefaultPrice();
         price = price.multiply(java.math.BigDecimal.valueOf(getDistrictPriceMultiplier(plot)));
-        return price.setScale(2, java.math.RoundingMode.HALF_UP);
+        return price.setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding());
     }
 
     public double getDistrictPriceMultiplier(Plot plot) {
@@ -190,13 +193,14 @@ public class PlotManager {
     }
 
     public org.bukkit.Material getIcon(Plot plot) {
-        return typeManager != null ? typeManager.getType(plot.getPropertyType()).getIconMaterial() : org.bukkit.Material.GRASS_BLOCK;
+        return typeManager != null ? typeManager.getType(plot.getPropertyType()).getIconMaterial() : org.bukkit.Material.matchMaterial(pl.riftplots.config.Settings.string("plots.default-icon"));
     }
 
     public void applyTypeDefaults(Plot plot) {
-        if (typeManager == null) throw new IllegalStateException("Property types not configured");
+        if (typeManager == null)
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.plot-manager.property-types-not-configured"));
         if (plot.isRented() || plot.isAuctionActive() || isResetPending(plot.getId()))
-            throw new IllegalArgumentException("Zakończ najem, aukcję lub reset przed zmianą warunków.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.plot-manager.zakoncz-najem-aukcje-lub-reset-przed-zmiana"));
         worldGuardHook.validateTypeFlags(typeManager.getType(plot.getPropertyType()).getDefaultFlags());
         plot.applyTypeDefaults(typeManager.getType(plot.getPropertyType()));
         savePlot(plot);
@@ -270,28 +274,28 @@ public class PlotManager {
 
     public PlotValidationResult validateNewPlot(String id, PlotBounds bounds) {
         if (id == null || id.isBlank()) {
-            return PlotValidationResult.error("Identyfikator działki nie może być pusty!");
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.identyfikator-dziaki-nie-moze-byc-pusty"));
         }
         String cleanId = id.toLowerCase();
         if (!cleanId.matches("^[a-zA-Z0-9_-]{2,32}$")) {
-            return PlotValidationResult.error("Identyfikator może zawierać tylko litery, cyfry, podkreślenia i myślniki (2-32 znaki)!");
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.identyfikator-moze-zawierac-tylko-litery-cyfry-podkreslenia"));
         }
         if (plots.containsKey(cleanId)) {
-            return PlotValidationResult.error("Działka o identyfikatorze " + cleanId + " już istnieje!");
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.dziaka-o-identyfikatorze-juz-istnieje", cleanId));
         }
         if (bounds == null) {
-            return PlotValidationResult.error("Granice działki są nieprawidłowe!");
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.granice-dziaki-sa-nieprawidowe"));
         }
 
         for (Plot existing : plots.values()) {
             if (existing.getBounds().intersects(bounds)) {
-                return PlotValidationResult.error("Kolizja z istniejącą działką: " + existing.getId());
+                return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.kolizja-z-istniejaca-dziaka", existing.getId()));
             }
         }
 
         String conflictRegion = worldGuardHook.findConflictingRegion(bounds, "riftplot_" + cleanId);
         if (conflictRegion != null) {
-            return PlotValidationResult.error("Kolizja z istniejącym regionem WorldGuard: " + conflictRegion);
+            return PlotValidationResult.error(pl.riftplots.config.Texts.raw("text.plot-manager.kolizja-z-istniejacym-regionem-worldguard", conflictRegion));
         }
 
         return PlotValidationResult.ok();
@@ -322,7 +326,7 @@ public class PlotManager {
         }
         if (!writeAllowed.getAsBoolean()) {
             if (committed.containsKey(plot.getId())) plot.restore(committed.get(plot.getId()));
-            throw new IllegalStateException("Zmiany są wstrzymane na czas migracji.");
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.plot-manager.zmiany-sa-wstrzymane-na-czas-migracji"));
         }
         refreshInherited(plot);
         plot.touch();
@@ -338,13 +342,13 @@ public class PlotManager {
         committed.put(plot.getId(), plot.copy());
         spatialIndex.put(plot.getId(), plot.getBounds());
         if (!worldGuardHook.syncMembers(plot))
-            throw new IllegalStateException("Nie można zsynchronizować ochrony działki " + plot.getId());
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.plot-manager.nie-mozna-zsynchronizowac-ochrony-dziaki", plot.getId()));
         synchronizeOwnerProfile(plot);
         updateListener.accept(plot);
         if (audit != null && before != null && !auditState(before).equals(auditState(plot))) {
             Actor operator = actor.get();
             UUID id = operator != null ? operator.uuid() : journal != null && journal.currentId() != null ? journal.find(journal.currentId()).map(pl.riftplots.service.transaction.OperationJournal.Entry::actor).orElse(null) : null;
-            audit.log(plot.getId(), id, operator != null ? operator.name() : "SYSTEM", "PLOT_CHANGED", auditState(before) + " -> " + auditState(plot) + " [op:" + currentOperationId() + "]");
+            audit.log(plot.getId(), id, operator != null ? operator.name() : pl.riftplots.config.Texts.raw("text.plot-manager.system"), "PLOT_CHANGED", auditState(before) + " -> " + auditState(plot) + " [op:" + currentOperationId() + "]");
         }
     }
 
@@ -378,7 +382,7 @@ public class PlotManager {
         if (plot.getOwnerUuid() != null) {
             Instant now = Instant.now();
             PlotPlayerProfile profile = profileRepository.findById(plot.getOwnerUuid()).orElseGet(() ->
-                    new PlotPlayerProfile(plot.getOwnerUuid(), plot.getOwnerName() != null ? plot.getOwnerName() : "Unknown",
+                    new PlotPlayerProfile(plot.getOwnerUuid(), plot.getOwnerName() != null ? plot.getOwnerName() : pl.riftplots.config.Texts.raw("text.plot-manager.unknown"),
                             now, now, new HashSet<>()));
             profile.addOwnedPlot(plot.getId());
             profileRepository.save(profile);
@@ -387,7 +391,8 @@ public class PlotManager {
     }
 
     public boolean deletePlot(String id) {
-        if (!writeAllowed.getAsBoolean()) throw new IllegalStateException("Zmiany są wstrzymane na czas migracji.");
+        if (!writeAllowed.getAsBoolean())
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.plot-manager.zmiany-sa-wstrzymane-na-czas-migracji"));
         if (id == null) {
             return false;
         }

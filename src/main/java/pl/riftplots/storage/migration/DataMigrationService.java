@@ -33,7 +33,7 @@ public class DataMigrationService {
 
     public synchronized MigrationReport migrate(StorageType source, StorageType target) throws Exception {
         if (source == target) {
-            throw new IllegalArgumentException("Źródłowy i docelowy typ bazy danych nie mogą być takie same!");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.data-migration-service.zrodowy-i-docelowy-typ-bazy-danych-nie"));
         }
 
         StorageBackend srcBackend = createBackend(source, activeConfiguration);
@@ -48,7 +48,7 @@ public class DataMigrationService {
                     || !dstBackend.getPlotSignRepository().findAll().isEmpty()
                     || !dstBackend.getPlayerProfileRepository().findAll().isEmpty()
                     || !serviceData.isEmpty(dstBackend)) {
-                throw new IllegalStateException("Docelowy magazyn nie jest pusty. Migracja nie nadpisuje istniejących danych.");
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.data-migration-service.docelowy-magazyn-nie-jest-pusty-migracja-nie"));
             }
 
             List<Plot> plots = srcBackend.getPlotRepository().findAll();
@@ -78,7 +78,7 @@ public class DataMigrationService {
             }
             serviceData.copy(srcBackend, dstBackend);
 
-            return new MigrationReport(source, target, plotsCount, txCount, signCount, true, "Migracja zakonczona sukcesem");
+            return new MigrationReport(source, target, plotsCount, txCount, signCount, true, pl.riftplots.config.Texts.raw("text.data-migration-service.migracja-zakonczona-sukcesem"));
         } finally {
             try {
                 dstBackend.shutdown();

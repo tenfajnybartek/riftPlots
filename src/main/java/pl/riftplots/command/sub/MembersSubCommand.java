@@ -34,12 +34,12 @@ public class MembersSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots members [działka]";
+        return pl.riftplots.config.Texts.raw("text.members.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla listę współużytkowników działki.";
+        return pl.riftplots.config.Texts.raw("text.members.description");
     }
 
     @Override
@@ -65,21 +65,21 @@ public class MembersSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            AdventureUtil.sendMessage(sender, "<red>Podaj identyfikator działki lub stań na jej terenie!</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.members.podaj-identyfikator-dziaki-lub-stan-na-jej"));
             return true;
         }
 
-        AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== WSPÓŁUŻYTKOWNICY DZIAŁKI " + targetPlot.getId().toUpperCase() + " ===</b></gradient>");
-        AdventureUtil.sendMessage(sender, "<gray>Właściciel: </gray><gold>" + (targetPlot.getOwnerName() != null ? targetPlot.getOwnerName() : "Brak") + "</gold>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.members.wspouzytkownicy-dziaki", targetPlot.getId().toUpperCase()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.members.wasciciel", (targetPlot.getOwnerName() != null ? targetPlot.getOwnerName() : pl.riftplots.config.Texts.raw("text.members.brak"))));
 
         Map<UUID, PlotMember> members = targetPlot.getMembers();
         if (members.isEmpty()) {
-            AdventureUtil.sendMessage(sender, "<gray>Brak dodanych współużytkowników.</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.members.brak-dodanych-wspouzytkownikow"));
             return true;
         }
 
         for (PlotMember member : members.values()) {
-            AdventureUtil.sendMessage(sender, "<yellow>• " + member.getPlayerName() + "</yellow> <gray>(Rola: <gold>" + member.getRole() + "</gold>, Dodano: <white>" + TimeUtil.formatInstant(member.getAddedAt()) + "</white>, Uprawnienia: <aqua>" + member.getPermissions().size() + "</aqua>)</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.members.rola-dodano-uprawnienia", member.getPlayerName(), member.getRole(), TimeUtil.formatInstant(member.getAddedAt()), member.getPermissions().size()));
         }
 
         return true;

@@ -34,6 +34,7 @@
 ### Administracja techniczna
 
 - [Konfiguracja](Konfiguracja.md)
+- [Wygląd GUI](Konfiguracja-GUI.md)
 - [Magazyny danych](Magazyny-danych.md)
 - [Migracja i kopie](Migracja-i-kopie-zapasowe.md)
 - [Rozwiązywanie problemów](Rozwiazywanie-problemow.md)

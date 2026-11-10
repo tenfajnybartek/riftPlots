@@ -19,7 +19,7 @@ public class PlotSnapshotService {
         if (!schematicsDirectory.exists()) {
             schematicsDirectory.mkdirs();
         }
-        this.worldEditHook = Objects.requireNonNull(worldEditHook, "worldEditHook cannot be null");
+        this.worldEditHook = Objects.requireNonNull(worldEditHook, pl.riftplots.config.Texts.raw("text.plot-snapshot-service.worldedithook-cannot-be-null"));
     }
 
     public File getSchematicFile(String plotId) {

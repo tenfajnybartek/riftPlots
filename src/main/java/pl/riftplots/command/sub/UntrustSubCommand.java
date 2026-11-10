@@ -35,12 +35,12 @@ public class UntrustSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots untrust <gracz> [działka]";
+        return pl.riftplots.config.Texts.raw("text.untrust.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Usuwa współużytkownika z działki.";
+        return pl.riftplots.config.Texts.raw("text.untrust.description");
     }
 
     @Override
@@ -77,7 +77,7 @@ public class UntrustSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            AdventureUtil.sendMessage(player, "<red>Podaj identyfikator działki lub stań na jej terenie!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.untrust.podaj-identyfikator-dziaki-lub-stan-na-jej"));
             return true;
         }
 
@@ -107,7 +107,7 @@ public class UntrustSubCommand implements SubCommand {
         }
 
         if (targetPlot.getMember(memberUuid).getRole() == pl.riftplots.domain.plot.PlotMemberRole.TENANT) {
-            AdventureUtil.sendMessage(player, "<red>Aktywny najem należy zakończyć przez /plots admin rent cancel.</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.untrust.aktywny-najem-nalezy-zakonczyc-przez-plots-admin"));
             return true;
         }
         targetPlot.removeMember(memberUuid);

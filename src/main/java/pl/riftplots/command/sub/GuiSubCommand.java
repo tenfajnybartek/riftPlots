@@ -28,12 +28,12 @@ public class GuiSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots gui";
+        return pl.riftplots.config.Texts.raw("text.gui.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Otwiera graficzny interfejs działek.";
+        return pl.riftplots.config.Texts.raw("text.gui.description");
     }
 
     @Override

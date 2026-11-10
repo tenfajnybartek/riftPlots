@@ -30,34 +30,34 @@ public class AdminListSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin list";
+        return pl.riftplots.config.Texts.raw("text.admin-list.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla listę wszystkich działek w systemie.";
+        return pl.riftplots.config.Texts.raw("text.admin-list.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         Collection<Plot> allPlots = plotManager.getAllPlots();
-        AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== WSZYSTKIE DZIAŁKI MIEJSKIE (" + allPlots.size() + ") ===</b></gradient>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-list.wszystkie-dziaki-miejskie", allPlots.size()));
 
         if (allPlots.isEmpty()) {
-            AdventureUtil.sendMessage(sender, "<gray>Brak utworzonych działek.</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-list.brak-utworzonych-dziaek"));
             return true;
         }
 
         for (Plot plot : allPlots) {
             String statusColor = switch (plot.getStatus()) {
-                case AVAILABLE -> "<green>";
-                case OWNED -> "<dark_green>";
-                case PAYMENT_DUE -> "<gold>";
-                case GRACE_PERIOD -> "<red>";
-                case RESETTING -> "<gray>";
-                case DISABLED -> "<dark_red>";
+                case AVAILABLE -> pl.riftplots.config.Texts.raw("text.admin-list.line");
+                case OWNED -> pl.riftplots.config.Texts.raw("text.admin-list.line-27cabc2");
+                case PAYMENT_DUE -> pl.riftplots.config.Texts.raw("text.admin-list.line-e647b77");
+                case GRACE_PERIOD -> pl.riftplots.config.Texts.raw("text.admin-list.line-8b75ec2");
+                case RESETTING -> pl.riftplots.config.Texts.raw("text.admin-list.line-9e60a98");
+                case DISABLED -> pl.riftplots.config.Texts.raw("text.admin-list.line-e540b91");
             };
-            AdventureUtil.sendMessage(sender, "<yellow>" + plot.getId() + "</yellow> - <white>" + plot.getName() + "</white> " + statusColor + "[" + plot.getStatus() + "]</color> <gray>(Wł.: " + (plot.getOwnerName() != null ? plot.getOwnerName() : "Brak") + ", Pow: " + plot.getBounds().getHorizontalArea() + "m²)</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-list.w-pow-m2", plot.getId(), plot.getName(), statusColor, plot.getStatus(), (plot.getOwnerName() != null ? plot.getOwnerName() : pl.riftplots.config.Texts.raw("text.admin-list.brak")), plot.getBounds().getHorizontalArea()));
         }
 
         return true;

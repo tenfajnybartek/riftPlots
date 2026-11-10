@@ -43,7 +43,7 @@ Działki są **przestrzenią 3D**. Dom, sklep na parterze i mieszkanie na piętr
 | Rozpoczęcie pracy | [Instalacja](Instalacja.md), [szybki start](Szybki-start.md), [poradnik gracza](Poradnik-gracza.md), [poradnik administratora](Poradnik-administratora.md) |
 | Nieruchomości i gospodarka | [Podatki](Podatki.md), [wynajem](Wynajem.md), [transfery](Transfery.md), [aukcje](Aukcje.md), [budżet i audyt](Budzet-i-audyt.md) |
 | Organizacja miasta | [Typy i dzielnice](Dzielnice-i-typy.md), [ochrona](Ochrona-terenu.md), [schematy i reset](Schematy-i-reset.md), [tabliczki](Tabliczki.md), [teleportacja](Teleportacja.md) |
-| Obsługa serwera | [Konfiguracja](Konfiguracja.md), [magazyny danych](Magazyny-danych.md), [migracja i kopie](Migracja-i-kopie-zapasowe.md) |
+| Obsługa serwera | [Konfiguracja](Konfiguracja.md), [wygląd GUI](Konfiguracja-GUI.md), [magazyny danych](Magazyny-danych.md), [migracja i kopie](Migracja-i-kopie-zapasowe.md) |
 | Pomoc i rozwój | [Rozwiązywanie problemów](Rozwiazywanie-problemow.md), [FAQ](FAQ.md), [API](API-i-integracje.md), [testy](Rozwoj-i-testy.md) |
 
 ## Najważniejsze zasady
@@ -56,6 +56,6 @@ Działki są **przestrzenią 3D**. Dom, sklep na parterze i mieszkanie na piętr
 
 ## Wersja dokumentacji
 
-Wiki opisuje **riftPlots 1.0.0 z wdrożeniem P1–P2** z 10 listopada 2026 r. Docelowe API projektu to Paper 26.3 i Java 25. Wersje zależności oraz zakres testów znajdują się w [instalacji](Instalacja.md) i [rozdziale dla programistów](Rozwoj-i-testy.md).
+Wiki opisuje **riftPlots 1.0.0 z wdrożeniem P1–P2 i pełną konfiguracją prezentacji** z 10 listopada 2026 r. Docelowe API projektu to Paper 26.3 i Java 25. Wersje zależności oraz zakres testów znajdują się w [instalacji](Instalacja.md) i [rozdziale dla programistów](Rozwoj-i-testy.md).
 
 Zacznij od [szybkiego startu](Szybki-start.md), a jeśli coś nie działa — od [diagnozy problemów](Rozwiazywanie-problemow.md).

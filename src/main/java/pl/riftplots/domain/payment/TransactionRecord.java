@@ -25,10 +25,10 @@ public class TransactionRecord {
                              TransactionStatus status,
                              Instant timestamp,
                              String details) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.plotId = Objects.requireNonNull(plotId, "plotId cannot be null");
-        this.playerUuid = Objects.requireNonNull(playerUuid, "playerUuid cannot be null");
-        this.playerName = playerName != null ? playerName : "Unknown";
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.transaction-record.id-cannot-be-null"));
+        this.plotId = Objects.requireNonNull(plotId, pl.riftplots.config.Texts.raw("text.transaction-record.plotid-cannot-be-null"));
+        this.playerUuid = Objects.requireNonNull(playerUuid, pl.riftplots.config.Texts.raw("text.transaction-record.playeruuid-cannot-be-null"));
+        this.playerName = playerName != null ? playerName : pl.riftplots.config.Texts.raw("text.transaction-record.unknown");
         this.type = type != null ? type : TransactionType.TAX;
         this.amount = amount != null ? amount : BigDecimal.ZERO;
         this.status = status != null ? status : TransactionStatus.SUCCESS;

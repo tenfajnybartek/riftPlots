@@ -19,7 +19,7 @@ import java.util.*;
 public class CityBudgetService {
     private final File budgetFile;
     private final DatabaseManager databaseManager;
-    private BigDecimal currentBalance = BigDecimal.valueOf(100000);
+    private BigDecimal currentBalance = BigDecimal.valueOf(pl.riftplots.config.Settings.decimal("city-budget.initial-balance"));
     private final List<CityTransaction> transactions = new ArrayList<>();
     private long lastTimestamp;
     private java.util.function.BooleanSupplier writeAllowed = () -> true;
@@ -29,7 +29,7 @@ public class CityBudgetService {
     }
 
     public CityBudgetService(File dataFolder, DatabaseManager databaseManager) {
-        this(dataFolder, databaseManager, BigDecimal.valueOf(100000));
+        this(dataFolder, databaseManager, BigDecimal.valueOf(pl.riftplots.config.Settings.decimal("city-budget.initial-balance")));
     }
 
     public CityBudgetService(File dataFolder, DatabaseManager databaseManager, BigDecimal initialBalance) {
@@ -92,7 +92,7 @@ public class CityBudgetService {
             budgetFile.getParentFile().mkdirs();
             YamlDataFile.save(config, budgetFile);
         } catch (IOException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.city-budget-service.storage-operation-failed"), e);
         }
     }
 
@@ -105,13 +105,14 @@ public class CityBudgetService {
                 this.lastTimestamp = rs.getLong("timestamp");
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.city-budget-service.storage-operation-failed"), e);
         }
     }
 
     public synchronized void recordTransaction(CityTransactionType type, BigDecimal amount, String plotId, UUID playerUuid, String description) {
-        if (!writeAllowed.getAsBoolean()) throw new IllegalStateException("Trwa migracja danych");
-        Objects.requireNonNull(type, "Transaction type cannot be null");
+        if (!writeAllowed.getAsBoolean())
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.city-budget-service.trwa-migracja-danych"));
+        Objects.requireNonNull(type, pl.riftplots.config.Texts.raw("text.city-budget-service.transaction-type-cannot-be-null"));
         if (amount == null) {
             amount = BigDecimal.ZERO;
         }
@@ -143,7 +144,7 @@ public class CityBudgetService {
                 ps.setString(8, tx.getDescription());
                 ps.executeUpdate();
             } catch (SQLException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.city-budget-service.storage-operation-failed"), e);
             }
         } else {
             saveToFile(nextBalance, tx);
@@ -183,7 +184,7 @@ public class CityBudgetService {
                     }
                 }
             } catch (SQLException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.city-budget-service.storage-operation-failed"), e);
             }
             return list;
         }

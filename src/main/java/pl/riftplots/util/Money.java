@@ -11,13 +11,18 @@ public final class Money {
 
     public static BigDecimal parse(String text) {
         BigDecimal amount = new BigDecimal(text);
-        if (!isSafe(amount) || amount.stripTrailingZeros().scale() > 2) {
-            throw new NumberFormatException("Kwota musi być nieujemna, mieć najwyżej 2 miejsca po przecinku i nie przekraczać " + MAX);
+        int decimals = pl.riftplots.config.Settings.integer("economy.decimal-places");
+        if (!isSafe(amount) || amount.stripTrailingZeros().scale() > decimals) {
+            throw new NumberFormatException(pl.riftplots.config.Texts.raw("validation.money", decimals, maximum()));
         }
-        return amount.setScale(2, RoundingMode.UNNECESSARY);
+        return amount.setScale(decimals, RoundingMode.UNNECESSARY);
     }
 
     public static boolean isSafe(BigDecimal amount) {
-        return amount != null && amount.signum() >= 0 && amount.compareTo(MAX) <= 0 && amount.scale() <= 8;
+        return amount != null && amount.signum() >= 0 && amount.compareTo(maximum()) <= 0 && amount.scale() <= 8;
+    }
+
+    public static BigDecimal maximum() {
+        return new BigDecimal(pl.riftplots.config.Settings.string("economy.maximum-transaction-amount")).min(MAX);
     }
 }

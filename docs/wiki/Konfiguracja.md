@@ -9,6 +9,7 @@
 | `config.yml` | Ustawienia główne, ekonomia, ochrona, reset i interfejs. |
 | `storage.yml` | Wybór backendu, połączenie i pula. |
 | `lang.yml` | Szablony wiadomości i ich placeholdery. |
+| `gui.yml` | Wygląd siedmiu ekranów: rozmiary, tytuły, sloty, przedmioty, lore i wypełnienie. |
 | `plot-types.yml` | Definicje typów, dozwolone operacje i limity. |
 | `districts.yml` | Dzielnice, mnożnik podatku i reguły nabycia. |
 
@@ -140,4 +141,63 @@ general:
   no-permission: "{prefix}<red>Brak uprawnień do tej czynności.</red>"
 ```
 
-Część tekstów komend i GUI jest nadal zapisana w kodzie. Edycja `lang.yml` nie przetłumaczy jeszcze całego interfejsu. Dla danej wiadomości korzystaj z placeholderów widocznych w jej dostarczonym szablonie.
+Katalog obejmuje **777 szablonów i etykiet**. Sekcje `text.<klasa>` zawierają pomoc, opisy komend, walidację, historię oraz diagnostykę. `labels` zawiera nazwy statusów, praw, ról, jednostek i sortowania, a `format` format kwot i względnego czasu. Zachowuj placeholdery widoczne w szablonie; nowe komunikaty używają także `{arg1}`, `{arg2}` itd.
+
+Wygląd menu opisuje [konfiguracja GUI](Konfiguracja-GUI.md). Teksty generowane przez zewnętrzne pluginy, Paper i biblioteki pochodzą z tych zależności. Zapisana historia i powiadomienia zachowują treść z chwili utworzenia.
+
+## Aktualizacja plików i reload
+
+Brakujące klucze `config.yml`, `storage.yml`, `lang.yml` i `gui.yml` są uzupełniane w pamięci wartościami z JAR-a, bez nadpisywania własnych plików. Pusta wiadomość `''` pozostaje pusta, a lore `[]` usuwa opis. Usunięcie klucza przywraca wartość domyślną. Nowy `gui.yml` powstaje przy uruchomieniu.
+
+Reload sprawdza YAML przed podmianą wspólnych ustawień. Błędne typy, układ menu i zakresy nowych ustawień powodują odrzucenie zestawu; wcześniejsze ustawienia główne, język i GUI pozostają aktywne. Pliki profili są również parsowane przed zastosowaniem, a wskazane błędy ich semantyki wymagają poprawienia. Backend bazy, pula połączeń i retencja już utworzonego magazynu wiadomości wymagają restartu. Otwarte menu otwórz ponownie.
+
+`plot-types.yml` nakłada własne wartości na bazowe profile z zasobów JAR-a. Własny profil dopisz pod `types`; brakujące pola korzystają z wartości ogólnych. `districts.yml` opisuje bieżącą listę dzielnic; pola własnej dzielnicy mogą korzystać z `district-defaults`.
+
+## Format kwot, dat i progi podatku
+
+```yaml
+economy:
+  decimal-places: 2
+  rounding-mode: HALF_UP
+  maximum-transaction-amount: '999999999999.99'
+formatting:
+  money-locale: pl-PL
+  money-grouping: true
+  date-pattern: 'yyyy-MM-dd HH:mm:ss'
+  timezone: system
+tax:
+  minimum-multiplier: 0.01
+  size-tier-limits: [250, 1000, 2500, 5000]
+  size-tier-multipliers: [1.0, 1.5, 2.5, 4.0]
+  size-tier-overflow-multiplier: 6.0
+```
+
+Precyzja wynosi 0–8 miejsc. Limit kwoty można obniżyć względem górnej granicy `999999999999.99`. Globalne zaokrąglenie `UNNECESSARY` jest odrzucane. Strefa to `system`, `UTC` lub np. `Europe/Warsaw`. Progi muszą rosnąć i mieć tyle elementów co mnożniki.
+
+## Dodatkowe parametry
+
+Pełne wartości znajdują się w [config.yml](https://github.com/tenfajnybartek/riftPlots/blob/master/src/main/resources/config.yml).
+
+| Sekcja / klucz | Zastosowanie i domyślne wartości |
+| :--- | :--- |
+| `economy.default-tax-enabled` | `true` przy tworzeniu działki. |
+| `plots` | Typ i kategoria `RESIDENTIAL`, ikona `GRASS_BLOCK`, limit członków `5`, sprzedaż i najem `true`. Typ domyślny musi istnieć w profilach. |
+| `billing.default-payment-periods` | `1` w komendzie, panelu i tabliczce. |
+| `rental.default-periods`, `default-unit`, `default-auto-renew` | `1`, `DAY`, `false`; najemca może zmienić auto-odnowienie. |
+| `rental-period-seconds` | `HOUR: 3600`, `DAY: 86400`, `WEEK: 604800`, `MONTH: 2592000`. Zmienia przyszłe obliczenia, zachowuje zapisane daty umów. |
+| `paging` | Historia/aukcje/wiadomości `10`, audyt `20`, budżet `15`, kolejki finansowe `30`, zwroty w historii `10`, starszy odczyt repozytorium `100`. Zakres 1–100. |
+| `scheduler.grace-warning-interval-seconds` | `300`, minimum 60 sekund. |
+| `signs.layouts` | Po cztery tekstowe wiersze dla siedmiu stanów tabliczek. |
+| `interaction.sign-target-distance` | `5` bloków, zakres 1–100. |
+| `worldguard.region-priority` | `10` dla regionów. |
+| `visualization` | Dodatkowo `border-particle: DUST`, `border-color: '#00c6ff'`, `border-particle-size: 1.1`, `border-interval-ticks: 10`. Obsługiwane cząsteczki bez danych lub z danymi pyłu. |
+| `notifications` | `sound-volume: 1.0`, `sound-pitch: 1.0`, `title-fade-in-ms: 300`, `title-stay-ms: 3000`, `title-fade-out-ms: 500`. |
+| `sounds` | Oddzielne dźwięki dla ofert, zakupów, aukcji, najmu i wiadomości offline. `''` wycisza dany dźwięk. |
+| `refunds` | `retry-initial-seconds: 60`, `retry-maximum-seconds: 3600`, `retry-multiplier: 2.0`. |
+| `performance` | `scheduler-initial-delay-ticks: 100`, `spatial-index-max-chunks-per-plot: 4096`, `io-shutdown-timeout-seconds: 30`. Parametr indeksu stosuj przez restart. |
+| `district-defaults` | Mnożniki ceny/podatku `1.0`, limit działek `3`, sprzedaż i najem `true`. |
+| `members.default-permissions` | Początkowe prawa członka: `INTERACT`, `DOORS`, `CONTAINERS`, `TELEPORT`. Zmiana dotyczy nowych członków; pusta lista nie nadaje praw. |
+| `rental.default-tenant-permissions` | Prawa najemcy: `BUILD`, `DESTROY`, `CONTAINERS`, `DOORS`, `INTERACT`, `TELEPORT`. Stosowane przy nowym najmie i odtworzeniu roli z aktywnej umowy podczas startu. |
+| `tab-completion` | Edytowalne listy podpowiedzi kwot, karencji, okresów i cen w komendach. Nie zmieniają walidacji argumentów. |
+
+Zmiana wartości domyślnych nie usuwa indywidualnych nadpisań działek ani zapisanych terminów i warunków umów.

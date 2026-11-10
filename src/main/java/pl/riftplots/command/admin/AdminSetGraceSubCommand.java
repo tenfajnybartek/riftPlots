@@ -31,12 +31,12 @@ public class AdminSetGraceSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin setgrace <id> <godziny>";
+        return pl.riftplots.config.Texts.raw("text.admin-set-grace.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Ustawia czas trwania okresu karencji w godzinach.";
+        return pl.riftplots.config.Texts.raw("text.admin-set-grace.description");
     }
 
     @Override
@@ -57,11 +57,11 @@ public class AdminSetGraceSubCommand implements SubCommand {
         try {
             hours = Integer.parseInt(args[1]);
             if (hours < 0) {
-                AdventureUtil.sendMessage(sender, "<red>Liczba godzin nie może być ujemna!</red>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-grace.liczba-godzin-nie-moze-byc-ujemna"));
                 return true;
             }
         } catch (NumberFormatException e) {
-            AdventureUtil.sendMessage(sender, "<red>Nieprawidłowa liczba godzin!</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-grace.nieprawidowa-liczba-godzin"));
             return true;
         }
 
@@ -85,7 +85,7 @@ public class AdminSetGraceSubCommand implements SubCommand {
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();
         } else if (args.length == 2) {
-            return List.of("1", "3", "6", "12", "24", "48");
+            return pl.riftplots.config.Settings.strings("tab-completion.grace-hours");
         }
         return Collections.emptyList();
     }

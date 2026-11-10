@@ -38,12 +38,12 @@ public class AdminSetTaxSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin settax <id> <podatek>";
+        return pl.riftplots.config.Texts.raw("text.admin-set-tax.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Ustawia bazową stawkę podatku dla działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-set-tax.description");
     }
 
     @Override
@@ -64,11 +64,11 @@ public class AdminSetTaxSubCommand implements SubCommand {
         try {
             tax = pl.riftplots.util.Money.parse(args[1]);
             if (tax.compareTo(BigDecimal.ZERO) < 0) {
-                AdventureUtil.sendMessage(sender, "<red>Podatek nie może być ujemny!</red>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-tax.podatek-nie-moze-byc-ujemny"));
                 return true;
             }
         } catch (NumberFormatException e) {
-            AdventureUtil.sendMessage(sender, "<red>Podana kwota jest nieprawidłowa!</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-tax.podana-kwota-jest-nieprawidowa"));
             return true;
         }
 
@@ -93,7 +93,7 @@ public class AdminSetTaxSubCommand implements SubCommand {
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();
         } else if (args.length == 2) {
-            return List.of("500", "1000", "1500", "2500", "5000");
+            return pl.riftplots.config.Settings.strings("tab-completion.plot-taxes");
         }
         return Collections.emptyList();
     }

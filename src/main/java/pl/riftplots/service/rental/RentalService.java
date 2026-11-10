@@ -99,8 +99,7 @@ public class RentalService {
                         && Objects.equals(plot.getOwnerUuid(), agreement.getOwnerUuid())) {
                     plot.setActiveRentalId(agreement.getId());
                     plot.addMember(new PlotMember(agreement.getTenantUuid(), agreement.getTenantName(), PlotMemberRole.TENANT,
-                            EnumSet.of(PlotPermission.BUILD, PlotPermission.DESTROY, PlotPermission.CONTAINERS,
-                                    PlotPermission.DOORS, PlotPermission.INTERACT, PlotPermission.TELEPORT), agreement.getStartDate()));
+                            pl.riftplots.config.Settings.permissions("rental.default-tenant-permissions"), agreement.getStartDate()));
                     plotManager.savePlot(plot);
                 }
             });
@@ -168,7 +167,7 @@ public class RentalService {
                 activeAgreements.put(plotId.toLowerCase(), agreement);
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.rental-service.storage-operation-failed"), e);
         }
     }
 
@@ -190,7 +189,8 @@ public class RentalService {
     }
 
     private void persistAgreement(RentalAgreement agreement) {
-        if (journal != null && !journal.isWriteAllowed()) throw new IllegalStateException("Trwa migracja danych");
+        if (journal != null && !journal.isWriteAllowed())
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.rental-service.trwa-migracja-danych"));
         if (databaseManager != null) {
             String sql = """
                         INSERT INTO rift_rentals (id, plot_id, owner_uuid, tenant_uuid, tenant_name, rent_price, period_unit, deposit, start_date, end_date, auto_renew, status)
@@ -220,7 +220,7 @@ public class RentalService {
                 ps.setString(12, agreement.getStatus().name());
                 ps.executeUpdate();
             } catch (SQLException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.rental-service.storage-operation-failed"), e);
             }
         } else {
             try {
@@ -240,7 +240,7 @@ public class RentalService {
                 rentalsFile.getParentFile().mkdirs();
                 YamlDataFile.save(config, rentalsFile);
             } catch (IOException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.rental-service.storage-operation-failed"), e);
             }
         }
     }
@@ -292,13 +292,13 @@ public class RentalService {
             org.bukkit.OfflinePlayer owner = org.bukkit.Bukkit.getOfflinePlayer(plot.getOwnerUuid());
             if (!vaultHook.deposit(owner, totalRent)) {
                 if (!vaultHook.deposit(tenant, totalCost)) {
-                    throw new IllegalStateException("Nie udało się zwrócić środków za wynajem " + plot.getId());
+                    throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.rental-service.nie-udao-sie-zwrocic-srodkow-za-wynajem", plot.getId()));
                 }
                 tenant.sendMessage(messageConfig.get("general.economy-error"));
                 return false;
             }
         } else {
-            budgetService.recordTransaction(CityTransactionType.RENTAL_FEE, totalRent, plot.getId(), tenant.getUniqueId(), "Czynsz za wynajem lokalu miejskiego");
+            budgetService.recordTransaction(CityTransactionType.RENTAL_FEE, totalRent, plot.getId(), tenant.getUniqueId(), pl.riftplots.config.Texts.raw("text.rental-service.czynsz-za-wynajem-lokalu-miejskiego"));
         }
 
         RentalAgreement agreement = RentalAgreement.create(
@@ -309,17 +309,17 @@ public class RentalService {
 
         plot.setActiveRentalId(agreement.getId());
         PlotMember tenantMember = new PlotMember(tenant.getUniqueId(), tenant.getName(), PlotMemberRole.TENANT,
-                EnumSet.of(PlotPermission.BUILD, PlotPermission.DESTROY, PlotPermission.CONTAINERS, PlotPermission.DOORS, PlotPermission.INTERACT, PlotPermission.TELEPORT),
+                pl.riftplots.config.Settings.permissions("rental.default-tenant-permissions"),
                 Instant.now());
         plot.addMember(tenantMember);
         plotManager.savePlot(plot);
 
-        String durationStr = periods + " " + unit.name().toLowerCase();
-        notificationService.notifyPlayer(tenant.getUniqueId(), messageConfig.getRaw("rental.success", "{prefix}<green>Wynajeto dzialke {name}!</green>")
+        String durationStr = pl.riftplots.config.Texts.raw("format.rental-duration", periods, unit);
+        notificationService.notifyPlayer(tenant.getUniqueId(), messageConfig.getRaw("rental.success")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{plot_id}", plot.getId())
-                .replace("{duration}", durationStr), "minecraft:entity.player.levelup");
+                .replace("{duration}", durationStr), pl.riftplots.config.Settings.string("sounds.rental-start"));
         return true;
     }
 
@@ -350,10 +350,10 @@ public class RentalService {
         });
         if (refunds != null) refunds.retryPending();
 
-        notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.terminated", "{prefix}<red>Wynajem dzialki {plot_id} zostal zakonczony ({reason}).</red>")
+        notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.terminated")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{plot_id}", plotId)
-                .replace("{reason}", reason), "minecraft:block.note_block.bass");
+                .replace("{reason}", reason), pl.riftplots.config.Settings.string("sounds.rental-end"));
         return true;
     }
 
@@ -369,7 +369,7 @@ public class RentalService {
                         agreement.getPlotId(), agreement.getTenantUuid(), agreement.getRentPrice(), () -> checkAgreement(agreement, now));
             } catch (RuntimeException e) {
                 java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE,
-                        "Nie można rozliczyć umowy " + agreement.getId(), e);
+                        pl.riftplots.config.Texts.raw("text.rental-service.nie-mozna-rozliczyc-umowy", agreement.getId()), e);
             }
         }
         if (refunds != null) refunds.retryPending();
@@ -387,20 +387,20 @@ public class RentalService {
                     var owner = org.bukkit.Bukkit.getOfflinePlayer(agreement.getOwnerUuid());
                     if (!vaultHook.deposit(owner, agreement.getRentPrice())) {
                         if (!vaultHook.deposit(tenant, agreement.getRentPrice()))
-                            throw new IllegalStateException("Nie udało się zwrócić czynszu " + agreement.getId());
-                        terminateRental(agreement.getPlotId(), true, "Nieudane rozliczenie czynszu");
+                            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.rental-service.nie-udao-sie-zwrocic-czynszu", agreement.getId()));
+                        terminateRental(agreement.getPlotId(), true, pl.riftplots.config.Texts.raw("text.rental-service.nieudane-rozliczenie-czynszu"));
                         return false;
                     }
                 } else budgetService.recordTransaction(CityTransactionType.RENTAL_FEE, agreement.getRentPrice(),
-                        agreement.getPlotId(), agreement.getTenantUuid(), "Odnowienie wynajmu lokalu miejskiego");
+                        agreement.getPlotId(), agreement.getTenantUuid(), pl.riftplots.config.Texts.raw("text.rental-service.odnowienie-wynajmu-lokalu-miejskiego"));
                 agreement.setEndDate(now.plus(agreement.getPeriodUnit().getDuration()));
                 saveAgreement(agreement);
-                notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.auto-renewed", "{prefix}<green>Przedluzono wynajem dzialki {name}.</green>")
-                        .replace("{prefix}", config.getPrefix()).replace("{name}", agreement.getPlotId()), "minecraft:block.note_block.pling");
+                notificationService.notifyPlayer(agreement.getTenantUuid(), messageConfig.getRaw("rental.auto-renewed")
+                        .replace("{prefix}", config.getPrefix()).replace("{name}", agreement.getPlotId()), pl.riftplots.config.Settings.string("sounds.rental-renewal"));
                 return true;
             }
         }
-        terminateRental(agreement.getPlotId(), true, "Koniec okresu umowy");
+        terminateRental(agreement.getPlotId(), true, pl.riftplots.config.Texts.raw("text.rental-service.koniec-okresu-umowy"));
         return false;
     }
 
@@ -437,7 +437,7 @@ public class RentalService {
     public synchronized boolean cancelByTenant(Player tenant, String plotId) {
         RentalAgreement agreement = activeAgreements.get(plotId.toLowerCase());
         return agreement != null && agreement.getTenantUuid().equals(tenant.getUniqueId())
-                && terminateRental(plotId, true, "Wypowiedzenie przez najemcę; opłacony czynsz nie podlega zwrotowi");
+                && terminateRental(plotId, true, pl.riftplots.config.Texts.raw("text.rental-service.wypowiedzenie-przez-najemce-opacony-czynsz-nie-podlega"));
     }
 
     public Optional<RentalAgreement> getActiveRental(String plotId) {

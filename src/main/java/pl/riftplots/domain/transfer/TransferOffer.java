@@ -27,22 +27,22 @@ public class TransferOffer {
                          Instant createdAt,
                          Instant expiresAt,
                          TransferStatus status) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.plotId = Objects.requireNonNull(plotId, "plotId cannot be null").toLowerCase();
-        this.sellerUuid = Objects.requireNonNull(sellerUuid, "sellerUuid cannot be null");
-        this.sellerName = sellerName != null ? sellerName : "Unknown";
-        this.buyerUuid = Objects.requireNonNull(buyerUuid, "buyerUuid cannot be null");
-        this.buyerName = buyerName != null ? buyerName : "Unknown";
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.transfer-offer.id-cannot-be-null"));
+        this.plotId = Objects.requireNonNull(plotId, pl.riftplots.config.Texts.raw("text.transfer-offer.plotid-cannot-be-null")).toLowerCase();
+        this.sellerUuid = Objects.requireNonNull(sellerUuid, pl.riftplots.config.Texts.raw("text.transfer-offer.selleruuid-cannot-be-null"));
+        this.sellerName = sellerName != null ? sellerName : pl.riftplots.config.Texts.raw("text.transfer-offer.unknown");
+        this.buyerUuid = Objects.requireNonNull(buyerUuid, pl.riftplots.config.Texts.raw("text.transfer-offer.buyeruuid-cannot-be-null"));
+        this.buyerName = buyerName != null ? buyerName : pl.riftplots.config.Texts.raw("text.transfer-offer.unknown");
         this.price = price != null ? price.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
-        this.expiresAt = expiresAt != null ? expiresAt : Instant.now().plusSeconds(300);
+        this.expiresAt = expiresAt != null ? expiresAt : Instant.now().plusSeconds(pl.riftplots.config.Settings.integer("market.transfer-offer-duration-seconds"));
         this.status = status != null ? status : TransferStatus.PENDING;
     }
 
     public static TransferOffer create(String plotId, UUID sellerUuid, String sellerName, UUID buyerUuid, String buyerName, BigDecimal price, int validSeconds) {
         String randomId = UUID.randomUUID().toString();
         Instant now = Instant.now();
-        Instant exp = now.plusSeconds(validSeconds > 0 ? validSeconds : 300);
+        Instant exp = now.plusSeconds(validSeconds > 0 ? validSeconds : pl.riftplots.config.Settings.integer("market.transfer-offer-duration-seconds"));
         return new TransferOffer(randomId, plotId, sellerUuid, sellerName, buyerUuid, buyerName, price, now, exp, TransferStatus.PENDING);
     }
 

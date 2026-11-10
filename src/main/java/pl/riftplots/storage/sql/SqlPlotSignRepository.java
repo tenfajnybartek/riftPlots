@@ -31,7 +31,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 signs.add(mapRow(rs));
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
         return signs;
     }
@@ -51,7 +51,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
         return Optional.empty();
     }
@@ -74,7 +74,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
         return Optional.empty();
     }
@@ -95,7 +95,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
         return signs;
     }
@@ -106,27 +106,27 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             return;
         }
         String sqliteSql = """
-            INSERT INTO rift_plot_signs (id, plot_id, type, world, x, y, z)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                plot_id = excluded.plot_id,
-                type = excluded.type,
-                world = excluded.world,
-                x = excluded.x,
-                y = excluded.y,
-                z = excluded.z
-        """;
+                    INSERT INTO rift_plot_signs (id, plot_id, type, world, x, y, z)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        plot_id = excluded.plot_id,
+                        type = excluded.type,
+                        world = excluded.world,
+                        x = excluded.x,
+                        y = excluded.y,
+                        z = excluded.z
+                """;
         String mysqlSql = """
-            INSERT INTO rift_plot_signs (id, plot_id, type, world, x, y, z)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                plot_id = VALUES(plot_id),
-                type = VALUES(type),
-                world = VALUES(world),
-                x = VALUES(x),
-                y = VALUES(y),
-                z = VALUES(z)
-        """;
+                    INSERT INTO rift_plot_signs (id, plot_id, type, world, x, y, z)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        plot_id = VALUES(plot_id),
+                        type = VALUES(type),
+                        world = VALUES(world),
+                        x = VALUES(x),
+                        y = VALUES(y),
+                        z = VALUES(z)
+                """;
 
         boolean isSqlite = databaseManager.getStorageType() == pl.riftplots.storage.StorageType.SQLITE;
         String query = isSqlite ? sqliteSql : mysqlSql;
@@ -142,7 +142,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             ps.setInt(7, sign.getZ());
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
     }
 
@@ -157,7 +157,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             ps.setString(1, id);
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
     }
 
@@ -172,7 +172,7 @@ public class SqlPlotSignRepository implements PlotSignRepository {
             ps.setString(1, plotId.toLowerCase());
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-sign-repository.storage-operation-failed"), e);
         }
     }
 

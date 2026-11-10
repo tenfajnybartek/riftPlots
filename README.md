@@ -137,7 +137,7 @@ Spójrz na tabliczkę w odległości do pięciu bloków:
 /plots rent autorenew apartament_4 on
 ```
 
-W tym przykładzie pierwszy koszt to **2 250**: siedem dni czynszu po 250 i kaucja 500. Auto-odnowienie jest domyślnie **wyłączone**; ostatnia komenda włącza je świadomie. Jednostki: `HOUR`, `DAY`, `WEEK`, `MONTH`; miesiąc oznacza **30 dni**. Najemca może zakończyć umowę przez `/plots rent cancel apartament_4 confirm`; opłacony czynsz nie jest zwracany, a kaucja trafia do rozliczenia niezależnego od dostępu. Właściciel może wystawić swój lokal z osobnym uprawnieniem `riftplots.rent.offer`.
+W tym przykładzie pierwszy koszt to **2 250**: siedem dni czynszu po 250 i kaucja 500. Auto-odnowienie jest domyślnie **wyłączone**; ostatnia komenda włącza je świadomie. Jednostki: `HOUR`, `DAY`, `WEEK`, `MONTH`; miesiąc domyślnie oznacza **30 dni** (`rental-period-seconds.MONTH`). Najemca może zakończyć umowę przez `/plots rent cancel apartament_4 confirm`; opłacony czynsz nie jest zwracany, a kaucja trafia do rozliczenia niezależnego od dostępu. Właściciel może wystawić swój lokal z osobnym uprawnieniem `riftplots.rent.offer`.
 
 ### Sprzedaj innemu graczowi
 
@@ -201,13 +201,16 @@ Niepewna odpowiedź Vault pozostawia operację do sprawdzenia przez `/plots admi
 | :--- | :--- |
 | [`config.yml`](src/main/resources/config.yml) | Ekonomia, terminy, ochrona, reset, teleportacja i format tabliczek |
 | [`storage.yml`](src/main/resources/storage.yml) | Backend, połączenie MySQL i pula połączeń |
-| [`lang.yml`](src/main/resources/lang.yml) | Szablony wiadomości obsługujące Adventure MiniMessage |
+| [`lang.yml`](src/main/resources/lang.yml) | Wiadomości, pomoc, walidacja, etykiety i diagnostyka pluginu |
+| [`gui.yml`](src/main/resources/gui.yml) | Siedem menu: tytuły, rozmiary, sloty, materiały, nazwy, lore i wypełnienie |
 | [`plot-types.yml`](src/main/resources/plot-types.yml) | Typy nieruchomości, zasady sprzedaży/najmu i limity członków |
 | [`districts.yml`](src/main/resources/districts.yml) | Dzielnice, mnożnik podatku, dozwolone typy i limity własności |
 | `schematics/` | Schematy pierwotnego stanu nieruchomości |
 | `data/` | Baza SQLite lub YAML; przy każdym backendzie także lokalny dziennik, zwroty, oferty transferu i wiadomości |
 
-`/plots admin reload` odświeża ustawienia, wiadomości, typy i dzielnice. Zmiana backendu wymaga **restartu**. Część tekstów w GUI i komendach pozostaje zapisana bezpośrednio w kodzie.
+`/plots admin reload` odświeża ustawienia, wiadomości, GUI, typy i dzielnice. Brakujące klucze korzystają z domyślnych wartości JAR-a, bez nadpisywania własnych plików. Zmiana backendu wymaga **restartu**. Otwórz menu ponownie po zmianie układu.
+
+Wygląd GUI, dźwięki, cząsteczki, układy tabliczek, strony historii, okresy najmu, progi podatku i formaty kwot/dat można edytować bez kompilacji. [Przykłady GUI](docs/wiki/Konfiguracja-GUI.md) · [Mapa ustawień i audyt stałych](docs/configuration-audit.md).
 
 Migracja działa w kolejce I/O przy wstrzymanych zmianach. Źródłem jest aktywny magazyn, a cel musi być pusty. Kopiowane są działki, profile, transakcje, tabliczki, umowy, aukcje z historią, budżet i audyt. Po sukcesie plugin zapisuje docelowy backend i utrzymuje blokadę do restartu. Schemat danych ma wersję **2**. [Procedura migracji i kopii zapasowej →](docs/operations.md#migracja-i-kopie-zapasowe)
 
@@ -227,7 +230,7 @@ Migracja działa w kolejce I/O przy wstrzymanych zmianach. Źródłem jest aktyw
 .\gradlew.bat build
 ```
 
-Ostatnia weryfikacja: **102 testy Java bez niepowodzeń i pominięć**, w tym rzeczywisty MySQL 8.4.10, **6 testów backupu** i **45 sprawdzeń Paper** obejmujących restart, reset i odtworzenie kopii. Testy sprawdzają też natywne SQLite w spakowanym JAR-ze. Raport HTML: `build/reports/tests/test/index.html`. Workflow CI jest przygotowany lokalnie; wynik nie oznacza uruchomienia go na GitHubie.
+Ostatnia weryfikacja: **119 testów Java bez niepowodzeń i pominięć**, w tym rzeczywisty MySQL 8.4.10, **6 testów backupu** i **54 sprawdzenia Paper** obejmujące restart, reset, odtworzenie kopii i edycję GUI/języka. Testy sprawdzają też natywne SQLite w spakowanym JAR-ze. Kontrola konfiguracji obejmuje 166 plików Java i 777 szablonów języka. Raport HTML: `build/reports/tests/test/index.html`. Workflow CI jest przygotowany lokalnie; wynik nie oznacza uruchomienia go na GitHubie.
 
 Test Paper używa zastępczych obiektów graczy i testowego providera ekonomii. Przed produkcją sprawdź rozgrywkę klientem Minecraft z docelowym zestawem pluginów. [Aktualny zakres, backup i ograniczenia →](docs/wiki/Nowosci-P1-P2.md)
 

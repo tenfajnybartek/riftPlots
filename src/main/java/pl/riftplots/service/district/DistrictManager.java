@@ -24,64 +24,41 @@ public class DistrictManager {
     }
 
     public void load() {
-        districts.clear();
+        Map<String, District> loaded = new HashMap<>();
         if (!configFile.exists()) {
             createDefaultConfig();
         }
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+        YamlConfiguration config = pl.riftplots.config.ConfigurationFiles.read(configFile);
         ConfigurationSection section = config.getConfigurationSection("districts");
         if (section == null) {
-            registerDefaults();
-            return;
+            throw new IllegalArgumentException("districts.yml: districts");
         }
 
         for (String key : section.getKeys(false)) {
             String path = "districts." + key;
             String name = config.getString(path + ".name", key);
             String desc = config.getString(path + ".description", "");
-            double priceMult = config.getDouble(path + ".price-multiplier", 1.0);
-            double taxMult = config.getDouble(path + ".tax-multiplier", 1.0);
+            double priceMult = config.getDouble(path + ".price-multiplier", pl.riftplots.config.Settings.decimal("district-defaults.price-multiplier"));
+            double taxMult = config.getDouble(path + ".tax-multiplier", pl.riftplots.config.Settings.decimal("district-defaults.tax-multiplier"));
             List<String> types = config.getStringList(path + ".allowed-types");
-            int maxPlots = config.getInt(path + ".max-plots-per-player", 3);
-            boolean sales = config.getBoolean(path + ".sales-enabled", true);
-            boolean rental = config.getBoolean(path + ".rental-enabled", true);
+            int maxPlots = config.getInt(path + ".max-plots-per-player", pl.riftplots.config.Settings.integer("district-defaults.max-plots-per-player"));
+            boolean sales = config.getBoolean(path + ".sales-enabled", pl.riftplots.config.Settings.flag("district-defaults.sales-enabled"));
+            boolean rental = config.getBoolean(path + ".rental-enabled", pl.riftplots.config.Settings.flag("district-defaults.rental-enabled"));
 
             District district = new District(key, name, desc, priceMult, taxMult, new HashSet<>(types), maxPlots, sales, rental);
-            districts.put(key.toLowerCase(), district);
+            loaded.put(key.toLowerCase(java.util.Locale.ROOT), district);
         }
 
-        if (districts.isEmpty()) {
-            registerDefaults();
-        }
-    }
-
-    private void registerDefaults() {
-        districts.put("centrum", new District("centrum", "Centrum Miasta", "Reprezentacyjne centrum z najwyższym prestiżem", 1.5, 1.25, Set.of("COMMERCIAL", "PREMIUM", "RESIDENTIAL"), 2, true, true));
-        districts.put("stare_miasto", new District("stare_miasto", "Stare Miasto", "Zabytkowa część miasta z kamienicami", 1.2, 1.1, Set.of("RESIDENTIAL", "COMMERCIAL"), 2, true, true));
-        districts.put("przedmiescia", new District("przedmiescia", "Przedmieścia", "Spokojna strefa domów jednorodzinnych", 0.8, 0.75, Set.of("RESIDENTIAL"), 4, true, true));
-        districts.put("handlowa", new District("handlowa", "Dzielnica Handlowa", "Strefa targowa, centra handlowe i salony", 1.3, 1.3, Set.of("COMMERCIAL", "RENTAL"), 3, true, true));
-        districts.put("przemyslowa", new District("przemyslowa", "Strefa Przemysłowa", "Fabryki, magazyny i zakłady produkcyjne", 0.9, 0.9, Set.of("INDUSTRIAL"), 5, true, false));
+        districts.clear();
+        districts.putAll(loaded);
     }
 
     private void createDefaultConfig() {
-        YamlConfiguration config = new YamlConfiguration();
-        registerDefaults();
-        for (District district : districts.values()) {
-            String path = "districts." + district.getId();
-            config.set(path + ".name", district.getName());
-            config.set(path + ".description", district.getDescription());
-            config.set(path + ".price-multiplier", district.getPriceMultiplier());
-            config.set(path + ".tax-multiplier", district.getTaxMultiplier());
-            config.set(path + ".allowed-types", new ArrayList<>(district.getAllowedPropertyTypes()));
-            config.set(path + ".max-plots-per-player", district.getMaxPlotsPerPlayer());
-            config.set(path + ".sales-enabled", district.isSalesEnabled());
-            config.set(path + ".rental-enabled", district.isRentalEnabled());
-        }
+        configFile.getParentFile().mkdirs();
         try {
-            configFile.getParentFile().mkdirs();
-            config.save(configFile);
+            pl.riftplots.storage.yaml.YamlDataFile.save(pl.riftplots.config.ConfigurationFiles.defaults("districts.yml"), configFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("districts.yml", e);
         }
     }
 
@@ -146,7 +123,7 @@ public class DistrictManager {
                 base = base.multiply(BigDecimal.valueOf(optDist.get().getPriceMultiplier()));
             }
         }
-        return base.setScale(2, RoundingMode.HALF_UP);
+        return base.setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding());
     }
 
     public BigDecimal resolveEffectiveTax(Plot plot) {
@@ -166,6 +143,6 @@ public class DistrictManager {
                 base = base.multiply(BigDecimal.valueOf(optDist.get().getTaxMultiplier()));
             }
         }
-        return base.setScale(2, RoundingMode.HALF_UP);
+        return base.setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding());
     }
 }

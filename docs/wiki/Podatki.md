@@ -55,7 +55,7 @@ Oznaczenia: `B` — stawka bazowa, `A` — powierzchnia pozioma, `C` — liczba 
 | `MULTIPLIER` | `B × max(0.01, M) × D` |
 | `SIZE_TIERS` | `B × współczynnik powierzchni × D` |
 
-Powierzchnia wynosi `(maxX − minX + 1) × (maxZ − minZ + 1)`. Wysokość nie zwiększa podatku od bloku. Liczone są wszystkie chunki przecinające działkę, również częściowo. Wynik jest zaokrąglany do dwóch miejsc metodą `HALF_UP`.
+Powierzchnia wynosi `(maxX − minX + 1) × (maxZ − minZ + 1)`. Wysokość nie zwiększa podatku od bloku. Liczone są wszystkie chunki przecinające działkę, również częściowo. Domyślnie wynik jest zaokrąglany do dwóch miejsc metodą `HALF_UP`; zmieniają to `economy.decimal-places` i `economy.rounding-mode`. Minimum mnożnika oraz poniższe domyślne progi edytuje się w `config.yml` pod `tax`.
 
 | Powierzchnia w `SIZE_TIERS` | Mnożnik |
 | :--- | ---: |

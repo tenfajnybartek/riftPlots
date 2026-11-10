@@ -34,12 +34,12 @@ public class AdminEnableSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin enable <id>";
+        return pl.riftplots.config.Texts.raw("text.admin-enable.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Przywraca wyłączoną działkę do stanu dostępności lub własności.";
+        return pl.riftplots.config.Texts.raw("text.admin-enable.description");
     }
 
     @Override

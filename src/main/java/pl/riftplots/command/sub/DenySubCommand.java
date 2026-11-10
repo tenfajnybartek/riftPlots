@@ -29,23 +29,23 @@ public class DenySubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots deny <id_oferty>";
+        return pl.riftplots.config.Texts.raw("text.deny.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Odrzuca lub anuluje ofertę sprzedaży działki.";
+        return pl.riftplots.config.Texts.raw("text.deny.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cTa komenda jest dostępna tylko dla graczy.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.deny.ta-komenda-jest-dostepna-tylko-dla-graczy"));
             return true;
         }
 
         if (args.length < 1) {
-            player.sendMessage("§cUżycie: /" + getUsage());
+            player.sendMessage(pl.riftplots.config.Texts.component("text.deny.uzycie", getUsage()));
             return true;
         }
 

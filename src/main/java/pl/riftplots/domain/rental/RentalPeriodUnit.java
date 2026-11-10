@@ -3,19 +3,10 @@ package pl.riftplots.domain.rental;
 import java.time.Duration;
 
 public enum RentalPeriodUnit {
-    HOUR(Duration.ofHours(1)),
-    DAY(Duration.ofDays(1)),
-    WEEK(Duration.ofDays(7)),
-    MONTH(Duration.ofDays(30));
-
-    private final Duration duration;
-
-    RentalPeriodUnit(Duration duration) {
-        this.duration = duration;
-    }
+    HOUR, DAY, WEEK, MONTH;
 
     public Duration getDuration() {
-        return duration;
+        return Duration.ofSeconds(pl.riftplots.config.Settings.longValue("rental-period-seconds." + name()));
     }
 
     public static RentalPeriodUnit parse(String input) {

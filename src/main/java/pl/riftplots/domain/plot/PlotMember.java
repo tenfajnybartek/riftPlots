@@ -23,12 +23,7 @@ public class PlotMember {
     }
 
     public static PlotMember defaultMember(UUID playerUuid, String playerName) {
-        EnumSet<PlotPermission> defaultPerms = EnumSet.of(
-                PlotPermission.INTERACT,
-                PlotPermission.DOORS,
-                PlotPermission.CONTAINERS,
-                PlotPermission.TELEPORT
-        );
+        Set<PlotPermission> defaultPerms = pl.riftplots.config.Settings.permissions("members.default-permissions");
         return new PlotMember(playerUuid, playerName, PlotMemberRole.MEMBER, defaultPerms, Instant.now());
     }
 

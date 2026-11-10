@@ -1,0 +1,272 @@
+# GUI riftPlots. Sloty są liczone od 0. Rozmiar: 9, 18, 27, 36, 45 lub 54.
+# Identyfikatory przycisków określają akcje. Zmiana materiału/slotu nie zmienia akcji.
+# Nazwy i lore obsługują MiniMessage oraz nazwane placeholdery opisane w dokumentacji.
+format: 1
+menus:
+  market:
+    default-tab: OWNED
+    default-sort: ID
+    fallback-material: GRASS_BLOCK
+    size: 54
+    title: '<gradient:#00c6ff:#0072ff><bold>Rynek nieruchomości · {page}</bold></gradient>'
+    content-slots: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    entry:
+      material: '{type_icon}'
+      name: '<aqua>{plot_name} ({plot_id})</aqua>'
+      lore:
+        - '<gray>Typ: {type} | Dzielnica: {district}</gray>'
+        - '<gray>Cena: {price}</gray>'
+        - '<gray>Podatek: {tax}</gray>'
+        - '<gray>Czynsz: {rent} / {rental_unit}</gray>'
+        - '<yellow>Kliknij, aby zobaczyć szczegóły.</yellow>'
+    buttons:
+      previous:
+        slot: 45
+        material: ARROW
+        name: '<aqua>Poprzednia strona</aqua>'
+      owned:
+        slot: 46
+        material: GOLD_BLOCK
+        name: '<aqua>Moje</aqua>'
+      sale:
+        slot: 47
+        material: EMERALD
+        name: '<aqua>Dostępne</aqua>'
+      rent:
+        slot: 48
+        material: OAK_DOOR
+        name: '<aqua>Wynajem</aqua>'
+      auction:
+        slot: 49
+        material: GOLDEN_HOE
+        name: '<aqua>Aukcje</aqua>'
+      sort:
+        slot: 50
+        material: COMPARATOR
+        name: '<aqua>Sortowanie: {sort}</aqua>'
+      district:
+        slot: 51
+        material: MAP
+        name: '<aqua>Dzielnica: {district_filter}</aqua>'
+      type:
+        slot: 52
+        material: BRICKS
+        name: '<aqua>Typ: {type_filter}</aqua>'
+      next:
+        slot: 53
+        material: ARROW
+        name: '<aqua>Następna strona</aqua>'
+  details:
+    size: 45
+    title: '<gradient:#00c6ff:#0072ff><bold>Zarządzanie: {plot_name}</bold></gradient>'
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    buttons:
+      info:
+        slot: 11
+        material: BOOK
+        name: '<gold><bold>Szczegóły nieruchomości</bold></gold>'
+        lore:
+          - '<gray>ID: <white>{plot_id}</white></gray>'
+          - '<gray>Status: <yellow>{status}</yellow></gray>'
+          - '<gray>Świat: <white>{world}</white></gray>'
+          - '<gray>Wymiary: <white>{width}x{length} ({area} m²)</white></gray>'
+          - '<gray>Zakupiono: <white>{purchase_date}</white></gray>'
+          - '<gray>Następny podatek: <yellow>{next_tax}</yellow></gray>'
+      pay:
+        slot: 13
+        material: EMERALD
+        name: '<green><bold>Opłać podatek</bold></green>'
+        lore:
+          - '<gray>Stawka: <gold>{tax}</gold></gray>'
+          - '<gray>Okres: {period} dni</gray>'
+          - '<gray>Opłacono z góry: <aqua>{advance_paid}/{advance_max}</aqua></gray>'
+          - ''
+          - '<yellow>Kliknij, aby opłacić {pay_periods} okresów.</yellow>'
+      members:
+        slot: 15
+        material: PLAYER_HEAD
+        name: '<aqua><bold>Współużytkownicy</bold></aqua>'
+        lore:
+          - '<gray>Liczba członków: {member_count}</gray>'
+          - ''
+          - '<yellow>Kliknij, aby zarządzać dostępem.</yellow>'
+      abandon:
+        slot: 31
+        material: BARRIER
+        name: '<red><bold>Porzuć nieruchomość</bold></red>'
+        lore:
+          - '<gray>Zwrot: <green>{refund}</green></gray>'
+          - '<red>Utracisz prawo własności!</red>'
+          - ''
+          - '<red>Kliknij, aby przejść do potwierdzenia na czacie.</red>'
+      back:
+        slot: 36
+        material: ARROW
+        name: '<yellow><bold>Powrót</bold></yellow>'
+  buy:
+    size: 27
+    title: '<dark_green><bold>Potwierdzenie zakupu</bold></dark_green>'
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    buttons:
+      confirm:
+        slot: 11
+        material: LIME_WOOL
+        name: '<green><bold>POTWIERDŹ ZAKUP</bold></green>'
+        lore:
+          - '<gray>Działka: <gold>{plot_name} ({plot_id})</gold></gray>'
+          - '<gray>Cena: <green>{price}</green></gray>'
+          - '<gray>Podatek: <gold>{tax} co {period} dni</gold></gray>'
+          - '<gray>Dodatkowa prowizja kupującego: <green>{buyer_fee}</green></gray>'
+          - ''
+          - '<yellow>Kliknij, aby sfinalizować zakup.</yellow>'
+      cancel:
+        slot: 15
+        material: RED_WOOL
+        name: '<red><bold>ANULUJ</bold></red>'
+        lore:
+          - '<gray>Zrezygnuj z zakupu.</gray>'
+      border:
+        slot: 22
+        material: GLOWSTONE_DUST
+        name: '<aqua>Pokaż granice 3D</aqua>'
+        lore:
+          - '<gray>Obejrzyj obrys nieruchomości w świecie.</gray>'
+  rental:
+    size: 27
+    title: '<dark_green>Potwierdź najem</dark_green>'
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    buttons:
+      confirm:
+        slot: 11
+        material: LIME_WOOL
+        name: '<aqua>Wynajmij {plot_name}</aqua>'
+        lore:
+          - '<gray>Czynsz: {rent} / {rental_unit}</gray>'
+          - '<gray>Liczba okresów: {rental_periods}</gray>'
+          - '<gray>Kaucja: {deposit}</gray>'
+          - '<gray>Do zapłaty: {cost}</gray>'
+          - '<gray>Podatek właściciela: {tax}</gray>'
+          - '<gray>Auto-odnowienie: {autorenew}</gray>'
+      autorenew:
+        slot: 13
+        material: REPEATER
+        name: '<aqua>Auto-odnowienie: {autorenew}</aqua>'
+        lore:
+          - '<gray>Kliknij, aby zmienić przed potwierdzeniem.</gray>'
+      cancel:
+        slot: 15
+        material: RED_WOOL
+        name: '<red>Anuluj</red>'
+  auction:
+    size: 27
+    title: '<gold>Aukcja: {plot_id}</gold>'
+    history-lines: 4
+    bid-line: '<gray>{bidder}: {amount}</gray>'
+    settlement-reserved: '<gray>Depozyt teraz: {charge}</gray>'
+    settlement-final: '<gray>Pobranie ceny zwycięskiej przy rozliczeniu.</gray>'
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    buttons:
+      bid:
+        slot: 11
+        material: LIME_WOOL
+        name: '<aqua>Licytuj: {minimum}</aqua>'
+        lore:
+          - '<gray>Prowizja miasta: {commission}% (z ceny)</gray>'
+          - '<gray>Podatek: {tax} co {period} dni</gray>'
+          - '<gray>Koniec: {end}</gray>'
+          - '{settlement}'
+          - '<yellow>Kliknięcie składa ofertę w podanej kwocie.</yellow>'
+      history:
+        slot: 13
+        material: BOOK
+        name: '<aqua>Historia przebić</aqua>'
+        lore:
+          - '{entries}'
+      buyout:
+        slot: 15
+        material: EMERALD
+        name: '<aqua>Kup teraz: {buyout}</aqua>'
+        lore:
+          - '<gray>Do pobrania teraz: {buyout_charge}</gray>'
+          - '<gray>Natychmiastowe rozliczenie aukcji.</gray>'
+      back:
+        slot: 22
+        material: ARROW
+        name: '<yellow>Powrót</yellow>'
+  members:
+    size: 45
+    title: '<aqua>Członkowie · {page}</aqua>'
+    content-slots: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    entry:
+      material: PLAYER_HEAD
+      name: '<aqua>{member}</aqua>'
+      lore:
+        - '<gray>Rola: {role}</gray>'
+        - '<gray>Lewy przycisk: edytor dostępu</gray>'
+        - '<gray>Prawy przycisk: usuń członka</gray>'
+        - '<gray>Aktywny najem kończy się przez umowę.</gray>'
+    buttons:
+      previous:
+        slot: 36
+        material: ARROW
+        name: '<aqua>Poprzednia strona</aqua>'
+      back:
+        slot: 40
+        material: ARROW
+        name: '<yellow>Powrót</yellow>'
+      next:
+        slot: 44
+        material: ARROW
+        name: '<aqua>Następna strona</aqua>'
+  permissions:
+    size: 36
+    title: '<aqua>Dostęp: {member}</aqua>'
+    content-slots: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    filler:
+      enabled: false
+      material: GRAY_STAINED_GLASS_PANE
+      name: ' '
+    entry:
+      material: '{permission_icon}'
+      name: '<aqua>{permission}: {allowed}</aqua>'
+      lore:
+        - '<gray>Kliknij, aby zmienić.</gray>'
+    allowed-material: LIME_DYE
+    denied-material: GRAY_DYE
+    buttons:
+      member:
+        slot: 27
+        material: NAME_TAG
+        name: '<aqua>Rola: {member_role}</aqua>'
+        lore:
+          - '<gray>Zwykły członek korzysta z nadanych praw.</gray>'
+      manager:
+        slot: 28
+        material: NAME_TAG
+        name: '<aqua>Rola: {manager_role}</aqua>'
+        lore:
+          - '<gray>MANAGER otrzymuje wszystkie prawa działki.</gray>'
+      back:
+        slot: 31
+        material: ARROW
+        name: '<yellow>Powrót</yellow>'

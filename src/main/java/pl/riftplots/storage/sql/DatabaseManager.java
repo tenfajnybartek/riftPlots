@@ -72,7 +72,7 @@ public class DatabaseManager {
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS rift_schema_version (id INT PRIMARY KEY, version INT NOT NULL)");
             try (var version = stmt.executeQuery("SELECT version FROM rift_schema_version WHERE id = 1")) {
                 if (version.next() && version.getInt(1) > 2)
-                    throw new SQLException("Magazyn pochodzi z nowszej wersji riftPlots");
+                    throw new SQLException(pl.riftplots.config.Texts.raw("text.database-manager.magazyn-pochodzi-z-nowszej-wersji-riftplots"));
             }
             try (var insert = conn.prepareStatement("INSERT INTO rift_schema_version (id, version) SELECT 1, 1 WHERE NOT EXISTS (SELECT 1 FROM rift_schema_version WHERE id = 1)")) {
                 insert.executeUpdate();
@@ -132,7 +132,7 @@ public class DatabaseManager {
 
             tryAddColumn(stmt, "rift_plots", "property_type", "VARCHAR(32) DEFAULT 'RESIDENTIAL'");
             tryAddColumn(stmt, "rift_plots", "district_id", "VARCHAR(64)");
-            tryAddColumn(stmt, "rift_plots", "rental_available", "BOOLEAN DEFAULT FALSE");
+            tryAddColumn(stmt, "rift_plots", "rental_available", pl.riftplots.config.Texts.raw("text.database-manager.boolean-default-false"));
             tryAddColumn(stmt, "rift_plots", "rental_price", "DECIMAL(18,2) DEFAULT 0");
             tryAddColumn(stmt, "rift_plots", "rental_period_unit", "VARCHAR(16) DEFAULT 'DAY'");
             tryAddColumn(stmt, "rift_plots", "rental_deposit", "DECIMAL(18,2) DEFAULT 0");
@@ -144,8 +144,8 @@ public class DatabaseManager {
             tryAddColumn(stmt, "rift_plots", "home_yaw", "FLOAT");
             tryAddColumn(stmt, "rift_plots", "home_pitch", "FLOAT");
             tryAddColumn(stmt, "rift_plots", "resell_price", "DECIMAL(18,2) DEFAULT 0");
-            tryAddColumn(stmt, "rift_plots", "resell_available", "BOOLEAN DEFAULT FALSE");
-            tryAddColumn(stmt, "rift_plots", "auction_active", "BOOLEAN DEFAULT FALSE");
+            tryAddColumn(stmt, "rift_plots", "resell_available", pl.riftplots.config.Texts.raw("text.database-manager.boolean-default-false"));
+            tryAddColumn(stmt, "rift_plots", "auction_active", pl.riftplots.config.Texts.raw("text.database-manager.boolean-default-false"));
             tryAddColumn(stmt, "rift_plots", "settings_overrides", "TEXT");
 
             stmt.executeUpdate("""
@@ -219,8 +219,8 @@ public class DatabaseManager {
                             description TEXT
                         );
                     """);
-            tryAddColumn(stmt, "rift_auctions", "escrow_enabled", "BOOLEAN DEFAULT FALSE");
-            tryAddColumn(stmt, "rift_auction_bids", "sequence", "INT NOT NULL DEFAULT 0");
+            tryAddColumn(stmt, "rift_auctions", "escrow_enabled", pl.riftplots.config.Texts.raw("text.database-manager.boolean-default-false"));
+            tryAddColumn(stmt, "rift_auction_bids", "sequence", pl.riftplots.config.Texts.raw("text.database-manager.int-not-null-default-0"));
 
             stmt.executeUpdate("""
                         CREATE TABLE IF NOT EXISTS rift_audit_logs (
@@ -306,14 +306,15 @@ public class DatabaseManager {
 
     public int getSchemaVersion() throws SQLException {
         try (var connection = getConnection(); var statement = connection.prepareStatement("SELECT version FROM rift_schema_version WHERE id = 1"); var result = statement.executeQuery()) {
-            if (!result.next()) throw new SQLException("Missing schema version");
+            if (!result.next())
+                throw new SQLException(pl.riftplots.config.Texts.raw("text.database-manager.missing-schema-version"));
             return result.getInt(1);
         }
     }
 
     public Connection getConnection() throws SQLException {
         if (dataSource == null || dataSource.isClosed()) {
-            throw new SQLException("HikariDataSource is closed or not initialized!");
+            throw new SQLException(pl.riftplots.config.Texts.raw("text.database-manager.hikaridatasource-is-closed-or-not-initialized"));
         }
         return dataSource.getConnection();
     }

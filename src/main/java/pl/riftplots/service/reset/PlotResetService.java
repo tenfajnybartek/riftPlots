@@ -46,11 +46,11 @@ public class PlotResetService {
                             PlotManager plotManager,
                             PlotSnapshotService snapshotService,
                             WorldEditHook worldEditHook) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin cannot be null");
-        this.config = Objects.requireNonNull(config, "config cannot be null");
-        this.plotManager = Objects.requireNonNull(plotManager, "plotManager cannot be null");
-        this.snapshotService = Objects.requireNonNull(snapshotService, "snapshotService cannot be null");
-        this.worldEditHook = Objects.requireNonNull(worldEditHook, "worldEditHook cannot be null");
+        this.plugin = Objects.requireNonNull(plugin, pl.riftplots.config.Texts.raw("text.plot-reset-service.plugin-cannot-be-null"));
+        this.config = Objects.requireNonNull(config, pl.riftplots.config.Texts.raw("text.plot-reset-service.config-cannot-be-null"));
+        this.plotManager = Objects.requireNonNull(plotManager, pl.riftplots.config.Texts.raw("text.plot-reset-service.plotmanager-cannot-be-null"));
+        this.snapshotService = Objects.requireNonNull(snapshotService, pl.riftplots.config.Texts.raw("text.plot-reset-service.snapshotservice-cannot-be-null"));
+        this.worldEditHook = Objects.requireNonNull(worldEditHook, pl.riftplots.config.Texts.raw("text.plot-reset-service.worldedithook-cannot-be-null"));
     }
 
     public void setSignService(PlotSignService signService) {
@@ -88,7 +88,7 @@ public class PlotResetService {
         try {
             File schematicFile = snapshotService.getSchematicFile(plot.getId());
             if (schematicFile == null || !schematicFile.isFile() || schematicFile.length() == 0) {
-                plugin.getLogger().severe("Brak schematu działki " + plotId + ". Reset przerwany; działka została wyłączona.");
+                plugin.getLogger().severe(pl.riftplots.config.Texts.raw("text.plot-reset-service.brak-schematu-dziaki-reset-przerwany-dziaka-zostaa", plotId));
                 plot.setStatus(PlotStatus.DISABLED);
                 plotManager.savePlot(plot);
                 activeResets.remove(plotId);
@@ -115,11 +115,11 @@ public class PlotResetService {
                             String problem = validateClipboard(plot, clipboard);
                             if (problem != null || plotManager.financiallyBlocked(plotId, originatingOperation) || !Objects.equals(originalOwner, plot.getOwnerUuid())
                                     || !originalBounds.equals(plot.getBounds())) {
-                                plugin.getLogger().warning("Reset " + plotId + " odrzucony: " + (problem != null ? problem : "zmieniony stan działki"));
+                                plugin.getLogger().warning("Reset " + plotId + " odrzucony: " + (problem != null ? problem : pl.riftplots.config.Texts.raw("text.plot-reset-service.zmieniony-stan-dziaki")));
                                 if (callback != null) callback.accept(false);
                                 return;
                             }
-                            if (rentalService != null && !rentalService.terminateRental(plotId, true, "Reset nieruchomości")) {
+                            if (rentalService != null && !rentalService.terminateRental(plotId, true, pl.riftplots.config.Texts.raw("text.plot-reset-service.reset-nieruchomosci"))) {
                                 if (callback != null) callback.accept(false);
                                 return;
                             }
@@ -131,7 +131,7 @@ public class PlotResetService {
                             pasteClipboard(plot, clipboard, callback);
                             accepted = true;
                         } catch (RuntimeException e) {
-                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Nie można rozpocząć resetu " + plotId, e);
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, pl.riftplots.config.Texts.raw("text.plot-reset-service.nie-mozna-rozpoczac-resetu", plotId), e);
                             if (callback != null) callback.accept(false);
                         } finally {
                             if (!accepted) activeResets.remove(plotId);
@@ -140,7 +140,7 @@ public class PlotResetService {
                 } catch (Exception e) {
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         try {
-                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Nie można odczytać schematu " + plotId, e);
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, pl.riftplots.config.Texts.raw("text.plot-reset-service.nie-mozna-odczytac-schematu", plotId), e);
                             if (callback != null) callback.accept(false);
                         } finally {
                             activeResets.remove(plotId);
@@ -156,18 +156,20 @@ public class PlotResetService {
     }
 
     public String validateClipboard(Plot plot, Clipboard clipboard) {
-        if (clipboard == null) return "Nie można odczytać schematu.";
+        if (clipboard == null)
+            return pl.riftplots.config.Texts.raw("text.plot-reset-service.nie-mozna-odczytac-schematu-ee45d61");
         PlotBounds bounds = plot.getBounds();
-        if (Bukkit.getWorld(bounds.getWorldName()) == null) return "Świat działki nie jest załadowany.";
+        if (Bukkit.getWorld(bounds.getWorldName()) == null)
+            return pl.riftplots.config.Texts.raw("text.plot-reset-service.swiat-dziaki-nie-jest-zaadowany");
         var region = clipboard.getRegion();
         return region.getWidth() != bounds.getWidthX() || region.getHeight() != bounds.getHeightY()
-                || region.getLength() != bounds.getLengthZ() ? "Wymiary schematu nie pasują do granic działki." : null;
+                || region.getLength() != bounds.getLengthZ() ? pl.riftplots.config.Texts.raw("text.plot-reset-service.wymiary-schematu-nie-pasuja-do-granic-dziaki") : null;
     }
 
     public void preview(Plot plot, Consumer<String> callback) {
         File file = snapshotService.getSchematicFile(plot.getId());
         if (file == null || !file.isFile()) {
-            callback.accept("Brak schematu.");
+            callback.accept(pl.riftplots.config.Texts.raw("text.plot-reset-service.brak-schematu"));
             return;
         }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -175,7 +177,7 @@ public class PlotResetService {
                 Clipboard clipboard = worldEditHook.loadSnapshot(file);
                 Bukkit.getScheduler().runTask(plugin, () -> callback.accept(validateClipboard(plot, clipboard)));
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> callback.accept("Nie można odczytać schematu: " + e.getMessage()));
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(pl.riftplots.config.Texts.raw("text.plot-reset-service.nie-mozna-odczytac-schematu-3b58c33", e.getMessage())));
             }
         });
     }
@@ -192,7 +194,7 @@ public class PlotResetService {
         var region = clipboard.getRegion();
         if (region.getWidth() != bounds.getWidthX() || region.getHeight() != bounds.getHeightY()
                 || region.getLength() != bounds.getLengthZ()) {
-            plugin.getLogger().severe("Wymiary schematu nie pasują do granic działki " + plot.getId());
+            plugin.getLogger().severe(pl.riftplots.config.Texts.raw("text.plot-reset-service.wymiary-schematu-nie-pasuja-do-granic-dziaki-7bbc340", plot.getId()));
             finishReset(plot, false, callback);
             return;
         }
@@ -210,7 +212,7 @@ public class PlotResetService {
                         editSession.setBlock(source.add(offset), clipboard.getFullBlock(source));
                     }
                 } catch (Exception e) {
-                    plugin.getLogger().severe("Błąd resetu działki " + plot.getId() + ": " + e.getMessage());
+                    plugin.getLogger().severe(pl.riftplots.config.Texts.raw("text.plot-reset-service.bad-resetu-dziaki", plot.getId(), e.getMessage()));
                     cancel();
                     finishReset(plot, false, callback);
                     return;
@@ -252,7 +254,7 @@ public class PlotResetService {
         for (Plot plot : plotManager.getAllPlots()) {
             if (plot.getStatus() == PlotStatus.RESETTING) {
                 startReset(plot, success -> {
-                    plugin.getLogger().info("Wznowiono i ukonczono reset dzialki: " + plot.getId() + " (sukces: " + success + ")");
+                    plugin.getLogger().info(pl.riftplots.config.Texts.raw("text.plot-reset-service.wznowiono-i-ukonczono-reset-dzialki-sukces", plot.getId(), success));
                 });
             }
         }

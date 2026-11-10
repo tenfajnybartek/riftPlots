@@ -165,7 +165,7 @@ public class PaymentService {
                     TransactionType.PURCHASE,
                     finalPrice,
                     TransactionStatus.SUCCESS,
-                    "Zakup działki " + plot.getName()
+                    pl.riftplots.config.Texts.raw("text.payment-service.zakup-dziaki", plot.getName())
             );
             transactionRepository.save(transaction);
 
@@ -183,7 +183,7 @@ public class PaymentService {
             }
 
             if (budgetService != null) {
-                budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.PURCHASE_INCOME, finalPrice, plot.getId(), player.getUniqueId(), "Zakup nieruchomości miejskiej " + plot.getId());
+                budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.PURCHASE_INCOME, finalPrice, plot.getId(), player.getUniqueId(), pl.riftplots.config.Texts.raw("text.payment-service.zakup-nieruchomosci-miejskiej", plot.getId()));
             }
             if (auditService != null) {
                 auditService.log(plot.getId(), player.getUniqueId(), player.getName(), "PURCHASE", "Cena: " + finalPrice);
@@ -222,7 +222,7 @@ public class PaymentService {
         }
 
         if (!plot.isTaxEnabled()) {
-            player.sendMessage(AdventureUtil.parse("<gray>Ta działka jest zwolniona z podatków.</gray>"));
+            player.sendMessage(AdventureUtil.parse(pl.riftplots.config.Texts.markup("text.payment-service.ta-dziaka-jest-zwolniona-z-podatkow")));
             return false;
         }
 
@@ -281,7 +281,7 @@ public class PaymentService {
                 periods > 1 ? TransactionType.ADVANCE_TAX : TransactionType.TAX,
                 finalAmount,
                 TransactionStatus.SUCCESS,
-                "Opłacenie podatku za " + periods + " okres(ów)"
+                pl.riftplots.config.Texts.raw("text.payment-service.opacenie-podatku-za-okres-ow", periods)
         );
         transactionRepository.save(transaction);
 
@@ -290,10 +290,10 @@ public class PaymentService {
         }
 
         if (budgetService != null) {
-            budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.TAX_INCOME, finalAmount, plot.getId(), player.getUniqueId(), "Wpłata podatku miejskiego za " + periods + " okres(ów)");
+            budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.TAX_INCOME, finalAmount, plot.getId(), player.getUniqueId(), pl.riftplots.config.Texts.raw("text.payment-service.wpata-podatku-miejskiego-za-okres-ow", periods));
         }
         if (auditService != null) {
-            auditService.log(plot.getId(), player.getUniqueId(), player.getName(), "TAX_PAID", "Kwota: " + finalAmount + ", Okresów: " + periods);
+            auditService.log(plot.getId(), player.getUniqueId(), player.getName(), "TAX_PAID", pl.riftplots.config.Texts.raw("text.payment-service.kwota-okresow", finalAmount, periods));
         }
 
         player.sendMessage(messageConfig.get("tax.paid-success", Map.of(
@@ -334,7 +334,7 @@ public class PaymentService {
         if (refunds != null && journal != null) {
             String operationId = journal.currentId();
             String refundKey = "abandon:" + operationId;
-            refunds.prepare(refundKey, "ABANDON", plot.getId(), operationId, ownerUuid, refund, "Zwrot za porzucenie działki");
+            refunds.prepare(refundKey, "ABANDON", plot.getId(), operationId, ownerUuid, refund, pl.riftplots.config.Texts.raw("text.payment-service.zwrot-za-porzucenie-dziaki"));
             if (plot.isAutoResetOnExpire()) {
                 journal.deferCurrent();
                 boolean accepted = resetService.startReset(plot, success -> {
@@ -348,13 +348,13 @@ public class PaymentService {
                     refunds.cancelPrepared(refundKey);
                     return false;
                 }
-                player.sendMessage(AdventureUtil.parse("<yellow>Zlecono oddanie działki. Zwrot zostanie rozliczony po zwolnieniu nieruchomości.</yellow>"));
+                player.sendMessage(AdventureUtil.parse(pl.riftplots.config.Texts.markup("text.payment-service.zlecono-oddanie-dziaki-zwrot-zostanie-rozliczony-po")));
                 return true;
             }
             plot.clearOwnership();
             plot.setStatus(PlotStatus.AVAILABLE);
             plotManager.savePlot(plot);
-            player.sendMessage(AdventureUtil.parse("<green>Oddano działkę. Stan zwrotu sprawdzisz przez /plots history.</green>"));
+            player.sendMessage(AdventureUtil.parse(pl.riftplots.config.Texts.markup("text.payment-service.oddano-dziake-stan-zwrotu-sprawdzisz-przez-plots")));
             return true;
         }
         if (plot.isAutoResetOnExpire()) {
@@ -370,16 +370,16 @@ public class PaymentService {
             TransactionRecord refundRecord = TransactionRecord.create(
                     plot.getId(),
                     ownerUuid,
-                    owner.getName() != null ? owner.getName() : "Unknown",
+                    owner.getName() != null ? owner.getName() : pl.riftplots.config.Texts.raw("text.payment-service.unknown"),
                     TransactionType.REFUND,
                     refund,
                     refunded ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
-                    "Zwrot środków za porzucenie działki"
+                    pl.riftplots.config.Texts.raw("text.payment-service.zwrot-srodkow-za-porzucenie-dziaki")
             );
             transactionRepository.save(refundRecord);
 
             if (refunded && budgetService != null) {
-                budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.REFUND_EXPENSE, refund, plot.getId(), player.getUniqueId(), "Zwrot kaucji/części ceny za porzucenie działki");
+                budgetService.recordTransaction(pl.riftplots.domain.city.CityTransactionType.REFUND_EXPENSE, refund, plot.getId(), player.getUniqueId(), pl.riftplots.config.Texts.raw("text.payment-service.zwrot-kaucji-czesci-ceny-za-porzucenie-dziaki"));
             }
             if (!refunded) {
                 player.sendMessage(messageConfig.get("general.economy-error"));
@@ -414,6 +414,6 @@ public class PaymentService {
             return BigDecimal.ZERO;
         }
         BigDecimal price = plot.getPrice();
-        return price.multiply(BigDecimal.valueOf(percent / 100.0)).setScale(2, RoundingMode.HALF_UP);
+        return price.multiply(BigDecimal.valueOf(percent / 100.0)).setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding());
     }
 }

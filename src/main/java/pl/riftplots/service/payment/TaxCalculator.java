@@ -38,7 +38,7 @@ public class TaxCalculator {
         switch (mode) {
             case FIXED, CUSTOM -> calculated = base;
             case MULTIPLIER -> {
-                double multiplier = Math.max(0.01, plot.getTaxMultiplier());
+                double multiplier = Math.max(pl.riftplots.config.Settings.decimal("tax.minimum-multiplier"), plot.getTaxMultiplier());
                 calculated = base.multiply(BigDecimal.valueOf(multiplier));
             }
             case PER_BLOCK -> {
@@ -51,17 +51,15 @@ public class TaxCalculator {
             }
             case SIZE_TIERS -> {
                 long area = bounds != null ? bounds.getHorizontalArea() : 1L;
-                double tierMultiplier;
-                if (area <= 250) {
-                    tierMultiplier = 1.0;
-                } else if (area <= 1000) {
-                    tierMultiplier = 1.5;
-                } else if (area <= 2500) {
-                    tierMultiplier = 2.5;
-                } else if (area <= 5000) {
-                    tierMultiplier = 4.0;
-                } else {
-                    tierMultiplier = 6.0;
+                double tierMultiplier = pl.riftplots.config.Settings.decimal("tax.size-tier-overflow-multiplier");
+                var settings = pl.riftplots.config.Settings.section("tax");
+                var limits = settings.getLongList("size-tier-limits");
+                var multipliers = settings.getDoubleList("size-tier-multipliers");
+                for (int index = 0; index < limits.size(); index++) {
+                    if (area <= limits.get(index)) {
+                        tierMultiplier = multipliers.get(index);
+                        break;
+                    }
                 }
                 calculated = base.multiply(BigDecimal.valueOf(tierMultiplier));
             }
@@ -75,6 +73,6 @@ public class TaxCalculator {
             }
         }
 
-        return calculated.setScale(2, RoundingMode.HALF_UP).max(BigDecimal.ZERO);
+        return calculated.setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding()).max(BigDecimal.ZERO);
     }
 }

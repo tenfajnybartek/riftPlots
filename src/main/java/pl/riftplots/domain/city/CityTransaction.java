@@ -23,7 +23,7 @@ public class CityTransaction {
                            String plotId,
                            UUID playerUuid,
                            String description) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.city-transaction.id-cannot-be-null"));
         this.type = type != null ? type : CityTransactionType.TAX_INCOME;
         this.amount = amount != null ? amount : BigDecimal.ZERO;
         this.balanceAfter = balanceAfter != null ? balanceAfter : BigDecimal.ZERO;

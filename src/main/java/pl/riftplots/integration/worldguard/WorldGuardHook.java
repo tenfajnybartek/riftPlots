@@ -59,7 +59,7 @@ public class WorldGuardHook {
         BlockVector3 max = BlockVector3.at(bounds.getMaxX(), bounds.getMaxY(), bounds.getMaxZ());
 
         ProtectedCuboidRegion region = new ProtectedCuboidRegion(regionId, min, max);
-        region.setPriority(10);
+        region.setPriority(pl.riftplots.config.Settings.integer("worldguard.region-priority"));
 
         DefaultDomain owners = region.getOwners();
         if (plot.getOwnerUuid() != null) {
@@ -130,19 +130,21 @@ public class WorldGuardHook {
     public void applyTypeFlags(Plot plot, java.util.Set<String> managedFlags, Map<String, String> values) {
         validateTypeFlags(values);
         ProtectedRegion region = getRegion(plot.getBounds().getWorldName(), plot.getWorldGuardRegionId());
-        if (region == null) throw new IllegalStateException("Brak regionu działki");
+        if (region == null)
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.world-guard-hook.brak-regionu-dziaki"));
         for (String name : managedFlags) {
             var flag = WorldGuard.getInstance().getFlagRegistry().get(name);
             if (!(flag instanceof StateFlag state)) {
                 if (values.containsKey(name))
-                    plugin.getLogger().warning("Flaga typu wymaga ręcznej konfiguracji: " + name);
+                    plugin.getLogger().warning(pl.riftplots.config.Texts.raw("text.world-guard-hook.flaga-typu-wymaga-recznej-konfiguracji", name));
                 continue;
             }
             String value = values.get(name);
             if (value == null) region.setFlag(state, null);
             else if (value.equalsIgnoreCase("allow") || value.equalsIgnoreCase("deny")) region.setFlag(state,
                     value.equalsIgnoreCase("allow") ? StateFlag.State.ALLOW : StateFlag.State.DENY);
-            else throw new IllegalArgumentException("Flaga " + name + " wymaga allow albo deny.");
+            else
+                throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.world-guard-hook.flaga-wymaga-allow-albo-deny", name));
         }
     }
 
@@ -150,7 +152,7 @@ public class WorldGuardHook {
         for (var entry : values.entrySet()) {
             if (!(WorldGuard.getInstance().getFlagRegistry().get(entry.getKey()) instanceof StateFlag)
                     || !(entry.getValue().equalsIgnoreCase("allow") || entry.getValue().equalsIgnoreCase("deny"))) {
-                throw new IllegalArgumentException("Domyślne flagi typu obsługują zarejestrowane flagi allow/deny: " + entry.getKey());
+                throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.world-guard-hook.domyslne-flagi-typu-obsuguja-zarejestrowane-flagi-allow", entry.getKey()));
             }
         }
     }

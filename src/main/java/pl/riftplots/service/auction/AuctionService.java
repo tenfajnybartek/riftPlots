@@ -149,7 +149,7 @@ public class AuctionService {
                 activeAuctions.put(plotId.toLowerCase(), auction);
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.auction-service.storage-operation-failed"), e);
         }
     }
 
@@ -171,7 +171,8 @@ public class AuctionService {
     }
 
     private void persistAuction(PlotAuction auction) {
-        if (journal != null && !journal.isWriteAllowed()) throw new IllegalStateException("Trwa migracja danych");
+        if (journal != null && !journal.isWriteAllowed())
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.auction-service.trwa-migracja-danych"));
         if (databaseManager != null) {
             String sql = """
                         INSERT INTO rift_auctions (id, plot_id, seller_uuid, starting_price, min_bid_increment, current_bid, current_bidder_uuid, current_bidder_name, start_time, end_time, buyout_price, status, escrow_enabled)
@@ -205,7 +206,7 @@ public class AuctionService {
                 persistBids(conn, auction);
                 conn.commit();
             } catch (SQLException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.auction-service.storage-operation-failed"), e);
             }
         } else {
             try {
@@ -228,7 +229,7 @@ public class AuctionService {
                 auctionsFile.getParentFile().mkdirs();
                 YamlDataFile.save(config, auctionsFile);
             } catch (IOException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.auction-service.storage-operation-failed"), e);
             }
         }
     }
@@ -260,7 +261,7 @@ public class AuctionService {
         plotManager.savePlot(plot);
 
         saveAuction(auction);
-        auditService.log(plot.getId(), sellerUuid, "SYSTEM", "AUCTION_STARTED", "Cena wywoławcza: " + startingPrice + ", Czas: " + durationMinutes + "m");
+        auditService.log(plot.getId(), sellerUuid, pl.riftplots.config.Texts.raw("text.auction-service.system"), "AUCTION_STARTED", pl.riftplots.config.Texts.raw("text.auction-service.cena-wywoawcza-czas-m", startingPrice, durationMinutes));
         return true;
     }
 
@@ -313,14 +314,14 @@ public class AuctionService {
             }
             if (previous.getCurrentBidderUuid() != null && !bidder.getUniqueId().equals(previous.getCurrentBidderUuid())) {
                 refunds.prepare("outbid:" + auction.getId() + ":" + previous.getBids().size(), "AUCTION_OUTBID", plotId,
-                        journal.currentId(), previous.getCurrentBidderUuid(), previous.getCurrentBid(), "Zwrot przebitej oferty aukcji " + auction.getId());
+                        journal.currentId(), previous.getCurrentBidderUuid(), previous.getCurrentBid(), pl.riftplots.config.Texts.raw("text.auction-service.zwrot-przebitej-oferty-aukcji", auction.getId()));
             }
         }
         saveAuction(auction);
-        notificationService.notifyPlayer(bidder.getUniqueId(), messageConfig.getRaw("auction.bid-accepted", "{prefix}<green>Oferta zostala przyjeta!</green>")
+        notificationService.notifyPlayer(bidder.getUniqueId(), messageConfig.getRaw("auction.bid-accepted")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{amount}", config.formatMoney(amount))
-                .replace("{plot_id}", plotId), "minecraft:block.note_block.bell");
+                .replace("{plot_id}", plotId), pl.riftplots.config.Settings.string("sounds.auction-bid"));
         return true;
     }
 
@@ -331,7 +332,7 @@ public class AuctionService {
                     finalizeAuction(auction);
                 } catch (RuntimeException e) {
                     java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE,
-                            "Nie można rozliczyć aukcji " + auction.getId(), e);
+                            pl.riftplots.config.Texts.raw("text.auction-service.nie-mozna-rozliczyc-aukcji", auction.getId()), e);
                 }
             }
         }
@@ -367,7 +368,7 @@ public class AuctionService {
             saveAuction(auction);
             plot.setAuctionActive(false);
             plotManager.savePlot(plot);
-            auditService.log(plot.getId(), null, "SYSTEM", "AUCTION_CLOSED_NO_BIDS", "Brak ofert w licytacji.");
+            auditService.log(plot.getId(), null, pl.riftplots.config.Texts.raw("text.auction-service.system"), "AUCTION_CLOSED_NO_BIDS", pl.riftplots.config.Texts.raw("text.auction-service.brak-ofert-w-licytacji"));
             return;
         }
 
@@ -380,22 +381,22 @@ public class AuctionService {
             BigDecimal feePct = BigDecimal.valueOf(config.getAuctionCityFeePercent()).movePointLeft(2);
             if (auction.getSellerUuid() != null) {
                 org.bukkit.OfflinePlayer seller = org.bukkit.Bukkit.getOfflinePlayer(auction.getSellerUuid());
-                BigDecimal cityFee = winningBid.multiply(feePct).setScale(2, RoundingMode.HALF_UP).min(winningBid);
+                BigDecimal cityFee = winningBid.multiply(feePct).setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding()).min(winningBid);
                 BigDecimal sellerShare = winningBid.subtract(cityFee);
                 if (!vaultHook.deposit(seller, sellerShare)) {
                     if (refunds != null && !auction.isEscrowEnabled()) {
                         refunds.prepare("auction-failed-payout:" + auction.getId(), "AUCTION_SETTLEMENT_REFUND", plot.getId(), journal.currentId(),
-                                winner.getUniqueId(), winningBid, "Nieudana wypłata dla sprzedawcy aukcji");
+                                winner.getUniqueId(), winningBid, pl.riftplots.config.Texts.raw("text.auction-service.nieudana-wypata-dla-sprzedawcy-aukcji"));
                     } else if (!auction.isEscrowEnabled() && !vaultHook.deposit(winner, winningBid)) {
-                        throw new IllegalStateException("Nie udało się zwrócić środków zwycięzcy aukcji " + auction.getId());
+                        throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.auction-service.nie-udao-sie-zwrocic-srodkow-zwyciezcy-aukcji", auction.getId()));
                     }
                     cancelAuction(plot.getId());
-                    auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_PAYMENT_FAILED", "Nieudana wypłata dla sprzedawcy; zwrócono środki kupującemu.");
+                    auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_PAYMENT_FAILED", pl.riftplots.config.Texts.raw("text.auction-service.nieudana-wypata-dla-sprzedawcy-zwrocono-srodki-kupujacemu"));
                     return;
                 }
-                budgetService.recordTransaction(CityTransactionType.AUCTION_FEE, cityFee, plot.getId(), winner.getUniqueId(), "Prowizja miejska z aukcji");
+                budgetService.recordTransaction(CityTransactionType.AUCTION_FEE, cityFee, plot.getId(), winner.getUniqueId(), pl.riftplots.config.Texts.raw("text.auction-service.prowizja-miejska-z-aukcji"));
             } else {
-                budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, winningBid, plot.getId(), winner.getUniqueId(), "Wygrana w licytacji działki miejskiej");
+                budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, winningBid, plot.getId(), winner.getUniqueId(), pl.riftplots.config.Texts.raw("text.auction-service.wygrana-w-licytacji-dziaki-miejskiej"));
             }
 
             plot.setOwnerUuid(winner.getUniqueId());
@@ -416,14 +417,14 @@ public class AuctionService {
             auction.setStatus(AuctionStatus.COMPLETED);
             saveAuction(auction);
 
-            notificationService.notifyPlayer(winner.getUniqueId(), messageConfig.getRaw("auction.won", "{prefix}<green>Wygrales licytacje!</green>")
+            notificationService.notifyPlayer(winner.getUniqueId(), messageConfig.getRaw("auction.won")
                     .replace("{prefix}", config.getPrefix())
                     .replace("{name}", plot.getName())
-                    .replace("{amount}", config.formatMoney(winningBid)), "minecraft:ui.toast.challenge_complete");
+                    .replace("{amount}", config.formatMoney(winningBid)), pl.riftplots.config.Settings.string("sounds.auction-won"));
             auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_WON", "Kwota: " + winningBid);
         } else {
             cancelAuction(plot.getId());
-            auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_PAYMENT_FAILED", "Brak środków u zwycięzcy");
+            auditService.log(plot.getId(), winner.getUniqueId(), winner.getName(), "AUCTION_PAYMENT_FAILED", pl.riftplots.config.Texts.raw("text.auction-service.brak-srodkow-u-zwyciezcy"));
         }
     }
 
@@ -444,7 +445,7 @@ public class AuctionService {
         if (auction != null) {
             if (auction.isEscrowEnabled() && auction.getCurrentBidderUuid() != null) {
                 refunds.prepare("auction-cancel:" + auction.getId(), "AUCTION_CANCELLED", plotId, journal.currentId(),
-                        auction.getCurrentBidderUuid(), auction.getCurrentBid(), "Anulowanie aukcji z depozytem ofert");
+                        auction.getCurrentBidderUuid(), auction.getCurrentBid(), pl.riftplots.config.Texts.raw("text.auction-service.anulowanie-aukcji-z-depozytem-ofert"));
             }
             auction.setStatus(AuctionStatus.CANCELLED);
             saveAuction(auction);
@@ -457,7 +458,7 @@ public class AuctionService {
 
     public synchronized void cancelAuction(String plotId, String operator, String reason) {
         if (journal != null && journal.isBlocked(plotId))
-            throw new IllegalArgumentException("Najpierw uzgodnij trwającą operację finansową.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.auction-service.najpierw-uzgodnij-trwajaca-operacje-finansowa"));
         cancelAuction(plotId);
         auditService.log(plotId, null, operator, "AUCTION_CANCELLED", reason);
     }
@@ -512,7 +513,7 @@ public class AuctionService {
                     bids = result.next() ? databaseBids(connection, result.getString(1)) : new ArrayList<>();
                 }
             } catch (SQLException e) {
-                throw new IllegalStateException("Nie można odczytać historii aukcji", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.auction-service.nie-mozna-odczytac-historii-aukcji"), e);
             }
         } else {
             var yaml = YamlDataFile.load(auctionsFile);
@@ -522,7 +523,7 @@ public class AuctionService {
             bids = latest.isPresent() ? fileBids(yaml, "auctions." + latest.get(), latest.get()) : new ArrayList<>();
         }
         Collections.reverse(bids);
-        return bids.stream().skip((long) Math.max(0, page) * 10).limit(10).toList();
+        return bids.stream().skip((long) Math.max(0, page) * pl.riftplots.config.Settings.integer("paging.auction-history")).limit(pl.riftplots.config.Settings.integer("paging.auction-history")).toList();
     }
 
     private void persistBids(Connection connection, PlotAuction auction) throws SQLException {

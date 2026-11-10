@@ -15,8 +15,8 @@ public class PlotPlayerProfile {
     private final Set<String> ownedPlotIds = ConcurrentHashMap.newKeySet();
 
     public PlotPlayerProfile(UUID uuid, String lastName, Instant firstJoin, Instant lastSeen, Set<String> ownedPlots) {
-        this.uuid = Objects.requireNonNull(uuid, "uuid cannot be null");
-        this.lastName = lastName != null ? lastName : "Unknown";
+        this.uuid = Objects.requireNonNull(uuid, pl.riftplots.config.Texts.raw("text.plot-player-profile.uuid-cannot-be-null"));
+        this.lastName = lastName != null ? lastName : pl.riftplots.config.Texts.raw("text.plot-player-profile.unknown");
         this.firstJoin = firstJoin != null ? firstJoin : Instant.now();
         this.lastSeen = lastSeen != null ? lastSeen : Instant.now();
         if (ownedPlots != null) {

@@ -1,6 +1,6 @@
 # Publikacja GitHub Wiki
 
-Źródła wiki znajdują się w [`docs/wiki/`](wiki/Home.md). Zawierają 26 rozdziałów, w tym wdrożenie P1–P2, menu `_Sidebar.md`, stopkę `_Footer.md`, 3 grafiki i 6 diagramów Mermaid. Pliki źródłowe można czytać bezpośrednio w głównym repozytorium; używają względnych odnośników `.md`.
+Źródła wiki znajdują się w [`docs/wiki/`](wiki/Home.md). Zawierają 27 rozdziałów, w tym wdrożenie P1–P2 i konfigurację GUI, menu `_Sidebar.md`, stopkę `_Footer.md`, 3 grafiki i 6 diagramów Mermaid. Pliki źródłowe można czytać bezpośrednio w głównym repozytorium; używają względnych odnośników `.md`.
 
 ## Dlaczego osobny eksport?
 

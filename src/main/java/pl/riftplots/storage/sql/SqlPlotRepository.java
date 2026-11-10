@@ -29,7 +29,7 @@ public class SqlPlotRepository implements PlotRepository {
                 plots.add(plot);
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-repository.storage-operation-failed"), e);
         }
         return plots;
     }
@@ -51,7 +51,7 @@ public class SqlPlotRepository implements PlotRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-repository.storage-operation-failed"), e);
         }
         return Optional.empty();
     }
@@ -74,7 +74,7 @@ public class SqlPlotRepository implements PlotRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-repository.storage-operation-failed"), e);
         }
         return plots;
     }
@@ -235,7 +235,7 @@ public class SqlPlotRepository implements PlotRepository {
 
             conn.commit();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-repository.storage-operation-failed"), e);
         }
     }
 
@@ -266,7 +266,7 @@ public class SqlPlotRepository implements PlotRepository {
             }
             conn.commit();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-plot-repository.storage-operation-failed"), e);
         }
     }
 

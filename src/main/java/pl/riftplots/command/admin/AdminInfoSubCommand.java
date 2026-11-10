@@ -39,12 +39,12 @@ public class AdminInfoSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin info <id>";
+        return pl.riftplots.config.Texts.raw("text.admin-info.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla zaawansowane parametry techniczne działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-info.description");
     }
 
     @Override
@@ -64,30 +64,28 @@ public class AdminInfoSubCommand implements SubCommand {
         Plot plot = opt.get();
         BigDecimal tax = taxCalculator.calculateTax(plot);
 
-        AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== PANEL TECHNICZNY DZIAŁKI: " + plot.getId().toUpperCase() + " ===</b></gradient>");
-        AdventureUtil.sendMessage(sender, "<gray>Nazwa: </gray><gold>" + plot.getName() + "</gold>");
-        AdventureUtil.sendMessage(sender, "<gray>Kategoria: </gray><yellow>" + plot.getCategory() + "</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Status: </gray><aqua>" + plot.getStatus() + "</aqua>");
-        AdventureUtil.sendMessage(sender, "<gray>Region WorldGuard: </gray><white>" + plot.getWorldGuardRegionId() + "</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Granice: </gray><white>" + plot.getBounds() + "</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Wymiary: </gray><white>" + plot.getBounds().getWidthX() + "x" + plot.getBounds().getHeightY() + "x" + plot.getBounds().getLengthZ() + " (Pow: " + plot.getBounds().getHorizontalArea() + " m², Chunki: " + plot.getBounds().getChunksCount() + ")</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Cena bazowa: </gray><green>" + config.formatMoney(plot.getPrice()) + "</green>");
-        sender.sendMessage(net.kyori.adventure.text.Component.text("Mnożnik cen dzielnicy: " + plotManager.getDistrictPriceMultiplier(plot)
-                + "; cena końcowa: " + config.formatMoney(plotManager.getPurchasePrice(plot))
-                + "; ręczne nadpisania: " + plot.getSettingOverrides()));
-        AdventureUtil.sendMessage(sender, "<gray>Podatek bazowy: </gray><gold>" + config.formatMoney(plot.getBaseTax()) + "</gold>");
-        AdventureUtil.sendMessage(sender, "<gray>Tryb podatku: </gray><yellow>" + plot.getTaxMode() + " (Mnożnik: " + plot.getTaxMultiplier() + ", Włączony: " + plot.isTaxEnabled() + ")</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Wyliczony podatek: </gray><gold>" + config.formatMoney(tax) + "</gold>");
-        AdventureUtil.sendMessage(sender, "<gray>Okres rozliczeniowy: </gray><white>" + plot.getBillingPeriodDays() + " dni</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Czas karencji: </gray><white>" + plot.getGracePeriodHours() + " godz.</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Właściciel: </gray><aqua>" + (plot.getOwnerName() != null ? plot.getOwnerName() : "Brak") + " (" + plot.getOwnerUuid() + ")</aqua>");
-        AdventureUtil.sendMessage(sender, "<gray>Data zakupu: </gray><white>" + TimeUtil.formatInstant(plot.getPurchaseDate()) + "</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Termin podatku: </gray><yellow>" + TimeUtil.formatInstant(plot.getNextTaxPayment()) + "</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Wygaśnięcie karencji: </gray><red>" + TimeUtil.formatInstant(plot.getGracePeriodExpiry()) + "</red>");
-        AdventureUtil.sendMessage(sender, "<gray>Opłacone z góry: </gray><aqua>" + plot.getAdvancePeriodsPaid() + "</aqua>");
-        AdventureUtil.sendMessage(sender, "<gray>Plik schematu: </gray><white>" + plot.getSchematicFile() + "</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Auto-reset: </gray><yellow>" + plot.isAutoResetOnExpire() + "</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Zwrot przy porzuceniu: </gray><green>" + plot.getRefundPercentOnAbandon() + "%</green>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.panel-techniczny-dziaki", plot.getId().toUpperCase()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.nazwa", plot.getName()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.kategoria", plot.getCategory()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.status", plot.getStatus()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.region-worldguard", plot.getWorldGuardRegionId()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.granice", plot.getBounds()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.wymiary-x-x-pow-m2-chunki", plot.getBounds().getWidthX(), plot.getBounds().getHeightY(), plot.getBounds().getLengthZ(), plot.getBounds().getHorizontalArea(), plot.getBounds().getChunksCount()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.cena-bazowa", config.formatMoney(plot.getPrice())));
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-info.mnoznik-cen-dzielnicy-cena-koncowa-reczne-nadpisania", plotManager.getDistrictPriceMultiplier(plot), config.formatMoney(plotManager.getPurchasePrice(plot)), plot.getSettingOverrides()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.podatek-bazowy", config.formatMoney(plot.getBaseTax())));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.tryb-podatku-mnoznik-waczony", plot.getTaxMode(), plot.getTaxMultiplier(), plot.isTaxEnabled()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.wyliczony-podatek", config.formatMoney(tax)));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.okres-rozliczeniowy-dni", plot.getBillingPeriodDays()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.czas-karencji-godz", plot.getGracePeriodHours()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.wasciciel", (plot.getOwnerName() != null ? plot.getOwnerName() : pl.riftplots.config.Texts.raw("text.admin-info.brak")), plot.getOwnerUuid()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.data-zakupu", TimeUtil.formatInstant(plot.getPurchaseDate())));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.termin-podatku", TimeUtil.formatInstant(plot.getNextTaxPayment())));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.wygasniecie-karencji", TimeUtil.formatInstant(plot.getGracePeriodExpiry())));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.opacone-z-gory", plot.getAdvancePeriodsPaid()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.plik-schematu", plot.getSchematicFile()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.auto-reset", plot.isAutoResetOnExpire()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-info.zwrot-przy-porzuceniu", plot.getRefundPercentOnAbandon()));
 
         return true;
     }

@@ -38,12 +38,12 @@ public class AdminSetPriceSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin setprice <id> <cena>";
+        return pl.riftplots.config.Texts.raw("text.admin-set-price.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Ustawia cenę zakupu działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-set-price.description");
     }
 
     @Override
@@ -64,11 +64,11 @@ public class AdminSetPriceSubCommand implements SubCommand {
         try {
             price = pl.riftplots.util.Money.parse(args[1]);
             if (price.compareTo(BigDecimal.ZERO) < 0) {
-                AdventureUtil.sendMessage(sender, "<red>Cena nie może być ujemna!</red>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-price.cena-nie-moze-byc-ujemna"));
                 return true;
             }
         } catch (NumberFormatException e) {
-            AdventureUtil.sendMessage(sender, "<red>Podana kwota jest nieprawidłowa!</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-price.podana-kwota-jest-nieprawidowa"));
             return true;
         }
 
@@ -93,7 +93,7 @@ public class AdminSetPriceSubCommand implements SubCommand {
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();
         } else if (args.length == 2) {
-            return List.of("10000", "25000", "50000", "100000");
+            return pl.riftplots.config.Settings.strings("tab-completion.plot-prices");
         }
         return Collections.emptyList();
     }

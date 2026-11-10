@@ -42,18 +42,18 @@ public class AdminAuditSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin audit <id> [strona]";
+        return pl.riftplots.config.Texts.raw("text.admin-audit.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Przeprowadza audyt finansowy i operacyjny wybranej działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-audit.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length < 1 || args.length > 2) {
-            AdventureUtil.sendMessage(sender, "<red>Użycie: /" + getUsage() + "</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-audit.uzycie", getUsage()));
             return true;
         }
 
@@ -62,23 +62,23 @@ public class AdminAuditSubCommand implements SubCommand {
         try {
             page = args.length == 2 ? pl.riftplots.command.BillingArguments.positiveInt(args[1]) - 1 : 0;
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Użycie: /" + getUsage());
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-audit.uzycie-c161434", getUsage()));
             return true;
         }
-        sender.sendMessage("Audyt — strona " + (page + 1));
-        if (audit != null) for (var entry : audit.getLogsForPlot(id, page, 20))
-            sender.sendMessage(net.kyori.adventure.text.Component.text(
-                    entry.getTimestamp() + " | " + entry.getOperatorName() + " | " + entry.getAction() + " | " + entry.getDetails()));
-        List<TransactionRecord> records = transactionRepository.findByPlotId(id, page, 20);
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-audit.audyt-strona", (page + 1)));
+        if (audit != null)
+            for (var entry : audit.getLogsForPlot(id, page, pl.riftplots.config.Settings.integer("paging.audit")))
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-audit.line", entry.getTimestamp(), entry.getOperatorName(), entry.getAction(), entry.getDetails()));
+        List<TransactionRecord> records = transactionRepository.findByPlotId(id, page, pl.riftplots.config.Settings.integer("paging.audit"));
 
-        AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== AUDYT TRANSAKCJI DZIAŁKI " + id.toUpperCase() + " ===</b></gradient>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-audit.audyt-transakcji-dziaki", id.toUpperCase()));
         if (records.isEmpty()) {
-            AdventureUtil.sendMessage(sender, "<gray>Brak zarejestrowanych transakcji dla tej działki.</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-audit.brak-zarejestrowanych-transakcji-dla-tej-dziaki"));
             return true;
         }
 
-        for (TransactionRecord record : records.stream().limit(20).toList()) {
-            AdventureUtil.sendMessage(sender, "<gray>[" + TimeUtil.formatInstant(record.getTimestamp()) + "]</gray> <gold>" + record.getType() + "</gold> <yellow>" + config.formatMoney(record.getAmount()) + "</yellow> <aqua>" + record.getPlayerName() + "</aqua> <dark_gray>(" + record.getStatus() + " - " + record.getDetails() + ")</dark_gray>");
+        for (TransactionRecord record : records.stream().toList()) {
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-audit.line-c252bf8", TimeUtil.formatInstant(record.getTimestamp()), record.getType(), config.formatMoney(record.getAmount()), record.getPlayerName(), record.getStatus(), record.getDetails()));
         }
 
         return true;

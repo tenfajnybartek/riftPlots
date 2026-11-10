@@ -11,26 +11,29 @@ public record BillingArguments(Plot plot, int periods) {
             if (parsed < 1) throw new NumberFormatException();
             return parsed;
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Liczba okresów musi być dodatnią liczbą całkowitą.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.billing-arguments.liczba-okresow-musi-byc-dodatnia-liczba-cakowita"));
         }
     }
 
     public static BillingArguments resolve(Player player, String[] args, PlotManager plots) {
-        if (args.length > 2) throw new IllegalArgumentException("Zbyt wiele argumentów. Podaj [działka] [okresy].");
+        if (args.length > 2)
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.billing-arguments.zbyt-wiele-argumentow-podaj-dziaka-okresy"));
         Plot plot = null;
-        int periods = 1;
+        int periods = pl.riftplots.config.Settings.integer("billing.default-payment-periods");
         if (args.length > 0) {
             plot = plots.getPlot(args[0]).orElse(null);
             if (plot != null) {
                 if (args.length == 2) periods = positiveInt(args[1]);
             } else if (args.length == 1 && args[0].matches("[+-]?[0-9]+")) periods = positiveInt(args[0]);
-            else throw new IllegalArgumentException("Działka nie istnieje. Podaj poprawne ID.");
+            else
+                throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.billing-arguments.dziaka-nie-istnieje-podaj-poprawne-id"));
         }
         if (plot == null) {
             var location = player.getLocation();
             plot = plots.getPlotAt(player.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()).orElse(null);
         }
-        if (plot == null) throw new IllegalArgumentException("Podaj identyfikator działki lub stań na jej terenie.");
+        if (plot == null)
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.billing-arguments.podaj-identyfikator-dziaki-lub-stan-na-jej"));
         return new BillingArguments(plot, periods);
     }
 }

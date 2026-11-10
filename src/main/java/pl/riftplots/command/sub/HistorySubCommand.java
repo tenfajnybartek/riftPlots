@@ -46,12 +46,12 @@ public class HistorySubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots history [id|all] [strona] [legacy]";
+        return pl.riftplots.config.Texts.raw("text.history.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla historię płatności i transakcji.";
+        return pl.riftplots.config.Texts.raw("text.history.description");
     }
 
     @Override
@@ -60,7 +60,7 @@ public class HistorySubCommand implements SubCommand {
         int page = 0;
         try {
             if (args.length > 3 || args.length == 3 && !args[2].equalsIgnoreCase("legacy"))
-                throw new IllegalArgumentException("Użycie: /" + getUsage());
+                throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.history.uzycie", getUsage()));
             if (args.length >= 2) page = pl.riftplots.command.BillingArguments.positiveInt(args[1]) - 1;
         } catch (IllegalArgumentException e) {
             sender.sendMessage(net.kyori.adventure.text.Component.text(e.getMessage()));
@@ -69,7 +69,7 @@ public class HistorySubCommand implements SubCommand {
         if (args.length > 0 && !args[0].equalsIgnoreCase("all")) {
             Plot plot = plotManager.getPlot(args[0]).orElse(null);
             if (plot == null) {
-                sender.sendMessage("Działka nie istnieje.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.history.dziaka-nie-istnieje"));
                 return true;
             }
             plotId = plot.getId();
@@ -87,42 +87,42 @@ public class HistorySubCommand implements SubCommand {
         if (sender instanceof Player player && plotId != null && !config.isPublicHistory()
                 && !plotManager.getPlot(plotId).map(plot -> plot.isOwner(player.getUniqueId())).orElse(false)
                 && !player.hasPermission("riftplots.admin.history")) {
-            sender.sendMessage("Historia tej nieruchomości jest prywatna.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.history.historia-tej-nieruchomosci-jest-prywatna"));
             return true;
         }
-        if (sender instanceof Player player && refunds != null) refunds.list(player.getUniqueId()).stream().limit(10)
-                .forEach(refund -> sender.sendMessage(net.kyori.adventure.text.Component.text("Zwrot " + refund.id() + " | " + config.formatMoney(refund.amount()) + " | " + refund.status())));
+        if (sender instanceof Player player && refunds != null)
+            refunds.list(player.getUniqueId()).stream().limit(pl.riftplots.config.Settings.integer("paging.refunds-in-player-history"))
+                    .forEach(refund -> sender.sendMessage(pl.riftplots.config.Texts.component("text.history.zwrot", refund.id(), config.formatMoney(refund.amount()), refund.status())));
         if (journal != null && args.length < 3) {
             java.util.UUID playerId = sender instanceof Player player && plotId == null ? player.getUniqueId() : null;
-            var entries = journal.history(playerId, plotId, page, 10);
+            var entries = journal.history(playerId, plotId, page, pl.riftplots.config.Settings.integer("paging.history"));
             if (!entries.isEmpty() || page > 0) {
-                sender.sendMessage("Historia operacji — strona " + (page + 1));
-                entries.forEach(entry -> sender.sendMessage(net.kyori.adventure.text.Component.text(
-                        entry.id() + " | " + entry.created() + " | " + entry.kind() + " | " + config.formatMoney(entry.amount()) + " | " + entry.status())));
-                sender.sendMessage("Starsze zapisy: /plots history " + (plotId == null ? "all" : plotId) + " " + (page + 1) + " legacy");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.history.historia-operacji-strona", (page + 1)));
+                entries.forEach(entry -> sender.sendMessage(pl.riftplots.config.Texts.component("text.history.line", entry.id(), entry.created(), entry.kind(), config.formatMoney(entry.amount()), entry.status())));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.history.starsze-zapisy-plots-history-legacy", (plotId == null ? "all" : plotId), (page + 1)));
                 return true;
             }
         }
 
         List<TransactionRecord> list;
         if (plotId != null) {
-            list = transactionRepository.findByPlotId(plotId, page, 10);
-            AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== HISTORIA TRANSAKCJI DZIAŁKI " + plotId.toUpperCase() + " ===</b></gradient>");
+            list = transactionRepository.findByPlotId(plotId, page, pl.riftplots.config.Settings.integer("paging.history"));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.history.historia-transakcji-dziaki", plotId.toUpperCase()));
         } else if (sender instanceof Player player) {
-            list = transactionRepository.findByPlayer(player.getUniqueId(), page, 10);
-            AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== TWOJA HISTORIA TRANSAKCJI ===</b></gradient>");
+            list = transactionRepository.findByPlayer(player.getUniqueId(), page, pl.riftplots.config.Settings.integer("paging.history"));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.history.twoja-historia-transakcji"));
         } else {
-            list = transactionRepository.findAll(page, 10);
-            AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== OSTATNIE TRANSAKCJE ===</b></gradient>");
+            list = transactionRepository.findAll(page, pl.riftplots.config.Settings.integer("paging.history"));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.history.ostatnie-transakcje"));
         }
 
         if (list.isEmpty()) {
-            AdventureUtil.sendMessage(sender, "<gray>Brak zarejestrowanych transakcji.</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.history.brak-zarejestrowanych-transakcji"));
             return true;
         }
 
         for (TransactionRecord record : list) {
-            AdventureUtil.sendMessage(sender, "<gray>[" + TimeUtil.formatInstant(record.getTimestamp()) + "]</gray> <gold>" + record.getType() + "</gold> <yellow>" + config.formatMoney(record.getAmount()) + "</yellow> <white>(" + record.getDetails() + ")</white>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.history.line-252d238", TimeUtil.formatInstant(record.getTimestamp()), record.getType(), config.formatMoney(record.getAmount()), record.getDetails()));
         }
 
         return true;

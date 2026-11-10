@@ -42,12 +42,12 @@ public class AdminSetOwnerSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin setowner <id> <gracz|none>";
+        return pl.riftplots.config.Texts.raw("text.admin-set-owner.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Ustawia lub usuwa właściciela danej działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-set-owner.description");
     }
 
     @Override
@@ -85,7 +85,7 @@ public class AdminSetOwnerSubCommand implements SubCommand {
 
             sender.sendMessage(messageConfig.get("admin.owner-set", Map.of(
                     "plot_id", id,
-                    "owner", "Brak (Udostępniona do zakupu)"
+                    "owner", pl.riftplots.config.Texts.raw("text.admin-set-owner.brak-udostepniona-do-zakupu")
             )));
             return true;
         }

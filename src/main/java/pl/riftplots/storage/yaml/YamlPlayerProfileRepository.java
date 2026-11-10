@@ -43,7 +43,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
         }
         try {
             YamlConfiguration config = YamlDataFile.load(file);
-            String lastName = config.getString("lastName", "Unknown");
+            String lastName = config.getString("lastName", pl.riftplots.config.Texts.raw("text.yaml-player-profile-repository.unknown"));
             long firstJoin = config.getLong("firstJoin", System.currentTimeMillis());
             long lastSeen = config.getLong("lastSeen", System.currentTimeMillis());
             List<String> owned = config.getStringList("ownedPlots");
@@ -51,7 +51,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
                     uuid, lastName, Instant.ofEpochMilli(firstJoin), Instant.ofEpochMilli(lastSeen), new HashSet<>(owned)
             ));
         } catch (Exception e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-player-profile-repository.storage-operation-failed"), e);
         }
     }
 
@@ -71,7 +71,7 @@ public class YamlPlayerProfileRepository implements PlayerProfileRepository {
         try {
             YamlDataFile.save(config, file);
         } catch (IOException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-player-profile-repository.storage-operation-failed"), e);
         }
     }
 }

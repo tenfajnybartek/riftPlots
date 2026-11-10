@@ -40,23 +40,24 @@ public class StorageConfiguration {
     private long poolMaxLifetime;
 
     public void load(FileConfiguration config) {
-        String typeStr = config.getString("storage.type", "SQLITE");
+        config = ConfigurationFiles.merged("storage.yml", config);
+        String typeStr = config.getString("storage.type");
         this.storageType = StorageType.parse(typeStr);
 
-        this.sqliteFileName = config.getString("storage.sqlite.file", "riftplots.db");
+        this.sqliteFileName = config.getString("storage.sqlite.file");
 
-        this.mysqlHost = config.getString("storage.mysql.host", "localhost");
-        this.mysqlPort = config.getInt("storage.mysql.port", 3306);
-        this.mysqlDatabase = config.getString("storage.mysql.database", "riftplots");
-        this.mysqlUsername = config.getString("storage.mysql.username", "root");
-        this.mysqlPassword = config.getString("storage.mysql.password", "");
-        this.mysqlUseSsl = config.getBoolean("storage.mysql.use-ssl", false);
+        this.mysqlHost = config.getString("storage.mysql.host");
+        this.mysqlPort = config.getInt("storage.mysql.port");
+        this.mysqlDatabase = config.getString("storage.mysql.database");
+        this.mysqlUsername = config.getString("storage.mysql.username");
+        this.mysqlPassword = config.getString("storage.mysql.password");
+        this.mysqlUseSsl = config.getBoolean("storage.mysql.use-ssl");
 
-        this.poolMaxSize = Math.max(1, config.getInt("storage.pool.maximum-pool-size", 10));
-        this.poolMinIdle = Math.max(1, config.getInt("storage.pool.minimum-idle", 2));
-        this.poolIdleTimeout = Math.max(10000L, config.getLong("storage.pool.idle-timeout-ms", 600000L));
-        this.poolConnectionTimeout = Math.max(1000L, config.getLong("storage.pool.connection-timeout-ms", 30000L));
-        this.poolMaxLifetime = Math.max(30000L, config.getLong("storage.pool.max-lifetime-ms", 1800000L));
+        this.poolMaxSize = Math.max(1, config.getInt("storage.pool.maximum-pool-size"));
+        this.poolMinIdle = Math.max(1, config.getInt("storage.pool.minimum-idle"));
+        this.poolIdleTimeout = Math.max(10000L, config.getLong("storage.pool.idle-timeout-ms"));
+        this.poolConnectionTimeout = Math.max(1000L, config.getLong("storage.pool.connection-timeout-ms"));
+        this.poolMaxLifetime = Math.max(30000L, config.getLong("storage.pool.max-lifetime-ms"));
     }
 
     public StorageType getStorageType() {

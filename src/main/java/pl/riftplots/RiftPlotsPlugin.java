@@ -40,6 +40,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
     private PluginConfiguration pluginConfig;
     private StorageConfiguration storageConfig;
     private MessageConfiguration messageConfig;
+    private pl.riftplots.config.GuiConfiguration guiConfig;
 
     private VaultHook vaultHook;
     private WorldEditHook worldEditHook;
@@ -94,13 +95,13 @@ public class RiftPlotsPlugin extends JavaPlugin {
         loadConfigurations();
 
         if (!setupIntegrations()) {
-            getLogger().severe("Nie udalo sie zainicjalizowac wymaganych integracji (WorldGuard / WorldEdit / Vault)! Wylaczanie pluginu...");
+            getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.nie-udalo-sie-zainicjalizowac-wymaganych-integracji-worldguard"));
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         if (!setupStorage()) {
-            getLogger().severe("Nie udalo sie zainicjalizowac magazynu danych! Wylaczanie pluginu...");
+            getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.nie-udalo-sie-zainicjalizowac-magazynu-danych-wylaczanie"));
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -124,7 +125,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
 
         signService.updateAllSigns();
 
-        getLogger().info("Plugin riftPlots zostal pomyslnie wlaczony! Zaladowano dzialek: " + plotManager.getAllPlots().size());
+        getLogger().info(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.plugin-riftplots-zostal-pomyslnie-wlaczony-zaladowano-dzialek", plotManager.getAllPlots().size()));
     }
 
     @Override
@@ -133,7 +134,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
         try {
             ioQueue.close();
         } catch (RuntimeException e) {
-            getLogger().log(java.util.logging.Level.SEVERE, "Błąd zamykania kolejki danych", e);
+            getLogger().log(java.util.logging.Level.SEVERE, pl.riftplots.config.Texts.raw("text.rift-plots-plugin.bad-zamykania-kolejki-danych"), e);
         }
         if (taxScheduler != null) {
             taxScheduler.stop();
@@ -143,38 +144,37 @@ public class RiftPlotsPlugin extends JavaPlugin {
             try {
                 storageBackend.shutdown();
             } catch (Exception e) {
-                getLogger().severe("Blad podczas zamykania magazynu danych: " + e.getMessage());
+                getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.blad-podczas-zamykania-magazynu-danych", e.getMessage()));
             }
         }
 
         instance = null;
-        getLogger().info("Plugin riftPlots zostal wylaczony.");
+        getLogger().info(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.plugin-riftplots-zostal-wylaczony"));
     }
 
     public void reloadPlugin() {
+        loadConfigurations();
         if (taxScheduler != null) {
             taxScheduler.stop();
         }
-
-        loadConfigurations();
-
-        if (typeManager != null) typeManager.load();
-        if (districtManager != null) districtManager.load();
-        if (plotManager != null) plotManager.refreshInheritedDefaults();
-
-        if (taxScheduler != null) {
-            taxScheduler.start();
+        try {
+            if (typeManager != null) typeManager.load();
+            if (districtManager != null) districtManager.load();
+            if (plotManager != null) plotManager.refreshInheritedDefaults();
+        } finally {
+            if (taxScheduler != null) taxScheduler.start();
         }
 
         if (signService != null) {
             signService.updateAllSigns();
         }
 
-        getLogger().info("Konfiguracja pluginu riftPlots zostala przeladowana.");
+        getLogger().info(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.konfiguracja-pluginu-riftplots-zostala-przeladowana"));
     }
 
     private void saveDefaultConfigs() {
         saveDefaultConfig();
+        if (!new File(getDataFolder(), "gui.yml").exists()) saveResource("gui.yml", false);
 
         File storageFile = new File(getDataFolder(), "storage.yml");
         if (!storageFile.exists()) {
@@ -198,38 +198,58 @@ public class RiftPlotsPlugin extends JavaPlugin {
     }
 
     private void loadConfigurations() {
+        var candidateConfig = pl.riftplots.config.ConfigurationFiles.read(new File(getDataFolder(), "config.yml"));
+        var candidateGui = pl.riftplots.config.ConfigurationFiles.read(new File(getDataFolder(), "gui.yml"));
+        var candidateLang = pl.riftplots.config.ConfigurationFiles.read(new File(getDataFolder(), "lang.yml"));
+        var candidateStorage = pl.riftplots.config.ConfigurationFiles.read(new File(getDataFolder(), "storage.yml"));
+        // Validate the entire batch before replacing the objects used by existing services.
+        var checkedGui = new pl.riftplots.config.GuiConfiguration();
+        checkedGui.load(candidateGui);
+        pl.riftplots.config.Settings.validate(candidateConfig);
+        var checkedPlugin = new PluginConfiguration();
+        checkedPlugin.load(candidateConfig);
+        var checkedStorage = new StorageConfiguration();
+        checkedStorage.load(candidateStorage);
+        new MessageConfiguration(checkedPlugin).load(candidateLang);
+        // Catch malformed profile YAML before changing the shared configuration snapshots.
+        var candidateTypes = pl.riftplots.config.ConfigurationFiles.merged("plot-types.yml", pl.riftplots.config.ConfigurationFiles.read(new File(getDataFolder(), "plot-types.yml")));
+        String defaultType = pl.riftplots.config.ConfigurationFiles.merged("config.yml", candidateConfig).getString("plots.default-type");
+        if (candidateTypes.getConfigurationSection("types").getKeys(false).stream().noneMatch(name -> name.equalsIgnoreCase(defaultType)))
+            throw new IllegalArgumentException("plots.default-type");
+        pl.riftplots.config.ConfigurationFiles.read(new File(getDataFolder(), "districts.yml"));
         reloadConfig();
         if (pluginConfig == null) pluginConfig = new PluginConfiguration();
-        pluginConfig.load(getConfig());
+        pluginConfig.load(candidateConfig);
 
-        File storageFile = new File(getDataFolder(), "storage.yml");
-        YamlConfiguration storageYaml = YamlConfiguration.loadConfiguration(storageFile);
         if (storageConfig == null) storageConfig = new StorageConfiguration();
-        storageConfig.load(storageYaml);
+        storageConfig.load(candidateStorage);
 
-        File langFile = new File(getDataFolder(), "lang.yml");
-        YamlConfiguration langYaml = YamlConfiguration.loadConfiguration(langFile);
         if (messageConfig == null) messageConfig = new MessageConfiguration(pluginConfig);
-        messageConfig.load(langYaml);
+        messageConfig.load(candidateLang);
+        if (guiConfig == null) guiConfig = new pl.riftplots.config.GuiConfiguration();
+        guiConfig.load(candidateGui);
+        pl.riftplots.config.Texts.install(messageConfig);
+        pl.riftplots.config.Presentation.install(guiConfig);
+        pl.riftplots.config.Settings.install(candidateConfig);
     }
 
     private boolean setupIntegrations() {
         vaultHook = new VaultHook(this);
         boolean vaultOk = vaultHook.setup();
         if (!vaultOk) {
-            getLogger().severe("Brak dostepnego providera ekonomii w Vault!");
+            getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.brak-dostepnego-providera-ekonomii-w-vault"));
             return false;
         }
 
         worldEditHook = new WorldEditHook(this);
         if (!worldEditHook.isAvailable()) {
-            getLogger().severe("Brak wtyczki WorldEdit!");
+            getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.brak-wtyczki-worldedit"));
             return false;
         }
 
         worldGuardHook = new WorldGuardHook(this);
         if (!worldGuardHook.isAvailable()) {
-            getLogger().severe("Brak wtyczki WorldGuard!");
+            getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.brak-wtyczki-worldguard"));
             return false;
         }
 
@@ -249,7 +269,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
             storageBackend.initialize();
             return true;
         } catch (Exception e) {
-            getLogger().severe("Blad inicjalizacji bazy danych (" + type + "): " + e.getMessage());
+            getLogger().severe(pl.riftplots.config.Texts.raw("text.rift-plots-plugin.blad-inicjalizacji-bazy-danych", type, e.getMessage()));
             e.printStackTrace();
             return false;
         }
@@ -282,7 +302,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
         plotManager.setUpdateListener(signService::updateSignsForPlot);
 
         notificationService = new pl.riftplots.service.notification.NotificationService(getDataFolder(),
-                getConfig().getInt("notifications.retention-days", 30), getConfig().getInt("notifications.max-history-per-player", 200));
+                pl.riftplots.config.Settings.integer("notifications.retention-days"), pl.riftplots.config.Settings.integer("notifications.max-history-per-player"));
 
         pl.riftplots.storage.sql.DatabaseManager dbMgr = storageBackend.getDatabaseManager();
 
@@ -296,7 +316,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
                     pl.riftplots.domain.city.CityTransactionType.REFUND_EXPENSE, refund.amount(), refund.plotId(), refund.player(),
                     refund.reason() + " [op:" + operationJournal.currentId() + "]");
             storageBackend.getTransactionRepository().save(pl.riftplots.domain.payment.TransactionRecord.create(
-                    refund.plotId(), refund.player(), "Refund", pl.riftplots.domain.payment.TransactionType.REFUND,
+                    refund.plotId(), refund.player(), pl.riftplots.config.Texts.raw("text.rift-plots-plugin.refund"), pl.riftplots.domain.payment.TransactionType.REFUND,
                     refund.amount(), pl.riftplots.domain.payment.TransactionStatus.SUCCESS,
                     refund.reason() + " [op:" + operationJournal.currentId() + "]"));
         });
@@ -421,7 +441,7 @@ public class RiftPlotsPlugin extends JavaPlugin {
             @org.bukkit.event.EventHandler
             public void onLogin(org.bukkit.event.player.PlayerLoginEvent event) {
                 if (maintenance.isActive())
-                    event.disallow(org.bukkit.event.player.PlayerLoginEvent.Result.KICK_OTHER, "Trwa migracja danych miasta. Spróbuj po restarcie serwera.");
+                    event.disallow(org.bukkit.event.player.PlayerLoginEvent.Result.KICK_OTHER, pl.riftplots.config.Texts.raw("text.rift-plots-plugin.trwa-migracja-danych-miasta-sprobuj-po-restarcie"));
             }
         }, this);
     }

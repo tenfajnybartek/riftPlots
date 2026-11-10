@@ -38,12 +38,12 @@ public class ListSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots list";
+        return pl.riftplots.config.Texts.raw("text.list.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla listę Twoich działek.";
+        return pl.riftplots.config.Texts.raw("text.list.description");
     }
 
     @Override
@@ -53,9 +53,9 @@ public class ListSubCommand implements SubCommand {
             return true;
         }
 
-        AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== LISTA DZIAŁEK MIEJSKICH ===</b></gradient>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.list.lista-dziaek-miejskich"));
         for (Plot plot : plotManager.getAllPlots()) {
-            AdventureUtil.sendMessage(sender, "<yellow>" + plot.getId() + "</yellow> - <gold>" + plot.getName() + "</gold> [" + plot.getStatus() + "] (Wł.: " + (plot.getOwnerName() != null ? plot.getOwnerName() : "Brak") + ")");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.list.w", plot.getId(), plot.getName(), plot.getStatus(), (plot.getOwnerName() != null ? plot.getOwnerName() : pl.riftplots.config.Texts.raw("text.list.brak"))));
         }
         return true;
     }

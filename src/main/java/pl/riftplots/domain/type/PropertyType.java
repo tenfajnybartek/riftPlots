@@ -36,19 +36,19 @@ public class PropertyType {
                         double refundPercent,
                         Material iconMaterial,
                         Map<String, String> defaultFlags) {
-        this.id = Objects.requireNonNull(id, "id cannot be null").toUpperCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.property-type.id-cannot-be-null")).toUpperCase();
         this.displayName = displayName != null ? displayName : id;
         this.description = description != null ? description : "";
-        this.defaultPrice = defaultPrice != null ? defaultPrice : BigDecimal.valueOf(25000);
-        this.defaultBaseTax = defaultBaseTax != null ? defaultBaseTax : BigDecimal.valueOf(1500);
-        this.defaultTaxMode = defaultTaxMode != null ? defaultTaxMode : TaxMode.FIXED;
+        this.defaultPrice = defaultPrice != null ? defaultPrice : BigDecimal.valueOf(pl.riftplots.config.Settings.decimal("economy.default-price"));
+        this.defaultBaseTax = defaultBaseTax != null ? defaultBaseTax : BigDecimal.valueOf(pl.riftplots.config.Settings.decimal("economy.default-base-tax"));
+        this.defaultTaxMode = defaultTaxMode != null ? defaultTaxMode : TaxMode.parse(pl.riftplots.config.Settings.string("economy.default-tax-mode"));
         this.defaultTaxMultiplier = defaultTaxMultiplier > 0 ? defaultTaxMultiplier : 1.0;
-        this.defaultBillingPeriodDays = defaultBillingPeriodDays > 0 ? defaultBillingPeriodDays : 7;
+        this.defaultBillingPeriodDays = defaultBillingPeriodDays > 0 ? defaultBillingPeriodDays : pl.riftplots.config.Settings.integer("economy.default-billing-period-days");
         this.maxMembers = Math.max(0, maxMembers);
         this.rentalAllowed = rentalAllowed;
         this.salesAllowed = salesAllowed;
-        this.refundPercent = refundPercent >= 0 ? refundPercent : 50.0;
-        this.iconMaterial = iconMaterial != null ? iconMaterial : Material.BRICKS;
+        this.refundPercent = refundPercent >= 0 ? refundPercent : pl.riftplots.config.Settings.decimal("economy.default-abandon-refund-percent");
+        this.iconMaterial = iconMaterial != null ? iconMaterial : Material.matchMaterial(pl.riftplots.config.Settings.string("plots.default-icon"));
         if (defaultFlags != null) {
             this.defaultFlags.putAll(defaultFlags);
         }

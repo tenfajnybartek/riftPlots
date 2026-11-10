@@ -35,12 +35,12 @@ public class TransferSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots transfer <gracz> <cena> [działka]";
+        return pl.riftplots.config.Texts.raw("text.transfer.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wysyła ofertę sprzedaży lub przekazania działki innemu graczowi.";
+        return pl.riftplots.config.Texts.raw("text.transfer.description");
     }
 
     @Override
@@ -98,7 +98,7 @@ public class TransferSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            player.sendMessage("§cPodaj identyfikator działki lub stań na jej terenie!");
+            player.sendMessage(pl.riftplots.config.Texts.component("text.transfer.podaj-identyfikator-dziaki-lub-stan-na-jej"));
             return true;
         }
 
@@ -111,7 +111,7 @@ public class TransferSubCommand implements SubCommand {
         if (args.length == 1) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName).filter(n -> n.toLowerCase().startsWith(args[0].toLowerCase())).toList();
         } else if (args.length == 2) {
-            return List.of("0", "1000", "5000", "10000", "50000");
+            return pl.riftplots.config.Settings.strings("tab-completion.transfer-prices");
         } else if (args.length == 3 && sender instanceof Player player) {
             return plotManager.getPlotsByOwner(player.getUniqueId()).stream().map(Plot::getId).filter(id -> id.toLowerCase().startsWith(args[2].toLowerCase())).toList();
         }

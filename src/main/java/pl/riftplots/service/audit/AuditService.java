@@ -34,7 +34,8 @@ public class AuditService {
     }
 
     public synchronized void log(String plotId, UUID operatorUuid, String operatorName, String action, String details) {
-        if (!writeAllowed.getAsBoolean()) throw new IllegalStateException("Trwa migracja danych");
+        if (!writeAllowed.getAsBoolean())
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.audit-service.trwa-migracja-danych"));
         PlotAuditLog entry = PlotAuditLog.create(plotId, operatorUuid, operatorName, action, details);
 
         if (databaseManager != null) {
@@ -49,7 +50,7 @@ public class AuditService {
                 ps.setLong(7, entry.getTimestamp().toEpochMilli());
                 ps.executeUpdate();
             } catch (SQLException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.audit-service.storage-operation-failed"), e);
             }
         } else {
             saveToFile(entry);
@@ -69,7 +70,7 @@ public class AuditService {
             auditFile.getParentFile().mkdirs();
             YamlDataFile.save(config, auditFile);
         } catch (IOException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.audit-service.storage-operation-failed"), e);
         }
     }
 
@@ -78,7 +79,8 @@ public class AuditService {
     }
 
     public synchronized List<PlotAuditLog> getLogsForPlot(String plotId, int page, int limit) {
-        if (page < 0) throw new IllegalArgumentException("Invalid audit page");
+        if (page < 0)
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.audit-service.invalid-audit-page"));
         if (plotId == null || limit <= 0) return Collections.emptyList();
         if (databaseManager != null) {
             List<PlotAuditLog> list = new ArrayList<>();
@@ -101,7 +103,7 @@ public class AuditService {
                     }
                 }
             } catch (SQLException e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.audit-service.storage-operation-failed"), e);
             }
             return list;
         }

@@ -25,15 +25,19 @@ public final class BorderService implements AutoCloseable {
 
     public boolean show(Player player, Plot plot) {
         if (!player.getWorld().getName().equalsIgnoreCase(plot.getBounds().getWorldName())) return false;
-        int cooldown = Math.clamp(plugin.getConfig().getInt("visualization.border-cooldown-seconds", 10), 5, 120);
+        int cooldown = Math.clamp(pl.riftplots.config.Settings.integer("visualization.border-cooldown-seconds"), 5, 120);
         if (cooldowns.getOrDefault(player.getUniqueId(), Instant.EPOCH).plusSeconds(cooldown).isAfter(Instant.now()))
             return false;
         cancel(player.getUniqueId());
         cooldowns.put(player.getUniqueId(), Instant.now());
-        int limit = Math.clamp(plugin.getConfig().getInt("visualization.border-points", 120), 24, 240);
+        int limit = Math.clamp(pl.riftplots.config.Settings.integer("visualization.border-points"), 24, 240);
         var points = points(plot.getBounds(), limit);
-        int frames = Math.clamp(plugin.getConfig().getInt("visualization.border-duration-seconds", 10), 3, 30) * 2;
-        var dust = new Particle.DustOptions(Color.fromRGB(0, 198, 255), 1.1f);
+        int interval = pl.riftplots.config.Settings.integer("visualization.border-interval-ticks");
+        int frames = Math.max(1, (int) Math.ceil(Math.clamp(pl.riftplots.config.Settings.integer("visualization.border-duration-seconds"), 3, 30) * 20.0 / interval));
+        var particle = Particle.valueOf(pl.riftplots.config.Settings.string("visualization.border-particle"));
+        Object dust = particle.getDataType() == Particle.DustOptions.class ? new Particle.DustOptions(
+                Color.fromRGB(Integer.parseInt(pl.riftplots.config.Settings.string("visualization.border-color").substring(1), 16)),
+                (float) pl.riftplots.config.Settings.decimal("visualization.border-particle-size")) : null;
         BukkitTask task = new BukkitRunnable() {
             int remaining = frames;
 
@@ -44,9 +48,9 @@ public final class BorderService implements AutoCloseable {
                     return;
                 }
                 for (Point point : points)
-                    player.spawnParticle(Particle.DUST, point.x(), point.y(), point.z(), 1, 0, 0, 0, 0, dust);
+                    player.spawnParticle(particle, point.x(), point.y(), point.z(), 1, 0, 0, 0, 0, dust);
             }
-        }.runTaskTimer(plugin, 0L, 10L);
+        }.runTaskTimer(plugin, 0L, interval);
         tasks.put(player.getUniqueId(), task);
         return true;
     }

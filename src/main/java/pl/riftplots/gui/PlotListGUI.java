@@ -17,7 +17,7 @@ public class PlotListGUI {
     }
 
     public void open(Player player) {
-        market.open(player, MarketView.start(MarketView.Tab.OWNED));
+        market.open(player, MarketView.start(MarketView.Tab.valueOf(pl.riftplots.config.Presentation.gui().value("market.default-tab"))));
     }
 
     public void openAvailable(Player player) {

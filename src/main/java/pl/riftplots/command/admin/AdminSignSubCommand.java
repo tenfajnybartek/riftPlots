@@ -39,12 +39,12 @@ public class AdminSignSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin sign <id> [FOR_SALE|STATUS|RENEW]";
+        return pl.riftplots.config.Texts.raw("text.admin-sign.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wiąże tabliczkę, na którą patrzysz, z wybraną działką.";
+        return pl.riftplots.config.Texts.raw("text.admin-sign.description");
     }
 
     @Override
@@ -66,9 +66,9 @@ public class AdminSignSubCommand implements SubCommand {
             return true;
         }
 
-        Block targetBlock = player.getTargetBlockExact(5);
+        Block targetBlock = player.getTargetBlockExact(pl.riftplots.config.Settings.integer("interaction.sign-target-distance"));
         if (targetBlock == null || !(targetBlock.getState() instanceof Sign)) {
-            AdventureUtil.sendMessage(player, "<red>Musisz patrzeć bezpośrednio na tabliczkę (w odległości do 5 bloków)!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.admin-sign.musisz-patrzec-bezposrednio-na-tabliczke-w-odlegosci"));
             return true;
         }
 

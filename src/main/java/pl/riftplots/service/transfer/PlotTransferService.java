@@ -75,7 +75,7 @@ public class PlotTransferService {
         try {
             pl.riftplots.storage.yaml.YamlDataFile.save(yaml, offersFile);
         } catch (java.io.IOException e) {
-            throw new IllegalStateException("Nie można zapisać ofert transferu", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.plot-transfer-service.nie-mozna-zapisac-ofert-transferu"), e);
         }
     }
 
@@ -137,20 +137,20 @@ public class PlotTransferService {
             throw e;
         }
 
-        notificationService.notifyPlayer(seller.getUniqueId(), messageConfig.getRaw("transfer.offer-sent", "{prefix}<green>Wyslano oferte!</green>")
+        notificationService.notifyPlayer(seller.getUniqueId(), messageConfig.getRaw("transfer.offer-sent")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{buyer}", buyer.getName())
-                .replace("{price}", config.formatMoney(price)), "minecraft:block.note_block.pling");
+                .replace("{price}", config.formatMoney(price)), pl.riftplots.config.Settings.string("sounds.transfer-offer-sent"));
 
-        notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.offer-received", "{prefix}<yellow>Otrzymales oferte zakupu!</yellow>")
+        notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.offer-received")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{seller}", seller.getName())
                 .replace("{price}", config.formatMoney(price))
-                .replace("{offer_id}", offer.getId()), "minecraft:entity.experience_orb.pickup");
+                .replace("{offer_id}", offer.getId()), pl.riftplots.config.Settings.string("sounds.transfer-offer-received"));
 
-        auditService.log(plot.getId(), seller.getUniqueId(), seller.getName(), "OFFER_CREATED", "Cena: " + price + ", Kupujący: " + buyer.getName());
+        auditService.log(plot.getId(), seller.getUniqueId(), seller.getName(), "OFFER_CREATED", pl.riftplots.config.Texts.raw("text.plot-transfer-service.cena-kupujacy", price, buyer.getName()));
         return Optional.of(offer);
     }
 
@@ -207,23 +207,23 @@ public class PlotTransferService {
             }
 
             BigDecimal feePercent = BigDecimal.valueOf(config.getTransferFeePercent()).movePointLeft(2);
-            BigDecimal adminFee = price.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).min(price);
+            BigDecimal adminFee = price.multiply(feePercent).setScale(pl.riftplots.config.Settings.integer("economy.decimal-places"), pl.riftplots.config.Settings.rounding()).min(price);
             BigDecimal sellerPayout = price.subtract(adminFee);
 
             org.bukkit.OfflinePlayer seller = org.bukkit.Bukkit.getOfflinePlayer(offer.getSellerUuid());
             if (!vaultHook.deposit(seller, sellerPayout)) {
                 if (!vaultHook.deposit(buyer, price)) {
-                    throw new IllegalStateException("Nie udało się zwrócić środków za ofertę " + offerId);
+                    throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.plot-transfer-service.nie-udao-sie-zwrocic-srodkow-za-oferte", offerId));
                 }
                 buyer.sendMessage(messageConfig.get("general.economy-error"));
                 return false;
             }
 
             if (adminFee.compareTo(BigDecimal.ZERO) > 0) {
-                budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, adminFee, plot.getId(), buyer.getUniqueId(), "Prowizja administracyjna z transferu działki");
+                budgetService.recordTransaction(CityTransactionType.PURCHASE_INCOME, adminFee, plot.getId(), buyer.getUniqueId(), pl.riftplots.config.Texts.raw("text.plot-transfer-service.prowizja-administracyjna-z-transferu-dziaki"));
             }
 
-            transactionRepository.save(TransactionRecord.create(plot.getId(), buyer.getUniqueId(), buyer.getName(), TransactionType.PURCHASE, price, TransactionStatus.SUCCESS, "Zakup na rynku wtórnym od " + offer.getSellerName()));
+            transactionRepository.save(TransactionRecord.create(plot.getId(), buyer.getUniqueId(), buyer.getName(), TransactionType.PURCHASE, price, TransactionStatus.SUCCESS, pl.riftplots.config.Texts.raw("text.plot-transfer-service.zakup-na-rynku-wtornym-od", offer.getSellerName())));
         }
 
         plot.setOwnerUuid(buyer.getUniqueId());
@@ -239,17 +239,17 @@ public class PlotTransferService {
         activeOffers.values().removeIf(other -> other.getPlotId().equals(plot.getId()));
         persistOffers();
 
-        notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.buyer-success", "{prefix}<green>Przejales wlasnosc dzialki!</green>")
+        notificationService.notifyPlayer(buyer.getUniqueId(), messageConfig.getRaw("transfer.buyer-success")
                 .replace("{prefix}", config.getPrefix())
-                .replace("{name}", plot.getName()), "minecraft:ui.toast.challenge_complete");
+                .replace("{name}", plot.getName()), pl.riftplots.config.Settings.string("sounds.transfer-buyer-success"));
 
-        notificationService.notifyPlayer(offer.getSellerUuid(), messageConfig.getRaw("transfer.seller-success", "{prefix}<green>Dzialka zostala sprzedana!</green>")
+        notificationService.notifyPlayer(offer.getSellerUuid(), messageConfig.getRaw("transfer.seller-success")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{buyer}", buyer.getName())
-                .replace("{price}", config.formatMoney(price)), "minecraft:entity.player.levelup");
+                .replace("{price}", config.formatMoney(price)), pl.riftplots.config.Settings.string("sounds.transfer-seller-success"));
 
-        auditService.log(plot.getId(), buyer.getUniqueId(), buyer.getName(), "TRANSFER_COMPLETED", "Sprzedający: " + offer.getSellerName() + ", Kwota: " + price);
+        auditService.log(plot.getId(), buyer.getUniqueId(), buyer.getName(), "TRANSFER_COMPLETED", pl.riftplots.config.Texts.raw("text.plot-transfer-service.sprzedajacy-kwota", offer.getSellerName(), price));
         return true;
     }
 

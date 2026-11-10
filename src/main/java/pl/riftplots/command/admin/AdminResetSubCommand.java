@@ -33,12 +33,12 @@ public class AdminResetSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin reset <id> [confirm]";
+        return pl.riftplots.config.Texts.raw("text.admin-reset.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wymusza natychmiastowe zresetowanie terenu działki do stanu pierwotnego.";
+        return pl.riftplots.config.Texts.raw("text.admin-reset.description");
     }
 
     @Override
@@ -58,8 +58,7 @@ public class AdminResetSubCommand implements SubCommand {
         Plot plot = opt.get();
         if (args.length != 2 || !args[1].equalsIgnoreCase("confirm")) {
             resetService.preview(plot, problem -> sender.sendMessage(net.kyori.adventure.text.Component.text(problem != null ? problem
-                    : "Reset odbierze własność i zakończy najem. Odtworzy " + plot.getBounds().getVolume()
-                    + " bloków. Potwierdź: /plots admin reset " + plot.getId() + " confirm")));
+                    : pl.riftplots.config.Texts.raw("text.admin-reset.reset-odbierze-wasnosc-i-zakonczy-najem-odtworzy", plot.getBounds().getVolume(), plot.getId()))));
             return true;
         }
         sender.sendMessage(messageConfig.get("admin.restore-started", Map.of("plot_id", id)));
@@ -68,7 +67,7 @@ public class AdminResetSubCommand implements SubCommand {
             if (success) {
                 sender.sendMessage(messageConfig.get("admin.restore-finished", Map.of("plot_id", id)));
             } else {
-                sender.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Błąd podczas przywracania stanu działki!")));
+                sender.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", pl.riftplots.config.Texts.raw("text.admin-reset.bad-podczas-przywracania-stanu-dziaki"))));
             }
         });
 

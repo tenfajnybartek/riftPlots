@@ -34,12 +34,12 @@ public class AdminDisableSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin disable <id>";
+        return pl.riftplots.config.Texts.raw("text.admin-disable.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyłącza działkę z użytku.";
+        return pl.riftplots.config.Texts.raw("text.admin-disable.description");
     }
 
     @Override

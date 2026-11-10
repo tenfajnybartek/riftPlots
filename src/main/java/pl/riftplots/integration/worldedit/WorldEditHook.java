@@ -63,7 +63,7 @@ public class WorldEditHook {
         }
         org.bukkit.World bukkitWorld = Bukkit.getWorld(bounds.getWorldName());
         if (bukkitWorld == null) {
-            throw new IllegalArgumentException("World " + bounds.getWorldName() + " does not exist!");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.world-edit-hook.world-does-not-exist", bounds.getWorldName()));
         }
 
         World world = BukkitAdapter.adapt(bukkitWorld);
@@ -79,7 +79,7 @@ public class WorldEditHook {
             copy.setCopyingEntities(false);
             Operations.complete(copy);
         } catch (Exception e) {
-            throw new IOException("Failed to copy extent for snapshot: " + e.getMessage(), e);
+            throw new IOException(pl.riftplots.config.Texts.raw("text.world-edit-hook.failed-to-copy-extent-for-snapshot", e.getMessage()), e);
         }
 
         File parentDir = outputFile.getParentFile();
@@ -92,7 +92,7 @@ public class WorldEditHook {
             format = ClipboardFormats.findByAlias("schem");
         }
         if (format == null) {
-            throw new IllegalStateException("No suitable schematic format found in WorldEdit!");
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.world-edit-hook.no-suitable-schematic-format-found-in-worldedit"));
         }
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputFile));
@@ -113,7 +113,7 @@ public class WorldEditHook {
             format = ClipboardFormats.findByAlias("sponge.schem");
         }
         if (format == null) {
-            throw new IllegalStateException("Cannot determine clipboard format for " + inputFile.getName());
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.world-edit-hook.cannot-determine-clipboard-format-for", inputFile.getName()));
         }
 
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(inputFile));

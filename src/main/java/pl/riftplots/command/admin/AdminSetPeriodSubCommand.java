@@ -31,12 +31,12 @@ public class AdminSetPeriodSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin setperiod <id> <dni>";
+        return pl.riftplots.config.Texts.raw("text.admin-set-period.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Ustawia długość okresu rozliczeniowego w dniach.";
+        return pl.riftplots.config.Texts.raw("text.admin-set-period.description");
     }
 
     @Override
@@ -57,11 +57,11 @@ public class AdminSetPeriodSubCommand implements SubCommand {
         try {
             days = Integer.parseInt(args[1]);
             if (days <= 0) {
-                AdventureUtil.sendMessage(sender, "<red>Liczba dni musi być większa od zera!</red>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-period.liczba-dni-musi-byc-wieksza-od-zera"));
                 return true;
             }
         } catch (NumberFormatException e) {
-            AdventureUtil.sendMessage(sender, "<red>Nieprawidłowa liczba dni!</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-set-period.nieprawidowa-liczba-dni"));
             return true;
         }
 
@@ -85,7 +85,7 @@ public class AdminSetPeriodSubCommand implements SubCommand {
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();
         } else if (args.length == 2) {
-            return List.of("1", "3", "7", "14", "30");
+            return pl.riftplots.config.Settings.strings("tab-completion.billing-days");
         }
         return Collections.emptyList();
     }

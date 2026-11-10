@@ -175,6 +175,7 @@ public final class IntegrationProbe extends JavaPlugin {
                         .get(new NamespacedKey("riftplots", "auction"), PersistentDataType.STRING)), "real auction GUI binds buyout to its auction ID");
                 call(auctions, "cancelAuction", "probe_ground");
                 check(!(boolean) call(ground, "isAuctionActive"), "journaled auction cancellation after restore");
+                verifyEditableConfiguration(plugin, buyer, ground);
                 report.set("phase", 3);
             }
             check(((List<?>) call(call(plugin, "getOperationJournal"), "pending")).isEmpty(), "no unresolved financial operation");
@@ -190,6 +191,59 @@ public final class IntegrationProbe extends JavaPlugin {
             getLogger().severe("RIFTPLOTS_INTEGRATION_FAILED");
         } finally {
             if (!waitingReset) finish(report);
+        }
+    }
+
+    private void verifyEditableConfiguration(Object plugin, Client buyer, Object plot) throws Exception {
+        File folder = (File) call(plugin, "getDataFolder");
+        var guiFile = new File(folder, "gui.yml").toPath();
+        var langFile = new File(folder, "lang.yml").toPath();
+        var configFile = new File(folder, "config.yml").toPath();
+        String originalGui = java.nio.file.Files.readString(guiFile), originalLang = java.nio.file.Files.readString(langFile), originalConfig = java.nio.file.Files.readString(configFile);
+        try {
+            var gui = YamlConfiguration.loadConfiguration(guiFile.toFile());
+            gui.set("menus.buy.buttons.confirm.slot", 5);
+            gui.set("menus.buy.buttons.confirm.material", "DIAMOND");
+            gui.set("menus.buy.buttons.confirm.name", "<gold>Custom {plot_id}</gold>");
+            gui.set("menus.buy.buttons.confirm.amount", 2);
+            gui.set("menus.buy.buttons.confirm.glow", true);
+            gui.set("menus.buy.buttons.confirm.custom-model-data", 12345);
+            gui.set("menus.buy.filler.enabled", true);
+            gui.save(guiFile.toFile());
+            var lang = YamlConfiguration.loadConfiguration(langFile.toFile());
+            lang.set("general.only-player", "<green>Configured language</green>");
+            lang.save(langFile.toFile());
+            call(plugin, "reloadPlugin");
+            call(field(plugin, "confirmBuyGUI"), "open", buyer.player(), plot);
+            Inventory inventory = buyer.inventory().get();
+            var confirm = inventory.getItem(5);
+            var meta = confirm.getItemMeta();
+            check(confirm.getType() == Material.DIAMOND && confirm.getAmount() == 2, "GUI material amount and slot reload on Paper");
+            check("confirm".equals(meta.getPersistentDataContainer().get(new NamespacedKey("riftplots", "action"), PersistentDataType.STRING)), "relocated GUI retains its action");
+            check("1000".equals(meta.getPersistentDataContainer().get(new NamespacedKey("riftplots", "quote"), PersistentDataType.STRING)), "relocated GUI retains current financial quote");
+            check(meta.hasEnchantmentGlintOverride() && meta.getEnchantmentGlintOverride() && meta.getCustomModelData() == 12345, "GUI glow and model data reload on Paper");
+            check(inventory.getItem(0).getType() == Material.GRAY_STAINED_GLASS_PANE, "GUI filler is configurable");
+            check("Custom probe_ground".equals(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(meta.displayName())), "GUI placeholder rendered in custom name");
+            check("<green>Configured language</green>".equals(call(field(plugin, "messageConfig"), "getRaw", "general.only-player")), "language reload uses edited catalog");
+            String prefix = (String) call(field(plugin, "pluginConfig"), "getPrefix");
+            var config = YamlConfiguration.loadConfiguration(configFile.toFile());
+            config.set("general.prefix", "rejected-prefix");
+            config.save(configFile.toFile());
+            lang.set("general.only-player", List.of("invalid-type"));
+            lang.save(langFile.toFile());
+            boolean rejected = false;
+            try {
+                call(plugin, "reloadPlugin");
+            } catch (InvocationTargetException expected) {
+                rejected = expected.getCause() instanceof IllegalArgumentException;
+            }
+            check(rejected && prefix.equals(call(field(plugin, "pluginConfig"), "getPrefix")), "bad language reload preserves active plugin settings");
+            check("confirm".equals(call(field(plugin, "guiConfig"), "actionAt", "buy", 5)), "bad reload preserves active GUI");
+        } finally {
+            java.nio.file.Files.writeString(guiFile, originalGui);
+            java.nio.file.Files.writeString(langFile, originalLang);
+            java.nio.file.Files.writeString(configFile, originalConfig);
+            call(plugin, "reloadPlugin");
         }
     }
 

@@ -2,6 +2,8 @@
 
 [← README](../README.md) · [Komendy](commands.md) · [Architektura](architecture.md)
 
+Pełna konfiguracja prezentacji: [wiadomości i ustawienia](wiki/Konfiguracja.md), [siedem ekranów GUI](wiki/Konfiguracja-GUI.md), [audyt stałych](configuration-audit.md). `gui.yml` zawiera układy i przedmioty, `lang.yml` wiadomości oraz etykiety. Dodatkowe polityki w `config.yml` obejmują precyzję kwot, progi podatku, okresy najmu, strony historii, dźwięki, cząsteczki i układy tabliczek.
+
 ## Domyślne ustawienia
 
 Nowe działki dziedziczą stawki z `plot-types.yml`. Pola `economy.default-*` pozostają w konfiguracji, ale przy rejestracji nie zastępują ustawień przypisanego typu. Polityka resetu i karencja są zapisywane przy tworzeniu. Starsze rekordy zachowują stawki jako jawne nadpisania.

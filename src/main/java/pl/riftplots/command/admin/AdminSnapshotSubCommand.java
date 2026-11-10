@@ -34,12 +34,12 @@ public class AdminSnapshotSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin snapshot <id>";
+        return pl.riftplots.config.Texts.raw("text.admin-snapshot.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Zapisuje obecny stan klocków działki do pliku schematu (szablonu pierwotnego).";
+        return pl.riftplots.config.Texts.raw("text.admin-snapshot.description");
     }
 
     @Override
@@ -67,7 +67,7 @@ public class AdminSnapshotSubCommand implements SubCommand {
                         "file", file != null ? file.getName() : id + ".schem"
                 )));
             } else {
-                sender.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Nie udało się utworzyć schematu WorldEdit")));
+                sender.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", pl.riftplots.config.Texts.raw("text.admin-snapshot.nie-udao-sie-utworzyc-schematu-worldedit"))));
             }
         } catch (Exception e) {
             sender.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", e.getMessage())));

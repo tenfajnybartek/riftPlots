@@ -40,13 +40,13 @@ Każdy proces utrzymuje własny cache. Brakuje rozproszonych blokad i uzgadniani
 
 ## Interfejs i operacje
 
-- Nie wszystkie teksty pochodzą z `lang.yml`.
+- Teksty pluginu pochodzą z `lang.yml`, a wygląd siedmiu ekranów z [gui.yml](Konfiguracja-GUI.md). Identyfikatory komend, akcji, uprawnień i danych pozostają stałe.
 - Wystawianie aukcji pozostaje komendą administracyjną.
 - Zdarzenia API nie pokrywają każdej zmiany statusu i własności.
 - Zwykłe płatności i ich trwałe zapisy pozostają synchroniczne. Migracja działa w kolejce; większe miasta wymagają pomiaru obciążenia.
 
 ## Zakres sprawdzenia
 
-Build i **102 testów Java** przeszły, w tym rzeczywisty MySQL. Dodatkowo przeszło 6 testów backupu i scenariusz Paper z WorldEdit, WorldGuard, Vault i testową ekonomią: zakup, restart, reset i odtworzona kopia. Zastępcze obiekty graczy nie zastępują próby z klientem i testu wszystkich mechanik fizyki.
+Build i **119 testów Java** przeszły, w tym rzeczywisty MySQL. Dodatkowo przeszło 6 testów backupu i 54 sprawdzenia Paper z WorldEdit, WorldGuard, Vault i testową ekonomią: zakup, restart, reset, odtworzona kopia oraz zmiana GUI i języka. Zastępcze obiekty graczy nie zastępują próby z klientem i testu wszystkich mechanik fizyki.
 
 [Przewodnik testowania](Rozwoj-i-testy.md) wskazuje, jak uzupełnić sprawdzenie przed uruchomieniem miasta.

@@ -151,7 +151,7 @@ public class YamlPlotRepository implements PlotRepository {
         try {
             YamlDataFile.save(config, file);
         } catch (IOException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-plot-repository.storage-operation-failed"), e);
         }
     }
 
@@ -174,7 +174,7 @@ public class YamlPlotRepository implements PlotRepository {
         try {
             Files.deleteIfExists(file.toPath());
         } catch (IOException e) {
-            throw new IllegalStateException("Nie można usunąć danych działki: " + id, e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-plot-repository.nie-mozna-usunac-danych-dziaki", id), e);
         }
     }
 
@@ -293,7 +293,7 @@ public class YamlPlotRepository implements PlotRepository {
                         .map(PropertySetting::valueOf).collect(java.util.stream.Collectors.toSet()));
             return loadedPlot;
         } catch (Exception e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-plot-repository.storage-operation-failed"), e);
         }
     }
 }

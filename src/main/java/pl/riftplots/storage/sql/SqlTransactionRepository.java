@@ -42,7 +42,7 @@ public class SqlTransactionRepository implements TransactionRepository {
             ps.setString(9, record.getDetails());
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-transaction-repository.storage-operation-failed"), e);
         }
     }
 
@@ -51,8 +51,7 @@ public class SqlTransactionRepository implements TransactionRepository {
         if (plotId == null) {
             return Collections.emptyList();
         }
-        String sql = "SELECT * FROM rift_transactions WHERE plot_id = ? ORDER BY timestamp DESC LIMIT 100";
-        return queryRecords(sql, plotId.toLowerCase());
+        return findByPlotId(plotId, 0, pl.riftplots.config.Settings.integer("paging.repository-history"));
     }
 
     @Override
@@ -60,8 +59,7 @@ public class SqlTransactionRepository implements TransactionRepository {
         if (playerUuid == null) {
             return Collections.emptyList();
         }
-        String sql = "SELECT * FROM rift_transactions WHERE player_uuid = ? ORDER BY timestamp DESC LIMIT 100";
-        return queryRecords(sql, playerUuid.toString());
+        return findByPlayer(playerUuid, 0, pl.riftplots.config.Settings.integer("paging.repository-history"));
     }
 
     @Override
@@ -77,23 +75,7 @@ public class SqlTransactionRepository implements TransactionRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
-        }
-        return list;
-    }
-
-    private List<TransactionRecord> queryRecords(String sql, String param) {
-        List<TransactionRecord> list = new ArrayList<>();
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, param);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(mapRow(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-transaction-repository.storage-operation-failed"), e);
         }
         return list;
     }
@@ -114,7 +96,8 @@ public class SqlTransactionRepository implements TransactionRepository {
     }
 
     private List<TransactionRecord> page(String column, String value, int page, int size) {
-        if (page < 0 || size < 1 || size > 100) throw new IllegalArgumentException("Invalid history page");
+        if (page < 0 || size < 1 || size > 100)
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.sql-transaction-repository.invalid-history-page"));
         String sql = "SELECT * FROM rift_transactions" + (column == null ? "" : " WHERE " + column + " = ?")
                 + " ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?";
         List<TransactionRecord> result = new ArrayList<>();
@@ -127,7 +110,7 @@ public class SqlTransactionRepository implements TransactionRepository {
                 while (rows.next()) result.add(mapRow(rows));
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Cannot read history page", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-transaction-repository.cannot-read-history-page"), e);
         }
         return result;
     }

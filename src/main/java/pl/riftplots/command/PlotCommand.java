@@ -93,8 +93,8 @@ public class PlotCommand implements CommandExecutor {
         try {
             return executeCommand(sender, command, label, args);
         } catch (RuntimeException e) {
-            java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE, "Nie udało się zakończyć polecenia /plots", e);
-            sender.sendMessage("Nie udało się zakończyć operacji. Administracja może sprawdzić jej status.");
+            java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE, pl.riftplots.config.Texts.raw("text.plot-command.nie-udao-sie-zakonczyc-polecenia-plots"), e);
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.plot-command.nie-udao-sie-zakonczyc-operacji-administracja-moze"));
             return true;
         } finally {
             plotManager.restoreActor(previous);
@@ -106,7 +106,7 @@ public class PlotCommand implements CommandExecutor {
             boolean read = args.length > 0 && java.util.Set.of("help", "list", "info", "history", "notifications", "members", "gui").contains(args[0].toLowerCase(Locale.ROOT));
             boolean admin = args.length > 1 && args[0].equalsIgnoreCase("admin") && java.util.Set.of("migrate", "health", "info", "list", "audit", "transactions").contains(args[1].toLowerCase(Locale.ROOT));
             if (!read && !admin) {
-                sender.sendMessage("Zmiany są wstrzymane na czas przełączenia magazynu. Administracja zakończy migrację restartem.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.plot-command.zmiany-sa-wstrzymane-na-czas-przeaczenia-magazynu"));
                 return true;
             }
         }

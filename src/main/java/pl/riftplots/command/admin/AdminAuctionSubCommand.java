@@ -32,34 +32,34 @@ public class AdminAuctionSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin auction start <działka> <cena_startowa> <przebicie> <czas_minuty> [kup_teraz]";
+        return pl.riftplots.config.Texts.raw("text.admin-auction.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wystawia działkę miejską na licytację.";
+        return pl.riftplots.config.Texts.raw("text.admin-auction.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length >= 3 && args[0].equalsIgnoreCase("cancel")) {
             if (args.length < 4 || !args[2].equalsIgnoreCase("confirm")) {
-                sender.sendMessage("Użycie: /plots admin auction cancel <id> confirm <powód>. Anulowanie obejmuje także aukcję z ofertami.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-auction.uzycie-plots-admin-auction-cancel-confirm-anulowanie"));
                 return true;
             }
             auctionService.cancelAuction(args[1], sender.getName(), String.join(" ", Arrays.copyOfRange(args, 3, args.length)));
-            sender.sendMessage("Anulowano aukcję. Ewentualne zwroty trafiają do trwałej kolejki.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-auction.anulowano-aukcje-ewentualne-zwroty-trafiaja-do-trwaej"));
             return true;
         }
         if (args.length < 5 || !"start".equalsIgnoreCase(args[0])) {
-            sender.sendMessage("§cUżycie: /" + getUsage());
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-auction.uzycie", getUsage()));
             return true;
         }
 
         String plotId = args[1].toLowerCase();
         Optional<Plot> opt = plotManager.getPlot(plotId);
         if (opt.isEmpty()) {
-            sender.sendMessage("§cDziałka nie istnieje.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-auction.dziaka-nie-istnieje"));
             return true;
         }
         Plot plot = opt.get();
@@ -72,12 +72,12 @@ public class AdminAuctionSubCommand implements SubCommand {
 
             boolean started = auctionService.startAuction(plot, plot.getOwnerUuid(), startingPrice, minInc, minutes, buyout);
             if (started) {
-                AdventureUtil.sendMessage(sender, "<green>Rozpoczęto licytację działki <yellow>" + plotId + "</yellow> na czas <gold>" + minutes + " minut</gold>!</green>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-auction.rozpoczeto-licytacje-dziaki-na-czas-minut", plotId, minutes));
             } else {
-                sender.sendMessage("§cNie można rozpocząć aukcji. Sprawdź stan działki, wynajem i podane kwoty/czas.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-auction.nie-mozna-rozpoczac-aukcji-sprawdz-stan-dziaki"));
             }
         } catch (Exception e) {
-            sender.sendMessage("§cBłąd parametrów: " + e.getMessage());
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-auction.bad-parametrow", e.getMessage()));
         }
 
         return true;

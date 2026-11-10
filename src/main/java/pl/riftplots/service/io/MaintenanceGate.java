@@ -10,7 +10,8 @@ public final class MaintenanceGate {
     }
 
     public void enter() {
-        if (!active.compareAndSet(false, true)) throw new IllegalStateException("Trwa inna operacja utrzymaniowa.");
+        if (!active.compareAndSet(false, true))
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.maintenance-gate.trwa-inna-operacja-utrzymaniowa"));
     }
 
     public void leave() {

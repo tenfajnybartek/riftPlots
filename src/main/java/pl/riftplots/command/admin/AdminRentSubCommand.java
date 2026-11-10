@@ -31,18 +31,18 @@ public class AdminRentSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin rent <offer <działka> <cena> <jednostka: HOUR|DAY|WEEK|MONTH> [kaucja]|cancel <działka>>";
+        return pl.riftplots.config.Texts.raw("text.admin-rent.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Konfiguracja wynajmu działek przez administrację.";
+        return pl.riftplots.config.Texts.raw("text.admin-rent.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage("§cUżycie: /" + getUsage());
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.uzycie", getUsage()));
             return true;
         }
 
@@ -51,14 +51,14 @@ public class AdminRentSubCommand implements SubCommand {
 
         Optional<Plot> opt = plotManager.getPlot(plotId);
         if (opt.isEmpty()) {
-            sender.sendMessage("§cDziałka nie istnieje.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.dziaka-nie-istnieje"));
             return true;
         }
         Plot plot = opt.get();
 
         if ("offer".equals(action)) {
             if (args.length < 4) {
-                sender.sendMessage("§cUżycie: /plots admin rent offer <działka> <cena> <HOUR|DAY|WEEK|MONTH> [kaucja]");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.uzycie-plots-admin-rent-offer-kaucja"));
                 return true;
             }
             try {
@@ -68,7 +68,7 @@ public class AdminRentSubCommand implements SubCommand {
                 if (price.signum() < 0 || deposit.signum() < 0 || plot.isRented() || plot.isAuctionActive()
                         || (plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.AVAILABLE
                         && plot.getStatus() != pl.riftplots.domain.plot.PlotStatus.OWNED)) {
-                    sender.sendMessage("§cKwoty muszą być nieujemne, a działka dostępna i bez aktywnego najmu lub aukcji.");
+                    sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.kwoty-musza-byc-nieujemne-a-dziaka-dostepna"));
                     return true;
                 }
 
@@ -78,9 +78,9 @@ public class AdminRentSubCommand implements SubCommand {
                 plot.setRentalDeposit(deposit);
                 plotManager.savePlot(plot);
 
-                sender.sendMessage("§aUdostępniono działkę " + plotId + " do wynajmu (" + price + " $ / " + unit + ", kaucja: " + deposit + " $).");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.udostepniono-dziake-do-wynajmu-kaucja", plotId, price, unit, deposit));
             } catch (Exception e) {
-                sender.sendMessage("§cBłędne parametry: " + e.getMessage());
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.bedne-parametry", e.getMessage()));
             }
             return true;
         }
@@ -88,17 +88,17 @@ public class AdminRentSubCommand implements SubCommand {
         if ("cancel".equals(action)) {
             plot.setRentalAvailable(false);
             if (plot.isRented()) {
-                if (!rentalService.terminateRental(plotId, true, "Anulowanie przez administratora")) {
-                    sender.sendMessage("§cNie udało się zwrócić kaucji. Spróbuj ponownie.");
+                if (!rentalService.terminateRental(plotId, true, pl.riftplots.config.Texts.raw("text.admin-rent.anulowanie-przez-administratora"))) {
+                    sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.nie-udao-sie-zwrocic-kaucji-sprobuj-ponownie"));
                     return true;
                 }
             }
             plotManager.savePlot(plot);
-            sender.sendMessage("§aWyłączono wynajem działki " + plotId + ".");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.wyaczono-wynajem-dziaki", plotId));
             return true;
         }
 
-        sender.sendMessage("§cUżycie: /" + getUsage());
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-rent.uzycie", getUsage()));
         return true;
     }
 

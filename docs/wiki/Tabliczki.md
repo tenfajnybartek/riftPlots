@@ -1,5 +1,7 @@
 # Interaktywne tabliczki
 
+Układ każdego stanu ma cztery edytowalne wiersze w `config.yml` pod `signs.layouts`. Dostępne są `{plot_id}`, `{plot_name}`, `{owner}`, `{status}`, `{price}`, `{tax}`, `{market}` oraz komponenty `{header}`, `{renew_header}`, `{for_sale_action}`, `{sold_action}`, `{renew_action}`, `{resetting_action}`, `{disabled_action}` z `signs.formats`. Domyślną liczbę opłacanych okresów ustawia `billing.default-payment-periods`.
+
 [← Strona główna](Home.md) · [Komendy administratora](Komendy-administratora.md) · [Podatki](Podatki.md)
 
 ## Trzy zastosowania

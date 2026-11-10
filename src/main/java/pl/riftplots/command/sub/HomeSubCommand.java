@@ -31,18 +31,18 @@ public class HomeSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots home [działka]";
+        return pl.riftplots.config.Texts.raw("text.home.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Teleportuje do punktu domowego wybranej działki.";
+        return pl.riftplots.config.Texts.raw("text.home.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cTa komenda jest dostępna tylko dla graczy.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.home.ta-komenda-jest-dostepna-tylko-dla-graczy"));
             return true;
         }
 
@@ -61,7 +61,7 @@ public class HomeSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            player.sendMessage("§cPodaj identyfikator działki lub zakup działkę przed użyciem /plots home.");
+            player.sendMessage(pl.riftplots.config.Texts.component("text.home.podaj-identyfikator-dziaki-lub-zakup-dziake-przed"));
             return true;
         }
 

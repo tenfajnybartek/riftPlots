@@ -12,8 +12,8 @@ public class AuctionBid {
     private final Instant timestamp;
 
     public AuctionBid(UUID bidderUuid, String bidderName, BigDecimal amount, Instant timestamp) {
-        this.bidderUuid = Objects.requireNonNull(bidderUuid, "bidderUuid cannot be null");
-        this.bidderName = bidderName != null ? bidderName : "Unknown";
+        this.bidderUuid = Objects.requireNonNull(bidderUuid, pl.riftplots.config.Texts.raw("text.auction-bid.bidderuuid-cannot-be-null"));
+        this.bidderName = bidderName != null ? bidderName : pl.riftplots.config.Texts.raw("text.auction-bid.unknown");
         this.amount = amount != null ? amount : BigDecimal.ZERO;
         this.timestamp = timestamp != null ? timestamp : Instant.now();
     }

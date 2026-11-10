@@ -12,10 +12,10 @@ public class PlotSign {
     private final int z;
 
     public PlotSign(String id, String plotId, PlotSignType type, String worldName, int x, int y, int z) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.plotId = Objects.requireNonNull(plotId, "plotId cannot be null").toLowerCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.plot-sign.id-cannot-be-null"));
+        this.plotId = Objects.requireNonNull(plotId, pl.riftplots.config.Texts.raw("text.plot-sign.plotid-cannot-be-null")).toLowerCase();
         this.type = type != null ? type : PlotSignType.FOR_SALE;
-        this.worldName = Objects.requireNonNull(worldName, "worldName cannot be null");
+        this.worldName = Objects.requireNonNull(worldName, pl.riftplots.config.Texts.raw("text.plot-sign.worldname-cannot-be-null"));
         this.x = x;
         this.y = y;
         this.z = z;

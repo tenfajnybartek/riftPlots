@@ -33,12 +33,12 @@ public class AdminDeleteSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin delete <id>";
+        return pl.riftplots.config.Texts.raw("text.admin-delete.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Usuwa działkę, jej region w WorldGuard oraz powiązane tabliczki.";
+        return pl.riftplots.config.Texts.raw("text.admin-delete.description");
     }
 
     @Override

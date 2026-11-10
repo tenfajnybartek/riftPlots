@@ -42,7 +42,7 @@ public class YamlTransactionRepository implements TransactionRepository {
         try {
             YamlDataFile.save(config, file);
         } catch (IOException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-transaction-repository.storage-operation-failed"), e);
         }
     }
 
@@ -93,7 +93,7 @@ public class YamlTransactionRepository implements TransactionRepository {
                 String id = config.getString("id");
                 String plotId = config.getString("plotId");
                 String uuidStr = config.getString("playerUuid");
-                String playerName = config.getString("playerName", "Unknown");
+                String playerName = config.getString("playerName", pl.riftplots.config.Texts.raw("text.yaml-transaction-repository.unknown"));
                 TransactionType type = TransactionType.parse(config.getString("type"));
                 BigDecimal amount = new BigDecimal(config.getString("amount", "0"));
                 TransactionStatus status = TransactionStatus.valueOf(config.getString("status", "SUCCESS"));
@@ -108,7 +108,7 @@ public class YamlTransactionRepository implements TransactionRepository {
                     count++;
                 }
             } catch (Exception e) {
-                throw new IllegalStateException("Storage operation failed", e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-transaction-repository.storage-operation-failed"), e);
             }
         }
         return list;

@@ -120,50 +120,28 @@ public class PlotSignService {
         blockSign.update(true, false);
     }
 
-    private List<Component> formatLines(PlotSign sign, Plot plot) {
-        List<Component> lines = new ArrayList<>(4);
-        PlotStatus status = plot.getStatus();
-
-        if (sign.getType() == PlotSignType.FOR_SALE) {
-            lines.add(AdventureUtil.parse(config.getSignHeader()));
-            lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
-            if (plot.isAvailableForPurchase()) {
-                lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(Optional.ofNullable(plotManager.getPurchasePrice(plot)).orElse(plot.getPrice())) + "</gold>"));
-                lines.add(AdventureUtil.parse(config.getSignForSaleAction()));
-            } else if (plot.isAuctionActive() || plot.isRentalAvailable() || plot.isRented()) {
-                lines.add(AdventureUtil.parse("<gray>" + (plot.isAuctionActive() ? "Aukcja" : "Wynajem") + "</gray>"));
-                lines.add(AdventureUtil.parse(config.getSignResettingAction()));
-            } else if (status == PlotStatus.RESETTING) {
-                lines.add(AdventureUtil.parse("<gray>Resetowanie...</gray>"));
-                lines.add(AdventureUtil.parse(config.getSignResettingAction()));
-            } else if (status == PlotStatus.DISABLED) {
-                lines.add(AdventureUtil.parse("<dark_gray>Wyłączona</dark_gray>"));
-                lines.add(AdventureUtil.parse(config.getSignDisabledAction()));
-            } else {
-                lines.add(AdventureUtil.parse("<yellow>" + (plot.getOwnerName() != null ? plot.getOwnerName() : "Właściciel") + "</yellow>"));
-                lines.add(AdventureUtil.parse(config.getSignSoldAction()));
-            }
-        } else if (sign.getType() == PlotSignType.RENEW) {
-            lines.add(AdventureUtil.parse(config.getSignRenewHeader()));
-            lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
-            BigDecimal tax = taxCalculator.calculateTax(plot);
-            lines.add(AdventureUtil.parse("<gold>" + config.formatMoney(tax) + "</gold>"));
-            lines.add(AdventureUtil.parse(config.getSignRenewAction()));
-        } else {
-            lines.add(AdventureUtil.parse("<gradient:#00c6ff:#0072ff><b>" + plot.getName() + "</b></gradient>"));
-            lines.add(AdventureUtil.parse("<dark_gray>" + plot.getId() + "</dark_gray>"));
-            lines.add(AdventureUtil.parse("<yellow>" + (plot.getOwnerName() != null ? plot.getOwnerName() : "Brak") + "</yellow>"));
-            String statusStr = switch (status) {
-                case AVAILABLE -> "<green>DOSTĘPNA</green>";
-                case OWNED -> "<dark_green>OPŁACONA</dark_green>";
-                case PAYMENT_DUE -> "<gold>ZALEGŁOŚĆ</gold>";
-                case GRACE_PERIOD -> "<red>KARENCJA</red>";
-                case RESETTING -> "<gray>RESET</gray>";
-                case DISABLED -> "<dark_red>WYŁĄCZONA</dark_red>";
-            };
-            lines.add(AdventureUtil.parse(statusStr));
+    public List<Component> formatLines(PlotSign sign, Plot plot) {
+        var variables = new HashMap<String, Object>();
+        variables.put("plot_id", plot.getId());
+        variables.put("plot_name", plot.getName());
+        variables.put("owner", plot.getOwnerName() != null ? plot.getOwnerName() : pl.riftplots.config.Texts.raw("labels.none"));
+        variables.put("status", pl.riftplots.config.Texts.label(plot.getStatus()));
+        variables.put("price", config.formatMoney(Optional.ofNullable(plotManager.getPurchasePrice(plot)).orElse(plot.getPrice())));
+        variables.put("tax", config.formatMoney(taxCalculator.calculateTax(plot)));
+        variables.put("market", pl.riftplots.config.Texts.raw(plot.isAuctionActive() ? "labels.Tab.AUCTION" : "labels.Tab.RENT"));
+        for (String name : List.of("header", "renew-header", "for-sale-action", "sold-action", "renew-action", "resetting-action", "disabled-action")) {
+            variables.put(name.replace('-', '_'), pl.riftplots.util.AdventureUtil.parse(pl.riftplots.config.Settings.string("signs.formats." + name)));
         }
-        return lines;
+        String layout;
+        if (sign.getType() == PlotSignType.RENEW) layout = "renew";
+        else if (sign.getType() == PlotSignType.STATUS) layout = "status";
+        else if (plot.isAvailableForPurchase()) layout = "sale";
+        else if (plot.isAuctionActive() || plot.isRentalAvailable() || plot.isRented()) layout = "market";
+        else if (plot.getStatus() == PlotStatus.RESETTING) layout = "resetting";
+        else if (plot.getStatus() == PlotStatus.DISABLED) layout = "disabled";
+        else layout = "owned";
+        return pl.riftplots.config.Settings.strings("signs.layouts." + layout).stream()
+                .map(line -> pl.riftplots.config.Presentation.gui().render(line, variables)).toList();
     }
 
     public void handleSignClick(Player player, PlotSign sign, boolean isRightClick) {
@@ -172,7 +150,7 @@ public class PlotSignService {
         }
         Optional<Plot> optPlot = plotManager.getPlot(sign.getPlotId());
         if (optPlot.isEmpty()) {
-            AdventureUtil.sendMessage(player, "<red>Powiązana działka nie istnieje!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.powiazana-dziaka-nie-istnieje"));
             return;
         }
         Plot plot = optPlot.get();
@@ -185,7 +163,7 @@ public class PlotSignService {
         if (isRightClick) {
             if (sign.getType() == PlotSignType.RENEW) {
                 if (paymentService != null && player.hasPermission("riftplots.user.pay")) {
-                    paymentService.payTax(player, plot, 1);
+                    paymentService.payTax(player, plot, pl.riftplots.config.Settings.integer("billing.default-payment-periods"));
                 }
             } else if (plot.isAvailableForPurchase()) {
                 if (paymentService != null && player.hasPermission("riftplots.user.buy")) {
@@ -193,10 +171,10 @@ public class PlotSignService {
                 }
             } else if (plot.isOwner(player.getUniqueId())) {
                 if (paymentService != null && player.hasPermission("riftplots.user.pay")) {
-                    paymentService.payTax(player, plot, 1);
+                    paymentService.payTax(player, plot, pl.riftplots.config.Settings.integer("billing.default-payment-periods"));
                 }
             } else {
-                AdventureUtil.sendMessage(player, "<red>Ta działka nie jest na sprzedaż!</red>");
+                AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.ta-dziaka-nie-jest-na-sprzedaz"));
             }
         } else {
             displayPlotSummary(player, plot);
@@ -204,14 +182,14 @@ public class PlotSignService {
     }
 
     public void displayPlotSummary(Player player, Plot plot) {
-        AdventureUtil.sendMessage(player, "<gradient:#00c6ff:#0072ff><b>=== INFORMACJE O DZIAŁCE ===</b></gradient>");
-        AdventureUtil.sendMessage(player, "<gray>ID:</gray> <white>" + plot.getId() + "</white>");
-        AdventureUtil.sendMessage(player, "<gray>Nazwa:</gray> <gold>" + plot.getName() + "</gold>");
-        AdventureUtil.sendMessage(player, "<gray>Status:</gray> <yellow>" + plot.getStatus() + "</yellow>");
-        AdventureUtil.sendMessage(player, "<gray>Właściciel:</gray> <aqua>" + (plot.getOwnerName() != null ? plot.getOwnerName() : "Brak") + "</aqua>");
-        AdventureUtil.sendMessage(player, "<gray>Cena zakupu:</gray> <green>" + config.formatMoney(plot.getPrice()) + "</green>");
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.informacje-o-dziace"));
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.id", plot.getId()));
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.nazwa", plot.getName()));
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.status", plot.getStatus()));
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.wasciciel-2ec929c", (plot.getOwnerName() != null ? plot.getOwnerName() : pl.riftplots.config.Texts.raw("text.plot-sign-service.brak"))));
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.cena-zakupu", config.formatMoney(plotManager.getPurchasePrice(plot))));
         BigDecimal tax = taxCalculator.calculateTax(plot);
-        AdventureUtil.sendMessage(player, "<gray>Podatek:</gray> <yellow>" + config.formatMoney(tax) + " (" + plot.getTaxMode() + ")</yellow>");
-        AdventureUtil.sendMessage(player, "<gray>Powierzchnia:</gray> <white>" + plot.getBounds().getHorizontalArea() + " m²</white>");
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.podatek", config.formatMoney(tax), plot.getTaxMode()));
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-service.powierzchnia-m2", plot.getBounds().getHorizontalArea()));
     }
 }

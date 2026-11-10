@@ -44,12 +44,12 @@ public class PlotSignListener implements Listener {
         Player player = event.getPlayer();
         if (!player.hasPermission(PermissionConfiguration.ADMIN_SIGN) && !player.hasPermission(PermissionConfiguration.ADMIN_BYPASS)) {
             event.setCancelled(true);
-            AdventureUtil.sendMessage(player, "<red>Nie masz uprawnień do niszczenia tabliczek działek!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-listener.nie-masz-uprawnien-do-niszczenia-tabliczek-dziaek"));
             return;
         }
 
         signService.removeSign(optSign.get().getId());
-        AdventureUtil.sendMessage(player, "<green>Pomyślnie usunięto powiązanie tabliczki z działką.</green>");
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.plot-sign-listener.pomyslnie-usunieto-powiazanie-tabliczki-z-dziaka"));
     }
 
     @EventHandler(priority = EventPriority.NORMAL)

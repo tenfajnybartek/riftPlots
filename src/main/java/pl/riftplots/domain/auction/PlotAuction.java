@@ -41,16 +41,16 @@ public class PlotAuction {
                        BigDecimal buyoutPrice,
                        List<AuctionBid> bids,
                        AuctionStatus status) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.plotId = Objects.requireNonNull(plotId, "plotId cannot be null").toLowerCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.plot-auction.id-cannot-be-null"));
+        this.plotId = Objects.requireNonNull(plotId, pl.riftplots.config.Texts.raw("text.plot-auction.plotid-cannot-be-null")).toLowerCase();
         this.sellerUuid = sellerUuid;
         this.startingPrice = startingPrice != null ? startingPrice : BigDecimal.ZERO;
-        this.minBidIncrement = minBidIncrement != null ? minBidIncrement : BigDecimal.valueOf(100);
+        this.minBidIncrement = minBidIncrement != null ? minBidIncrement : BigDecimal.valueOf(pl.riftplots.config.Settings.decimal("auction.default-min-bid-increment"));
         this.currentBid = currentBid != null ? currentBid : this.startingPrice;
         this.currentBidderUuid = currentBidderUuid;
         this.currentBidderName = currentBidderName;
         this.startTime = startTime != null ? startTime : Instant.now();
-        this.endTime = endTime != null ? endTime : this.startTime.plusSeconds(3600);
+        this.endTime = endTime != null ? endTime : this.startTime.plusSeconds((long) pl.riftplots.config.Settings.integer("auction.default-duration-minutes") * 60L);
         this.buyoutPrice = buyoutPrice;
         if (bids != null) {
             this.bids.addAll(bids);
@@ -170,7 +170,8 @@ public class PlotAuction {
 
     public void restore(PlotAuction state) {
         if (this == state) return;
-        if (!id.equals(state.id)) throw new IllegalArgumentException("Different auction ID");
+        if (!id.equals(state.id))
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.plot-auction.different-auction-id"));
         currentBid = state.currentBid;
         currentBidderUuid = state.currentBidderUuid;
         currentBidderName = state.currentBidderName;

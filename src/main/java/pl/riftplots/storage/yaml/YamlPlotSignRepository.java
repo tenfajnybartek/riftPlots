@@ -62,7 +62,7 @@ public class YamlPlotSignRepository implements PlotSignRepository {
             }
             YamlDataFile.save(config, signsFile);
         } catch (IOException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-plot-sign-repository.storage-operation-failed"), e);
         }
     }
 

@@ -39,12 +39,12 @@ public class AbandonSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots abandon [działka] [confirm]";
+        return pl.riftplots.config.Texts.raw("text.abandon.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Dobrowolnie oddaje działkę z możliwością częściowego zwrotu kosztów.";
+        return pl.riftplots.config.Texts.raw("text.abandon.description");
     }
 
     @Override
@@ -83,7 +83,7 @@ public class AbandonSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            AdventureUtil.sendMessage(player, "<red>Podaj identyfikator działki lub stań na jej terenie!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.abandon.podaj-identyfikator-dziaki-lub-stan-na-jej"));
             return true;
         }
 

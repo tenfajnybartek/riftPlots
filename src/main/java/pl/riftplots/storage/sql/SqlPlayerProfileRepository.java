@@ -31,7 +31,7 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
                         Instant.ofEpochMilli(result.getLong("first_join")), Instant.ofEpochMilli(result.getLong("last_seen")), plotIds));
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Nie udało się odczytać profili graczy", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-player-profile-repository.nie-udao-sie-odczytac-profili-graczy"), e);
         }
         return profiles;
     }
@@ -63,7 +63,7 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
                 }
             }
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-player-profile-repository.storage-operation-failed"), e);
         }
         return Optional.empty();
     }
@@ -74,21 +74,21 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
             return;
         }
         String sqliteSql = """
-            INSERT INTO rift_player_profiles (uuid, last_name, first_join, last_seen, owned_plots)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(uuid) DO UPDATE SET
-                last_name = excluded.last_name,
-                last_seen = excluded.last_seen,
-                owned_plots = excluded.owned_plots
-        """;
+                    INSERT INTO rift_player_profiles (uuid, last_name, first_join, last_seen, owned_plots)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(uuid) DO UPDATE SET
+                        last_name = excluded.last_name,
+                        last_seen = excluded.last_seen,
+                        owned_plots = excluded.owned_plots
+                """;
         String mysqlSql = """
-            INSERT INTO rift_player_profiles (uuid, last_name, first_join, last_seen, owned_plots)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                last_name = VALUES(last_name),
-                last_seen = VALUES(last_seen),
-                owned_plots = VALUES(owned_plots)
-        """;
+                    INSERT INTO rift_player_profiles (uuid, last_name, first_join, last_seen, owned_plots)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        last_name = VALUES(last_name),
+                        last_seen = VALUES(last_seen),
+                        owned_plots = VALUES(owned_plots)
+                """;
 
         boolean isSqlite = databaseManager.getStorageType() == pl.riftplots.storage.StorageType.SQLITE;
         String query = isSqlite ? sqliteSql : mysqlSql;
@@ -102,7 +102,7 @@ public class SqlPlayerProfileRepository implements PlayerProfileRepository {
             ps.setString(5, String.join(",", profile.getOwnedPlotIds()));
             ps.executeUpdate();
         } catch (SQLException e) {
-            throw new IllegalStateException("Storage operation failed", e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.sql-player-profile-repository.storage-operation-failed"), e);
         }
     }
 }

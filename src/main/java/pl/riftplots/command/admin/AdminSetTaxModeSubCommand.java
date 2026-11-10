@@ -34,12 +34,12 @@ public class AdminSetTaxModeSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin settaxmode <id> <FIXED|PER_BLOCK|PER_CHUNK|SIZE_TIERS|MULTIPLIER|CUSTOM>";
+        return pl.riftplots.config.Texts.raw("text.admin-set-tax-mode.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Zmienia model naliczania podatku dla działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-set-tax-mode.description");
     }
 
     @Override

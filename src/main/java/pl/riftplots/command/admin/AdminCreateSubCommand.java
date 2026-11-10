@@ -46,12 +46,12 @@ public class AdminCreateSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin create <id> [nazwa]";
+        return pl.riftplots.config.Texts.raw("text.admin-create.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Tworzy nową działkę na podstawie zaznaczenia WorldEdit.";
+        return pl.riftplots.config.Texts.raw("text.admin-create.description");
     }
 
     @Override
@@ -83,30 +83,31 @@ public class AdminCreateSubCommand implements SubCommand {
         Instant now = Instant.now();
 
         Plot plot = new Plot(
-                id, name, "", PlotCategory.RESIDENTIAL, PlotStatus.AVAILABLE,
+                id, name, "", PlotCategory.valueOf(pl.riftplots.config.Settings.string("plots.default-category")), PlotStatus.AVAILABLE,
                 bounds, "riftplot_" + id,
                 config.getDefaultPrice(), config.getDefaultBaseTax(),
                 config.getDefaultTaxMode(), config.getDefaultTaxMultiplier(),
-                true, config.getDefaultBillingPeriodDays(), config.getDefaultGracePeriodHours(),
+                pl.riftplots.config.Settings.flag("economy.default-tax-enabled"), config.getDefaultBillingPeriodDays(), config.getDefaultGracePeriodHours(),
                 null, null, Collections.emptyList(), null, null, null, 0,
                 id + ".schem", config.isAutoResetOnExpire(), config.getDefaultAbandonRefundPercent(),
                 now, now
         );
+        plot.setPropertyType(pl.riftplots.config.Settings.string("plots.default-type"));
 
         try {
             if (!snapshotService.createSnapshot(plot)) {
-                player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Nie udało się zapisać schematu działki")));
+                player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", pl.riftplots.config.Texts.raw("text.admin-create.nie-udao-sie-zapisac-schematu-dziaki"))));
                 return true;
             }
         } catch (Exception e) {
-            player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Błąd zapisu snapshotu: " + e.getMessage())));
+            player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", pl.riftplots.config.Texts.raw("text.admin-create.bad-zapisu-snapshotu", e.getMessage()))));
             return true;
         }
 
         plot.setSettingOverrides(java.util.Set.of());
         boolean registered = plotManager.registerPlot(plot);
         if (!registered) {
-            player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", "Nie udało się utworzyć regionu WorldGuard")));
+            player.sendMessage(messageConfig.get("admin.worldguard-error", Map.of("error", pl.riftplots.config.Texts.raw("text.admin-create.nie-udao-sie-utworzyc-regionu-worldguard"))));
             return true;
         }
 

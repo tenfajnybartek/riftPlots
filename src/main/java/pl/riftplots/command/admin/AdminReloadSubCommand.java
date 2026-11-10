@@ -30,12 +30,12 @@ public class AdminReloadSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin reload";
+        return pl.riftplots.config.Texts.raw("text.admin-reload.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Przeładowuje konfigurację pluginu oraz wiadomości językowe.";
+        return pl.riftplots.config.Texts.raw("text.admin-reload.description");
     }
 
     @Override

@@ -39,12 +39,12 @@ public class AdminSelectSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin select <id>";
+        return pl.riftplots.config.Texts.raw("text.admin-select.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Ustawia zaznaczenie WorldEdit na obszar wybranej działki.";
+        return pl.riftplots.config.Texts.raw("text.admin-select.description");
     }
 
     @Override
@@ -69,7 +69,7 @@ public class AdminSelectSubCommand implements SubCommand {
         Plot plot = opt.get();
         PlotBounds bounds = plot.getBounds();
         if (!player.getWorld().getName().equals(bounds.getWorldName())) {
-            AdventureUtil.sendMessage(player, "<red>Przejdź do świata działki: " + bounds.getWorldName() + "</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.admin-select.przejdz-do-swiata-dziaki", bounds.getWorldName()));
             return true;
         }
 
@@ -82,7 +82,7 @@ public class AdminSelectSubCommand implements SubCommand {
         SessionManager sessionManager = WorldEdit.getInstance().getSessionManager();
         sessionManager.get(BukkitAdapter.adapt(player)).setRegionSelector(weWorld, selector);
 
-        AdventureUtil.sendMessage(player, "<green>Ustawiono zaznaczenie WorldEdit na granice działki <yellow>" + id + "</yellow> (" + bounds.getHorizontalArea() + " m²)!</green>");
+        AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.admin-select.ustawiono-zaznaczenie-worldedit-na-granice-dziaki-m2", id, bounds.getHorizontalArea()));
         return true;
     }
 

@@ -35,11 +35,11 @@ public class Plot {
     private boolean autoResetOnExpire;
     private double refundPercentOnAbandon;
 
-    private String propertyType = "RESIDENTIAL";
+    private String propertyType = pl.riftplots.config.Settings.string("plots.default-type");
     private String districtId;
     private boolean rentalAvailable;
     private BigDecimal rentalPrice = BigDecimal.ZERO;
-    private String rentalPeriodUnit = "DAY";
+    private String rentalPeriodUnit = pl.riftplots.config.Settings.string("rental.default-unit");
     private BigDecimal rentalDeposit = BigDecimal.ZERO;
     private String activeRentalId;
 
@@ -109,20 +109,20 @@ public class Plot {
                 double refundPercentOnAbandon,
                 Instant createdAt,
                 Instant updatedAt) {
-        this.id = Objects.requireNonNull(id, "id cannot be null").toLowerCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.plot.id-cannot-be-null")).toLowerCase();
         this.name = name != null ? name : id;
         this.description = description != null ? description : "";
-        this.category = category != null ? category : PlotCategory.RESIDENTIAL;
+        this.category = category != null ? category : PlotCategory.valueOf(pl.riftplots.config.Settings.string("plots.default-category"));
         this.status = status != null ? status : PlotStatus.AVAILABLE;
-        this.bounds = Objects.requireNonNull(bounds, "bounds cannot be null");
+        this.bounds = Objects.requireNonNull(bounds, pl.riftplots.config.Texts.raw("text.plot.bounds-cannot-be-null"));
         this.worldGuardRegionId = worldGuardRegionId != null ? worldGuardRegionId : ("riftplot_" + this.id);
         this.price = price != null ? price.max(BigDecimal.ZERO) : BigDecimal.ZERO;
         this.baseTax = baseTax != null ? baseTax.max(BigDecimal.ZERO) : BigDecimal.ZERO;
-        this.taxMode = taxMode != null ? taxMode : TaxMode.FIXED;
-        this.taxMultiplier = taxMultiplier > 0 ? taxMultiplier : 1.0;
+        this.taxMode = taxMode != null ? taxMode : TaxMode.valueOf(pl.riftplots.config.Settings.string("economy.default-tax-mode"));
+        this.taxMultiplier = taxMultiplier > 0 ? taxMultiplier : pl.riftplots.config.Settings.decimal("economy.default-tax-multiplier");
         this.taxEnabled = taxEnabled;
-        this.billingPeriodDays = billingPeriodDays > 0 ? billingPeriodDays : 7;
-        this.gracePeriodHours = gracePeriodHours >= 0 ? gracePeriodHours : 6;
+        this.billingPeriodDays = billingPeriodDays > 0 ? billingPeriodDays : pl.riftplots.config.Settings.integer("economy.default-billing-period-days");
+        this.gracePeriodHours = gracePeriodHours >= 0 ? gracePeriodHours : pl.riftplots.config.Settings.integer("economy.default-grace-period-hours");
         this.ownerUuid = ownerUuid;
         this.ownerName = ownerName;
         if (membersList != null) {
@@ -186,7 +186,7 @@ public class Plot {
     }
 
     public void setBounds(PlotBounds bounds) {
-        this.bounds = Objects.requireNonNull(bounds, "bounds cannot be null");
+        this.bounds = Objects.requireNonNull(bounds, pl.riftplots.config.Texts.raw("text.plot.bounds-cannot-be-null"));
         touch();
     }
 
@@ -397,11 +397,11 @@ public class Plot {
     }
 
     public String getPropertyType() {
-        return propertyType != null ? propertyType : "RESIDENTIAL";
+        return propertyType != null ? propertyType : pl.riftplots.config.Settings.string("plots.default-type");
     }
 
     public void setPropertyType(String propertyType) {
-        this.propertyType = propertyType != null ? propertyType.toUpperCase() : "RESIDENTIAL";
+        this.propertyType = propertyType != null ? propertyType.toUpperCase(java.util.Locale.ROOT) : pl.riftplots.config.Settings.string("plots.default-type");
         touch();
     }
 
@@ -433,11 +433,11 @@ public class Plot {
     }
 
     public String getRentalPeriodUnit() {
-        return rentalPeriodUnit != null ? rentalPeriodUnit : "DAY";
+        return rentalPeriodUnit != null ? rentalPeriodUnit : pl.riftplots.config.Settings.string("rental.default-unit");
     }
 
     public void setRentalPeriodUnit(String rentalPeriodUnit) {
-        this.rentalPeriodUnit = rentalPeriodUnit != null ? rentalPeriodUnit.toUpperCase() : "DAY";
+        this.rentalPeriodUnit = rentalPeriodUnit != null ? rentalPeriodUnit.toUpperCase(java.util.Locale.ROOT) : pl.riftplots.config.Settings.string("rental.default-unit");
         touch();
     }
 
@@ -586,7 +586,8 @@ public class Plot {
 
     public void restore(Plot state) {
         if (this == state) return;
-        if (!id.equals(state.id)) throw new IllegalArgumentException("Different plot ID");
+        if (!id.equals(state.id))
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.plot.different-plot-id"));
         name = state.name;
         description = state.description;
         category = state.category;

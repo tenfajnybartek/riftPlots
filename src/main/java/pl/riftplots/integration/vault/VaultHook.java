@@ -19,7 +19,7 @@ public class VaultHook {
     }
 
     public VaultHook(Plugin plugin) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin cannot be null");
+        this.plugin = Objects.requireNonNull(plugin, pl.riftplots.config.Texts.raw("text.vault-hook.plugin-cannot-be-null"));
     }
 
     public boolean setup() {
@@ -44,7 +44,7 @@ public class VaultHook {
 
     public BigDecimal getBalance(OfflinePlayer player) {
         if (!isAvailable()) {
-            throw new IllegalStateException("Vault economy provider is not available!");
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.vault-hook.vault-economy-provider-is-not-available"));
         }
         double balance = economy.getBalance(player);
         return BigDecimal.valueOf(balance);
@@ -52,7 +52,7 @@ public class VaultHook {
 
     public boolean has(OfflinePlayer player, BigDecimal amount) {
         if (!isAvailable()) {
-            throw new IllegalStateException("Vault economy provider is not available!");
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.vault-hook.vault-economy-provider-is-not-available"));
         }
         if (!isValidAmount(amount)) return false;
         if (amount.signum() == 0) {
@@ -63,7 +63,7 @@ public class VaultHook {
 
     public boolean withdraw(OfflinePlayer player, BigDecimal amount) {
         if (!isAvailable()) {
-            throw new IllegalStateException("Vault economy provider is not available!");
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.vault-hook.vault-economy-provider-is-not-available"));
         }
         if (!isValidAmount(amount)) return false;
         if (amount.signum() == 0) {
@@ -78,7 +78,7 @@ public class VaultHook {
 
     public boolean deposit(OfflinePlayer player, BigDecimal amount) {
         if (!isAvailable()) {
-            throw new IllegalStateException("Vault economy provider is not available!");
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.vault-hook.vault-economy-provider-is-not-available"));
         }
         if (!isValidAmount(amount)) return false;
         if (amount.signum() == 0) {
@@ -99,7 +99,9 @@ public class VaultHook {
 
     public String format(BigDecimal amount) {
         if (!isAvailable()) {
-            return (amount != null ? amount.toPlainString() : "0.00") + " $";
+            var formatting = new pl.riftplots.config.PluginConfiguration();
+            formatting.load(plugin.getConfig());
+            return formatting.formatMoney(amount);
         }
         return economy.format(amount != null ? amount.doubleValue() : 0.0);
     }

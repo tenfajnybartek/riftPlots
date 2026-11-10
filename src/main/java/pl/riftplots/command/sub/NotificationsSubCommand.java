@@ -26,18 +26,18 @@ public final class NotificationsSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots notifications [strona]";
+        return pl.riftplots.config.Texts.raw("text.notifications.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Pokazuje zapisane powiadomienia i datę wysłania przez serwer.";
+        return pl.riftplots.config.Texts.raw("text.notifications.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Ta komenda wymaga gracza.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.notifications.ta-komenda-wymaga-gracza"));
             return true;
         }
         int page;
@@ -45,15 +45,15 @@ public final class NotificationsSubCommand implements SubCommand {
             if (args.length > 1) throw new IllegalArgumentException();
             page = args.length == 0 ? 0 : BillingArguments.positiveInt(args[0]) - 1;
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Użycie: /" + getUsage());
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.notifications.uzycie", getUsage()));
             return true;
         }
-        player.sendMessage("Powiadomienia — strona " + (page + 1));
+        player.sendMessage(pl.riftplots.config.Texts.component("text.notifications.powiadomienia-strona", (page + 1)));
         var notices = notifications.getStore().history(player.getUniqueId(), page);
-        if (notices.isEmpty()) player.sendMessage("Brak powiadomień na tej stronie.");
+        if (notices.isEmpty())
+            player.sendMessage(pl.riftplots.config.Texts.component("text.notifications.brak-powiadomien-na-tej-stronie"));
         for (var notice : notices) {
-            player.sendMessage(net.kyori.adventure.text.Component.text(notice.created() + " | "
-                    + (notice.delivered() == null ? "oczekujące" : "wysłane " + notice.delivered())));
+            player.sendMessage(pl.riftplots.config.Texts.component("text.notifications.line", notice.created(), (notice.delivered() == null ? pl.riftplots.config.Texts.raw("text.notifications.oczekujace") : pl.riftplots.config.Texts.raw("text.notifications.wysane", notice.delivered()))));
             player.sendMessage(AdventureUtil.parse(notice.message()));
         }
         return true;

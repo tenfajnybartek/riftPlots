@@ -26,23 +26,24 @@ public final class BorderSubCommand implements SubCommand {
     }
 
     public String getUsage() {
-        return "plots border [id]";
+        return pl.riftplots.config.Texts.raw("text.border.usage");
     }
 
     public String getDescription() {
-        return "Pokazuje granice 3D lokalu przez krótki czas.";
+        return pl.riftplots.config.Texts.raw("text.border.description");
     }
 
     public boolean execute(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Komenda tylko dla gracza.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.border.komenda-tylko-dla-gracza"));
             return true;
         }
         var location = player.getLocation();
         var plot = args.length > 0 ? plots.getPlot(args[0]) : plots.getPlotAt(player.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ());
-        if (plot.isEmpty()) sender.sendMessage("Nie znaleziono działki.");
+        if (plot.isEmpty())
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.border.nie-znaleziono-dziaki"));
         else if (!borders.show(player, plot.get()))
-            sender.sendMessage("Podgląd wymaga tego samego świata. Odczekaj chwilę przed kolejnym wywołaniem.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.border.podglad-wymaga-tego-samego-swiata-odczekaj-chwile"));
         return true;
     }
 

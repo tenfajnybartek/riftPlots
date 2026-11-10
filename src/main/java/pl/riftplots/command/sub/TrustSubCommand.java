@@ -35,12 +35,12 @@ public class TrustSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots trust <gracz> [działka]";
+        return pl.riftplots.config.Texts.raw("text.trust.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Dodaje gracza jako współużytkownika do działki.";
+        return pl.riftplots.config.Texts.raw("text.trust.description");
     }
 
     @Override
@@ -87,7 +87,7 @@ public class TrustSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            AdventureUtil.sendMessage(player, "<red>Podaj identyfikator działki lub stań na jej terenie!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.trust.podaj-identyfikator-dziaki-lub-stan-na-jej"));
             return true;
         }
 
@@ -103,7 +103,7 @@ public class TrustSubCommand implements SubCommand {
 
         PlotMember newMember = PlotMember.defaultMember(target.getUniqueId(), target.getName());
         if (targetPlot.getMembers().size() >= plotManager.getMemberLimit(targetPlot)) {
-            AdventureUtil.sendMessage(player, "<red>Osiągnięto limit współużytkowników dla tego typu nieruchomości.</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.trust.osiagnieto-limit-wspouzytkownikow-dla-tego-typu-nieruchomosci"));
             return true;
         }
         targetPlot.addMember(newMember);

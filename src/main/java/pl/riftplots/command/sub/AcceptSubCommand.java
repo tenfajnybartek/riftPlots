@@ -31,12 +31,12 @@ public class AcceptSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots accept <id_oferty>";
+        return pl.riftplots.config.Texts.raw("text.accept.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Akceptuje otrzymaną ofertę zakupu lub przekazania działki.";
+        return pl.riftplots.config.Texts.raw("text.accept.description");
     }
 
     @Override

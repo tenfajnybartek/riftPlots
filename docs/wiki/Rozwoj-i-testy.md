@@ -39,7 +39,15 @@ flowchart TD
 
 ## Co sprawdzają testy?
 
-Stan sprawdzony 10 listopada 2026 r.: **102 testów Java zakończonych powodzeniem**, bez pominięć przy włączonym teście rzeczywistego MySQL. Osobno wykonano testy backupu i izolowanego Paper. [Pełna procedura P1–P2](Nowosci-P1-P2.md#migracja-testy-i-backup).
+Stan sprawdzony 10 listopada 2026 r.: **119 testów Java zakończonych powodzeniem**, bez pominięć przy włączonym teście rzeczywistego MySQL. Osobno wykonano 6 testów backupu oraz 54 sprawdzenia izolowanego Paper, w tym zmianę slotu, materiału, ilości, modelu i poświaty przycisku, wypełnienia, tekstu i przeładowania języka. Błędny typ wiadomości podczas reloadu zachował wcześniejsze ustawienia pluginu i menu. [Procedura P1–P2](Nowosci-P1-P2.md#migracja-testy-i-backup).
+
+Kontrola prezentacji obejmuje wszystkie 166 produkcyjnych plików Java i 777 szablonów języka:
+
+```powershell
+python scripts/check_configuration.py
+```
+
+Raporty AST, CSV wszystkich literałów i podsumowanie JSON powstają w `build/reports/configuration/`. Kontrola wykrywa bezpośrednie teksty, brakujące klucze języka i tworzenie wyglądu GUI poza wspólną konfiguracją. Klasyfikacja stałych jest pomocnicza i wymaga przeglądu człowieka.
 
 | Obszar | Weryfikacja |
 | :--- | :--- |

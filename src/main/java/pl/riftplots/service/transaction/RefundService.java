@@ -44,17 +44,19 @@ public final class RefundService {
         File[] files = directory.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files == null) {
             if (directory.exists() && !directory.isDirectory())
-                throw new IllegalStateException("Invalid refund directory");
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.refund-service.invalid-refund-directory"));
             return;
         }
         for (File file : files) {
             YamlConfiguration yaml = YamlDataFile.load(file);
-            if (yaml.getInt("format", 1) != 1) throw new IllegalStateException("Unsupported refund format: " + file);
+            if (yaml.getInt("format", 1) != 1)
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.refund-service.unsupported-refund-format", file));
             Refund refund = new Refund(yaml.getString("id"), yaml.getString("key"), yaml.getString("kind"),
                     yaml.getString("plot"), yaml.getString("release"), UUID.fromString(yaml.getString("player")),
                     new BigDecimal(yaml.getString("amount")), yaml.getString("reason"), Status.valueOf(yaml.getString("status")),
                     Instant.ofEpochMilli(yaml.getLong("created")), Instant.ofEpochMilli(yaml.getLong("next-attempt")), yaml.getInt("attempts"));
-            if (!file.getName().equals(refund.id() + ".yml")) throw new IllegalStateException("Invalid refund ID");
+            if (!file.getName().equals(refund.id() + ".yml"))
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.refund-service.invalid-refund-id"));
             refunds.put(refund.id(), refund);
         }
     }
@@ -76,7 +78,7 @@ public final class RefundService {
                                      UUID player, BigDecimal amount, String reason) {
         if (amount == null || amount.signum() <= 0) return;
         if (player == null || !pl.riftplots.util.Money.isSafe(amount))
-            throw new IllegalArgumentException("Invalid refund");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.refund-service.invalid-refund"));
         String id = OperationJournal.idFor(key);
         if (refunds.containsKey(id)) return;
         save(new Refund(id, key, kind, plotId, releaseId, player, amount, reason, Status.PENDING,
@@ -112,7 +114,9 @@ public final class RefundService {
             save(new Refund(refund.id(), refund.key(), refund.kind(), refund.plotId(), refund.releaseId(), refund.player(),
                     refund.amount(), refund.reason(), operationStatus == OperationJournal.Status.REVIEW_REQUIRED
                     ? Status.REVIEW_REQUIRED : Status.PENDING, refund.created(),
-                    Instant.now().plusSeconds(Math.min(3600L, 60L << Math.min(6, attempts - 1))), attempts));
+                    Instant.now().plusSeconds(Math.min(pl.riftplots.config.Settings.longValue("refunds.retry-maximum-seconds"),
+                            (long) (pl.riftplots.config.Settings.longValue("refunds.retry-initial-seconds") * Math.pow(
+                                    pl.riftplots.config.Settings.decimal("refunds.retry-multiplier"), Math.min(30, attempts - 1))))), attempts));
         }
         return paid;
     }
@@ -123,18 +127,18 @@ public final class RefundService {
     public synchronized void resolve(String id, Status status, String operator, String reason) {
         Refund refund = refunds.get(id);
         if (!journal.isWriteAllowed() || journal.isRunning())
-            throw new IllegalArgumentException("Rozliczenia są wstrzymane.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.refund-service.rozliczenia-sa-wstrzymane"));
         if (refund == null || refund.status() != Status.REVIEW_REQUIRED || status == Status.REVIEW_REQUIRED
                 || reason == null || reason.isBlank())
-            throw new IllegalArgumentException("Wymagany zwrot do uzgodnienia, stan końcowy i powód.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.refund-service.wymagany-zwrot-do-uzgodnienia-stan-koncowy-i"));
         var operation = journal.latest("refund:" + id);
         if (operation.isPresent() && operation.get().status() == OperationJournal.Status.REVIEW_REQUIRED) {
             journal.resolve(operation.get().id(), status == Status.PAID ? OperationJournal.Status.COMPLETED : OperationJournal.Status.CANCELLED, operator, reason);
         }
         if (status == Status.PENDING && operation.isPresent() && operation.get().status() == OperationJournal.Status.COMPLETED)
-            throw new IllegalArgumentException("Potwierdzona wypłata nie może zostać ponowiona.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.refund-service.potwierdzona-wypata-nie-moze-zostac-ponowiona"));
         save(new Refund(refund.id(), refund.key(), refund.kind(), refund.plotId(), refund.releaseId(), refund.player(), refund.amount(),
-                refund.reason() + " | Uzgodniono przez " + operator + ": " + reason, status, refund.created(), Instant.EPOCH, refund.attempts()));
+                pl.riftplots.config.Texts.raw("text.refund-service.uzgodniono-przez", refund.reason(), operator, reason), status, refund.created(), Instant.EPOCH, refund.attempts()));
     }
 
     public synchronized void retryPending() {
@@ -143,7 +147,7 @@ public final class RefundService {
                 try {
                     retry(refund.id());
                 } catch (RuntimeException e) {
-                    Logger.getLogger("riftPlots").log(Level.SEVERE, "Zwrot wymaga sprawdzenia: " + refund.id(), e);
+                    Logger.getLogger("riftPlots").log(Level.SEVERE, pl.riftplots.config.Texts.raw("text.refund-service.zwrot-wymaga-sprawdzenia", refund.id()), e);
                 }
             }
         }
@@ -177,7 +181,7 @@ public final class RefundService {
         try {
             YamlDataFile.save(yaml, new File(directory, refund.id() + ".yml"));
         } catch (IOException e) {
-            throw new IllegalStateException("Nie można zapisać zobowiązania " + refund.id(), e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.refund-service.nie-mozna-zapisac-zobowiazania", refund.id()), e);
         }
         refunds.put(refund.id(), refund);
     }

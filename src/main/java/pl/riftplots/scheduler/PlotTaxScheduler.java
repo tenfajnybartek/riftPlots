@@ -79,7 +79,7 @@ public class PlotTaxScheduler implements Runnable {
     public void start() {
         stop();
         long intervalTicks = (long) config.getSchedulerCheckIntervalSeconds() * 20L;
-        this.task = Bukkit.getScheduler().runTaskTimer(plugin, this, 100L, intervalTicks);
+        this.task = Bukkit.getScheduler().runTaskTimer(plugin, this, pl.riftplots.config.Settings.longValue("performance.scheduler-initial-delay-ticks"), intervalTicks);
     }
 
     public void stop() {
@@ -111,7 +111,7 @@ public class PlotTaxScheduler implements Runnable {
                     handleGracePeriodPlot(plot, now);
                 }
             } catch (RuntimeException e) {
-                plugin.getLogger().log(Level.SEVERE, "Nie udało się sprawdzić podatku działki " + plot.getId(), e);
+                plugin.getLogger().log(Level.SEVERE, pl.riftplots.config.Texts.raw("text.plot-tax-scheduler.nie-udao-sie-sprawdzic-podatku-dziaki", plot.getId()), e);
             }
         }
 
@@ -119,14 +119,14 @@ public class PlotTaxScheduler implements Runnable {
             try {
                 rentalService.checkExpiredRentals();
             } catch (RuntimeException e) {
-                plugin.getLogger().log(Level.SEVERE, "Nie udało się sprawdzić wygasłych umów najmu", e);
+                plugin.getLogger().log(Level.SEVERE, pl.riftplots.config.Texts.raw("text.plot-tax-scheduler.nie-udao-sie-sprawdzic-wygasych-umow-najmu"), e);
             }
         }
         if (auctionService != null) {
             try {
                 auctionService.checkCompletedAuctions();
             } catch (RuntimeException e) {
-                plugin.getLogger().log(Level.SEVERE, "Nie udało się sprawdzić zakończonych aukcji", e);
+                plugin.getLogger().log(Level.SEVERE, pl.riftplots.config.Texts.raw("text.plot-tax-scheduler.nie-udao-sie-sprawdzic-zakonczonych-aukcji"), e);
             }
         }
     }
@@ -199,7 +199,7 @@ public class PlotTaxScheduler implements Runnable {
             });
             return;
         } else {
-            if (rentalService != null && !rentalService.terminateRental(plot.getId(), true, "Wygaśnięcie nieruchomości"))
+            if (rentalService != null && !rentalService.terminateRental(plot.getId(), true, pl.riftplots.config.Texts.raw("text.plot-tax-scheduler.wygasniecie-nieruchomosci")))
                 return;
             if (auctionService != null && plot.isAuctionActive()) auctionService.cancelAuction(plot.getId());
             plot.clearOwnership();
@@ -215,17 +215,17 @@ public class PlotTaxScheduler implements Runnable {
     }
 
     private void broadcastExpiration(Plot plot, String ownerName) {
-        AdventureUtil.sendMessage(Bukkit.getConsoleSender(), messageConfig.getRaw("tax.expired-broadcast", "{prefix}<red>Dzialka {plot_id} wygasla!</red>")
+        AdventureUtil.sendMessage(Bukkit.getConsoleSender(), messageConfig.getRaw("tax.expired-broadcast")
                 .replace("{prefix}", config.getPrefix())
                 .replace("{name}", plot.getName())
                 .replace("{plot_id}", plot.getId())
-                .replace("{player}", ownerName != null ? ownerName : "Nieznany"));
+                .replace("{player}", ownerName != null ? ownerName : pl.riftplots.config.Texts.raw("text.plot-tax-scheduler.nieznany")));
 
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             onlinePlayer.sendMessage(messageConfig.get("tax.expired-broadcast", Map.of(
                     "name", plot.getName(),
                     "plot_id", plot.getId(),
-                    "player", ownerName != null ? ownerName : "Nieznany"
+                    "player", ownerName != null ? ownerName : pl.riftplots.config.Texts.raw("text.plot-tax-scheduler.nieznany")
             )));
         }
     }

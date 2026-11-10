@@ -1,30 +1,33 @@
 package pl.riftplots.gui;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import pl.riftplots.config.*;
 import pl.riftplots.domain.plot.*;
-import pl.riftplots.util.AdventureUtil;
+
+import java.util.*;
 
 public final class PlotPermissionsGUI {
     public void open(Player player, Plot plot, PlotMember member) {
+        var gui = Presentation.gui();
+        var slots = gui.slots("permissions");
         var holder = new PlotGUIHolder("PLOT_PERMISSIONS", plot.getId());
         holder.setMember(member.getPlayerUuid());
-        var inventory = Bukkit.createInventory(holder, 36, AdventureUtil.parse("<aqua>Dostęp: " + member.getPlayerName() + "</aqua>"));
-        holder.setInventory(inventory);
-        int slot = 10;
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("member", member.getPlayerName());
+        variables.put("member_role", Texts.label(PlotMemberRole.MEMBER));
+        variables.put("manager_role", Texts.label(PlotMemberRole.MANAGER));
+        var inventory = gui.create("permissions", holder, variables);
+        int index = 0;
         for (PlotPermission permission : PlotPermission.values()) {
-            var item = GuiData.item(member.hasPermission(permission) ? Material.LIME_DYE : Material.GRAY_DYE,
-                    permission.name() + ": " + member.hasPermission(permission), "Kliknij, aby zmienić.");
+            variables.put("permission", Texts.label(permission));
+            variables.put("allowed", Texts.label(member.hasPermission(permission)));
+            variables.put("permission_icon", gui.value(member.hasPermission(permission) ? "permissions.allowed-material" : "permissions.denied-material"));
+            var item = gui.entry("permissions", variables);
             GuiData.set(item, "permission", permission.name());
-            inventory.setItem(slot++, item);
+            GuiData.set(item, "action", "permission-entry");
+            inventory.setItem(slots.get(index++), item);
         }
-        for (PlotMemberRole role : new PlotMemberRole[]{PlotMemberRole.MEMBER, PlotMemberRole.MANAGER}) {
-            var item = GuiData.item(Material.NAME_TAG, "Rola: " + role, "MANAGER otrzymuje wszystkie prawa działki.");
-            GuiData.set(item, "role", role.name());
-            inventory.setItem(role == PlotMemberRole.MEMBER ? 27 : 28, item);
-        }
-        inventory.setItem(31, GuiData.item(Material.ARROW, "Powrót"));
+        gui.buttons(inventory, "permissions", variables, Set.of());
         player.openInventory(inventory);
     }
 }

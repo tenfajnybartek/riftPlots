@@ -2,407 +2,277 @@ package pl.riftplots.gui;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.*;
+import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.ItemStack;
-import pl.riftplots.domain.plot.Plot;
-import pl.riftplots.domain.plot.PlotMember;
+import pl.riftplots.config.*;
+import pl.riftplots.domain.plot.*;
 import pl.riftplots.service.payment.PaymentService;
 import pl.riftplots.service.plot.PlotManager;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import pl.riftplots.util.AdventureUtil;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class PlotGUIListener implements Listener {
-    private final PlotManager plotManager;
-    private final PaymentService paymentService;
-    private final PlotListGUI listGUI;
-    private final PlotDetailsGUI detailsGUI;
-    private final PlotConfirmBuyGUI confirmBuyGUI;
-    private final PlotMembersGUI membersGUI;
+    private final PlotManager plots;
+    private final PaymentService payments;
+    private final PlotListGUI list;
+    private final PlotDetailsGUI details;
+    private final PlotConfirmBuyGUI buy;
+    private final PlotMembersGUI members;
     private pl.riftplots.service.rental.RentalService rentals;
     private pl.riftplots.service.auction.AuctionService auctions;
     private pl.riftplots.service.audit.AuditService audit;
 
-    public void setMarketServices(pl.riftplots.service.rental.RentalService rentals,
-                                  pl.riftplots.service.auction.AuctionService auctions, pl.riftplots.service.audit.AuditService audit) {
+    public PlotGUIListener(PlotManager plots, PaymentService payments, PlotListGUI list, PlotDetailsGUI details, PlotConfirmBuyGUI buy, PlotMembersGUI members) {
+        this.plots = plots;
+        this.payments = payments;
+        this.list = list;
+        this.details = details;
+        this.buy = buy;
+        this.members = members;
+    }
+
+    public void setMarketServices(pl.riftplots.service.rental.RentalService rentals, pl.riftplots.service.auction.AuctionService auctions, pl.riftplots.service.audit.AuditService audit) {
         this.rentals = rentals;
         this.auctions = auctions;
         this.audit = audit;
     }
 
-    public PlotGUIListener(PlotManager plotManager,
-                           PaymentService paymentService,
-                           PlotListGUI listGUI,
-                           PlotDetailsGUI detailsGUI,
-                           PlotConfirmBuyGUI confirmBuyGUI,
-                           PlotMembersGUI membersGUI) {
-        this.plotManager = plotManager;
-        this.paymentService = paymentService;
-        this.listGUI = listGUI;
-        this.detailsGUI = detailsGUI;
-        this.confirmBuyGUI = confirmBuyGUI;
-        this.membersGUI = membersGUI;
-    }
-
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof PlotGUIHolder)) return;
+        if (!(event.getInventory().getHolder() instanceof PlotGUIHolder holder)) return;
         event.setCancelled(true);
         if (event.getRawSlot() < 0 || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        var previous = plotManager.enterActor(player);
+        if (!(event.getWhoClicked() instanceof Player player) || !player.hasPermission("riftplots.user") || !player.hasPermission("riftplots.user.gui"))
+            return;
+        ItemStack item = event.getCurrentItem();
+        if (item == null || item.getType() == Material.AIR) return;
+        String action = GuiData.get(item, "action");
+        if (action == null) return;
+        var actor = plots.enterActor(player);
         try {
-            handleInventoryClick(event);
-        } catch (RuntimeException e) {
-            java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE, "Nie udało się zakończyć operacji w panelu", e);
+            if (holder.getPlotId() != null && (plots.isResetPending(holder.getPlotId()) || plots.financiallyBlocked(holder.getPlotId(), null))) {
+                player.closeInventory();
+                player.sendMessage(Texts.component("gui-messages.operation-blocked"));
+                return;
+            }
+            switch (holder.getGuiType()) {
+                case "PLOT_MARKET" -> market(player, holder, action, item);
+                case "PLOT_DETAILS" -> details(player, holder, action);
+                case "PLOT_CONFIRM_BUY" -> purchase(player, holder, action, item);
+                case "PLOT_CONFIRM_RENT" -> rental(player, holder, action, item);
+                case "PLOT_AUCTION" -> auction(player, holder, action, item);
+                case "PLOT_MEMBERS" -> members(player, holder, action, item, event.isRightClick());
+                case "PLOT_PERMISSIONS" -> permissions(player, holder, action, item);
+            }
+        } catch (RuntimeException error) {
+            java.util.logging.Logger.getLogger("riftPlots").log(java.util.logging.Level.SEVERE, Texts.raw("gui-messages.failure-log"), error);
             player.closeInventory();
-            player.sendMessage("Nie udało się zakończyć operacji. Administracja może sprawdzić jej status.");
+            player.sendMessage(Texts.component("gui-messages.failure"));
         } finally {
-            plotManager.restoreActor(previous);
-        }
-    }
-
-    private void handleInventoryClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof PlotGUIHolder holder)) {
-            return;
-        }
-
-        if (!(event.getWhoClicked() instanceof Player player)
-                || !player.hasPermission("riftplots.user") || !player.hasPermission("riftplots.user.gui")) return;
-        ItemStack clicked = event.getCurrentItem();
-        if (clicked == null || clicked.getType() == Material.AIR) {
-            return;
-        }
-
-        String type = holder.getGuiType();
-        if (holder.getPlotId() != null && (plotManager.isResetPending(holder.getPlotId()) || plotManager.financiallyBlocked(holder.getPlotId(), null))) {
-            player.closeInventory();
-            player.sendMessage("Nieruchomość jest w trakcie operacji lub wymaga uzgodnienia przez administrację.");
-            return;
-        }
-
-        if (type.equals("PLOT_MARKET")) {
-            handleMarket(player, holder, event.getSlot(), clicked);
-            return;
-        }
-        if (type.equals("PLOT_CONFIRM_RENT") || type.equals("PLOT_AUCTION")) {
-            handleMarketConfirmation(player, holder, event.getSlot(), clicked);
-            return;
-        }
-        if (type.equals("PLOT_PERMISSIONS")) {
-            handlePermissions(player, holder, event.getSlot(), clicked);
-            return;
-        }
-        if (type.equals("PLOT_MEMBERS")) {
-            handleMembers(player, holder, event.getSlot(), clicked, event.isRightClick());
-            return;
-        }
-
-        switch (type) {
-            case "PLOT_LIST" -> handlePlotListClick(player, event.getSlot(), clicked);
-            case "PLOT_AVAILABLE_LIST" -> handleAvailableListClick(player, event.getSlot(), clicked);
-            case "PLOT_DETAILS" -> handleDetailsClick(player, holder.getPlotId(), event.getSlot(), clicked);
-            case "PLOT_CONFIRM_BUY" -> handleConfirmBuyClick(player, holder.getPlotId(), event.getSlot(), clicked);
-            case "PLOT_MEMBERS" -> handleMembersClick(player, holder.getPlotId(), event.getSlot(), clicked);
+            plots.restoreActor(actor);
         }
     }
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         if (event.getView().getTopInventory().getHolder() instanceof PlotGUIHolder
-                && event.getRawSlots().stream().anyMatch(slot -> slot < event.getView().getTopInventory().getSize())) {
+                && event.getRawSlots().stream().anyMatch(slot -> slot < event.getView().getTopInventory().getSize()))
             event.setCancelled(true);
-        }
     }
 
-    private void handlePlotListClick(Player player, int slot, ItemStack clicked) {
-        if (slot == 49 && clicked.getType() == Material.EMERALD) {
-            listGUI.openAvailable(player);
-            return;
-        }
-
-        if (clicked.getType() == Material.GOLD_BLOCK) {
-            String plotId = extractPlotIdFromItem(clicked);
-            if (plotId != null) {
-                plotManager.getPlot(plotId).ifPresent(plot -> detailsGUI.open(player, plot));
-            }
-        }
+    private Plot plot(Player player, PlotGUIHolder holder) {
+        Plot plot = plots.getPlot(holder.getPlotId()).orElse(null);
+        if (plot == null) player.closeInventory();
+        return plot;
     }
 
-    private void handleAvailableListClick(Player player, int slot, ItemStack clicked) {
-        if (slot == 49 && clicked.getType() == Material.ARROW) {
-            listGUI.open(player);
-            return;
-        }
-
-        if (clicked.getType() == Material.GRASS_BLOCK) {
-            String plotId = extractPlotIdFromItem(clicked);
-            if (plotId != null) {
-                plotManager.getPlot(plotId).ifPresent(plot -> confirmBuyGUI.open(player, plot));
-            }
-        }
+    private boolean owner(Player player, Plot plot) {
+        return plot.isOwner(player.getUniqueId()) || player.hasPermission("riftplots.admin.bypass");
     }
 
-    private void handleDetailsClick(Player player, String plotId, int slot, ItemStack clicked) {
-        Optional<Plot> optPlot = plotManager.getPlot(plotId);
-        if (optPlot.isEmpty()) {
-            player.closeInventory();
-            return;
-        }
-        Plot plot = optPlot.get();
-        if (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) {
-            player.closeInventory();
-            return;
-        }
-
-        if (slot == 13 && player.hasPermission("riftplots.user.pay")) {
-            paymentService.payTax(player, plot, 1);
-            detailsGUI.open(player, plot);
-        } else if (slot == 15 && player.hasPermission("riftplots.user.members")) {
-            membersGUI.open(player, plot);
-        } else if (slot == 31 && player.hasPermission("riftplots.user.abandon")) {
-            player.closeInventory();
-            player.performCommand("plots abandon " + plot.getId());
-        } else if (slot == 36) {
-            listGUI.open(player);
-        }
-    }
-
-    private void handleConfirmBuyClick(Player player, String plotId, int slot, ItemStack clicked) {
-        Optional<Plot> optPlot = plotManager.getPlot(plotId);
-        if (optPlot.isEmpty()) {
-            player.closeInventory();
-            return;
-        }
-        Plot plot = optPlot.get();
-
-        if (slot == 11 && clicked.getType() == Material.LIME_WOOL && player.hasPermission("riftplots.user.buy")) {
-            String quote = GuiData.get(clicked, "quote");
-            var price = java.util.Optional.ofNullable(plotManager.getPurchasePrice(plot)).orElse(plot.getPrice());
-            if (quote == null || new java.math.BigDecimal(quote).compareTo(price) != 0) {
-                confirmBuyGUI.open(player, plot);
-                return;
-            }
-            player.closeInventory();
-            paymentService.buyPlot(player, plot);
-        } else if (slot == 15 && clicked.getType() == Material.RED_WOOL) {
-            listGUI.openAvailable(player);
-        } else if (slot == 22 && player.hasPermission("riftplots.border")) {
-            player.closeInventory();
-            player.performCommand("plots border " + plot.getId());
-        }
-    }
-
-    private void handleMarket(Player player, PlotGUIHolder holder, int slot, ItemStack clicked) {
-        MarketView view = holder.getMarketView();
+    private void market(Player player, PlotGUIHolder holder, String action, ItemStack item) {
+        var view = holder.getMarketView();
         if (view == null) return;
-        if (slot >= 45) {
-            listGUI.market().navigate(player, view, slot);
+        if (!action.equals("plot-entry")) {
+            list.market().navigate(player, view, action);
             return;
         }
-        String id = GuiData.get(clicked, "plot");
-        Plot plot = plotManager.getPlot(id).orElse(null);
+        var plot = plots.getPlot(GuiData.get(item, "plot")).orElse(null);
         if (plot == null) {
-            listGUI.market().open(player, view);
+            list.market().open(player, view);
             return;
         }
         switch (view.tab()) {
             case OWNED -> {
-                if (plot.isOwner(player.getUniqueId()) || player.hasPermission("riftplots.admin.bypass"))
-                    detailsGUI.open(player, plot);
+                if (owner(player, plot)) details.open(player, plot);
                 else if (rentals != null) player.performCommand("plots rent info " + plot.getId());
             }
             case SALE -> {
-                if (plot.isAvailableForPurchase() && player.hasPermission("riftplots.user.buy"))
-                    confirmBuyGUI.open(player, plot);
+                if (plot.isAvailableForPurchase() && player.hasPermission("riftplots.user.buy")) buy.open(player, plot);
             }
             case RENT -> {
-                if (player.hasPermission("riftplots.rent")) listGUI.market().confirmRental(player, plot, false);
+                if (player.hasPermission("riftplots.rent"))
+                    list.market().confirmRental(player, plot, Settings.flag("rental.default-auto-renew"));
             }
             case AUCTION -> {
-                if (player.hasPermission("riftplots.auction")) listGUI.market().auction(player, plot);
+                if (player.hasPermission("riftplots.auction")) list.market().auction(player, plot);
             }
         }
     }
 
-    private void handleMarketConfirmation(Player player, PlotGUIHolder holder, int slot, ItemStack clicked) {
-        Plot plot = plotManager.getPlot(holder.getPlotId()).orElse(null);
-        if (plot == null) {
+    private void details(Player player, PlotGUIHolder holder, String action) {
+        var plot = plot(player, holder);
+        if (plot == null || !owner(player, plot)) {
             player.closeInventory();
             return;
         }
-        if (holder.getGuiType().equals("PLOT_CONFIRM_RENT")) {
-            if (slot == 15) {
-                listGUI.market().open(player, MarketView.start(MarketView.Tab.RENT));
-                return;
+        switch (action) {
+            case "pay" -> {
+                if (player.hasPermission("riftplots.user.pay")) {
+                    payments.payTax(player, plot, Settings.integer("billing.default-payment-periods"));
+                    details.open(player, plot);
+                }
             }
-            if (slot == 13) {
-                listGUI.market().confirmRental(player, plot, !holder.isAutoRenew());
-                return;
+            case "members" -> {
+                if (player.hasPermission("riftplots.user.members")) members.open(player, plot);
             }
-            if (slot == 11 && rentals != null && player.hasPermission("riftplots.rent")) {
-                String terms = plot.getRentalPrice() + ":" + plot.getRentalDeposit() + ":" + plot.getRentalPeriodUnit();
-                if (!terms.equals(GuiData.get(clicked, "terms"))) {
-                    listGUI.market().confirmRental(player, plot, holder.isAutoRenew());
+            case "abandon" -> {
+                if (player.hasPermission("riftplots.user.abandon")) {
+                    player.closeInventory();
+                    player.performCommand("plots abandon " + plot.getId());
+                }
+            }
+            case "back" -> list.open(player);
+        }
+    }
+
+    private void purchase(Player player, PlotGUIHolder holder, String action, ItemStack item) {
+        var plot = plot(player, holder);
+        if (plot == null) return;
+        switch (action) {
+            case "confirm" -> {
+                if (!player.hasPermission("riftplots.user.buy")) return;
+                var quote = GuiData.get(item, "quote");
+                var price = Optional.ofNullable(plots.getPurchasePrice(plot)).orElse(plot.getPrice());
+                if (quote == null || new java.math.BigDecimal(quote).compareTo(price) != 0) {
+                    buy.open(player, plot);
                     return;
                 }
                 player.closeInventory();
-                rentals.rentPlot(player, plot, 1, holder.isAutoRenew());
+                payments.buyPlot(player, plot);
             }
-        } else {
-            if (slot == 22) {
-                listGUI.market().open(player, MarketView.start(MarketView.Tab.AUCTION));
-                return;
-            }
-            if (slot == 13) {
-                player.closeInventory();
-                player.performCommand("plots auction history " + plot.getId());
-                return;
-            }
-            String quote = GuiData.get(clicked, "quote");
-            if ((slot == 11 || slot == 15) && quote != null && auctions != null && player.hasPermission("riftplots.auction")) {
-                var currentAuction = auctions.getAuction(plot.getId()).orElse(null);
-                if (currentAuction == null || !currentAuction.getId().equals(GuiData.get(clicked, "auction"))) {
-                    listGUI.market().auction(player, plot);
-                    return;
+            case "cancel" -> list.openAvailable(player);
+            case "border" -> {
+                if (player.hasPermission("riftplots.border")) {
+                    player.closeInventory();
+                    player.performCommand("plots border " + plot.getId());
                 }
-                player.closeInventory();
-                auctions.placeBid(player, plot.getId(), new java.math.BigDecimal(quote));
             }
         }
     }
 
-    private void handleMembers(Player player, PlotGUIHolder holder, int slot, ItemStack clicked, boolean rightClick) {
-        Plot plot = plotManager.getPlot(holder.getPlotId()).orElse(null);
-        if (plot == null || (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass"))) {
+    private void rental(Player player, PlotGUIHolder holder, String action, ItemStack item) {
+        var plot = plot(player, holder);
+        if (plot == null) return;
+        switch (action) {
+            case "cancel" -> list.market().open(player, MarketView.start(MarketView.Tab.RENT));
+            case "autorenew" -> list.market().confirmRental(player, plot, !holder.isAutoRenew());
+            case "confirm" -> {
+                if (rentals == null || !player.hasPermission("riftplots.rent")) return;
+                if (!MarketMenu.rentalTerms(plot).equals(GuiData.get(item, "terms"))) {
+                    list.market().confirmRental(player, plot, holder.isAutoRenew());
+                    return;
+                }
+                player.closeInventory();
+                rentals.rentPlot(player, plot, Settings.integer("rental.default-periods"), holder.isAutoRenew());
+            }
+        }
+    }
+
+    private void auction(Player player, PlotGUIHolder holder, String action, ItemStack item) {
+        var plot = plot(player, holder);
+        if (plot == null) return;
+        if (action.equals("back")) {
+            list.market().open(player, MarketView.start(MarketView.Tab.AUCTION));
+            return;
+        }
+        if (action.equals("history")) {
+            player.closeInventory();
+            player.performCommand("plots auction history " + plot.getId());
+            return;
+        }
+        if ((!action.equals("bid") && !action.equals("buyout")) || auctions == null || !player.hasPermission("riftplots.auction"))
+            return;
+        var current = auctions.getAuction(plot.getId()).orElse(null);
+        if (current == null || !current.getId().equals(GuiData.get(item, "auction"))) {
+            list.market().auction(player, plot);
+            return;
+        }
+        String quote = GuiData.get(item, "quote");
+        if (quote == null) return;
+        player.closeInventory();
+        auctions.placeBid(player, plot.getId(), new java.math.BigDecimal(quote));
+    }
+
+    private void members(Player player, PlotGUIHolder holder, String action, ItemStack item, boolean rightClick) {
+        var plot = plot(player, holder);
+        if (plot == null || !owner(player, plot)) {
             player.closeInventory();
             return;
         }
-        if (slot == 40) {
-            detailsGUI.open(player, plot);
+        if (action.equals("back")) {
+            details.open(player, plot);
             return;
         }
-        if (slot == 36 || slot == 44) {
-            membersGUI.open(player, plot, holder.getPage() + (slot == 36 ? -1 : 1));
+        if (action.equals("previous") || action.equals("next")) {
+            members.open(player, plot, holder.getPage() + (action.equals("previous") ? -1 : 1));
             return;
         }
-        String memberId = GuiData.get(clicked, "member");
-        if (memberId == null) return;
-        PlotMember member = plot.getMember(UUID.fromString(memberId));
+        if (!action.equals("member-entry")) return;
+        var member = plot.getMember(UUID.fromString(GuiData.get(item, "member")));
         if (member == null) {
-            membersGUI.open(player, plot, holder.getPage());
+            members.open(player, plot, holder.getPage());
             return;
         }
-        if (member.getRole() == pl.riftplots.domain.plot.PlotMemberRole.TENANT) {
-            player.sendMessage("Uprawnienia najemcy wynikają z umowy.");
+        if (member.getRole() == PlotMemberRole.TENANT) {
+            player.sendMessage(Texts.component("gui-messages.tenant-access"));
             return;
         }
         if (rightClick && player.hasPermission("riftplots.user.untrust")) {
             plot.removeMember(member.getPlayerUuid());
-            plotManager.savePlot(plot);
+            plots.savePlot(plot);
             if (audit != null)
-                audit.log(plot.getId(), player.getUniqueId(), player.getName(), "MEMBER_REMOVED", memberId);
-            membersGUI.open(player, plot, holder.getPage());
+                audit.log(plot.getId(), player.getUniqueId(), player.getName(), "MEMBER_REMOVED", member.getPlayerUuid().toString());
+            members.open(player, plot, holder.getPage());
         } else if (player.hasPermission("riftplots.members.edit")) new PlotPermissionsGUI().open(player, plot, member);
     }
 
-    private void handlePermissions(Player player, PlotGUIHolder holder, int slot, ItemStack clicked) {
-        Plot plot = plotManager.getPlot(holder.getPlotId()).orElse(null);
-        if (plot == null || (!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass")) || !player.hasPermission("riftplots.members.edit")) {
+    private void permissions(Player player, PlotGUIHolder holder, String action, ItemStack item) {
+        var plot = plot(player, holder);
+        if (plot == null || !owner(player, plot) || !player.hasPermission("riftplots.members.edit")) {
             player.closeInventory();
             return;
         }
-        if (slot == 31) {
-            membersGUI.open(player, plot);
+        if (action.equals("back")) {
+            members.open(player, plot);
             return;
         }
-        PlotMember member = plot.getMember(holder.getMember());
-        if (member == null || member.getRole() == pl.riftplots.domain.plot.PlotMemberRole.TENANT) {
+        var member = plot.getMember(holder.getMember());
+        if (member == null || member.getRole() == PlotMemberRole.TENANT) {
             player.closeInventory();
             return;
         }
-        String role = GuiData.get(clicked, "role");
-        String permission = GuiData.get(clicked, "permission");
-        if (role != null && (role.equals("MEMBER") || role.equals("MANAGER")))
-            member.setRole(pl.riftplots.domain.plot.PlotMemberRole.valueOf(role));
-        else if (permission != null && member.getRole() != pl.riftplots.domain.plot.PlotMemberRole.MANAGER) {
-            var required = pl.riftplots.domain.plot.PlotPermission.valueOf(permission);
-            if (member.hasPermission(required)) member.revokePermission(required);
-            else member.grantPermission(required);
+        if (action.equals("member") || action.equals("manager"))
+            member.setRole(action.equals("member") ? PlotMemberRole.MEMBER : PlotMemberRole.MANAGER);
+        else if (action.equals("permission-entry") && member.getRole() != PlotMemberRole.MANAGER) {
+            var permission = PlotPermission.valueOf(GuiData.get(item, "permission"));
+            if (member.hasPermission(permission)) member.revokePermission(permission);
+            else member.grantPermission(permission);
         } else return;
-        plotManager.savePlot(plot);
+        plots.savePlot(plot);
         if (audit != null)
             audit.log(plot.getId(), player.getUniqueId(), player.getName(), "MEMBER_ACCESS_CHANGED", member.getPlayerUuid() + " " + member.getRole() + " " + member.getPermissions());
         new PlotPermissionsGUI().open(player, plot, member);
-    }
-
-    private void handleMembersClick(Player player, String plotId, int slot, ItemStack clicked) {
-        Optional<Plot> optPlot = plotManager.getPlot(plotId);
-        if (optPlot.isEmpty()) {
-            player.closeInventory();
-            return;
-        }
-        Plot plot = optPlot.get();
-        if ((!plot.isOwner(player.getUniqueId()) && !player.hasPermission("riftplots.admin.bypass"))
-                || !player.hasPermission("riftplots.user.untrust")) return;
-
-        if (slot == 40 && clicked.getType() == Material.ARROW) {
-            detailsGUI.open(player, plot);
-            return;
-        }
-
-        if (clicked.getType() == Material.PLAYER_HEAD) {
-            String memberName = extractMemberName(clicked);
-            if (memberName != null) {
-                UUID toRemove = null;
-                for (PlotMember member : plot.getMembers().values()) {
-                    if (member.getPlayerName().equalsIgnoreCase(memberName)) {
-                        if (member.getRole() == pl.riftplots.domain.plot.PlotMemberRole.TENANT) {
-                            AdventureUtil.sendMessage(player, "<red>Aktywny najem należy zakończyć przez /plots admin rent cancel.</red>");
-                            return;
-                        }
-                        toRemove = member.getPlayerUuid();
-                        break;
-                    }
-                }
-                if (toRemove != null) {
-                    plot.removeMember(toRemove);
-                    plotManager.savePlot(plot);
-                    AdventureUtil.sendMessage(player, "<green>Usunięto członka: " + memberName + "</green>");
-                    membersGUI.open(player, plot);
-                }
-            }
-        }
-    }
-
-    private String extractPlotIdFromItem(ItemStack item) {
-        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            net.kyori.adventure.text.Component comp = item.getItemMeta().displayName();
-            if (comp != null) {
-                String plain = PlainTextComponentSerializer.plainText().serialize(comp);
-                int openParen = plain.lastIndexOf('(');
-                int closeParen = plain.lastIndexOf(')');
-                if (openParen != -1 && closeParen != -1 && closeParen > openParen) {
-                    return plain.substring(openParen + 1, closeParen).trim();
-                }
-            }
-        }
-        return null;
-    }
-
-    private String extractMemberName(ItemStack item) {
-        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            net.kyori.adventure.text.Component comp = item.getItemMeta().displayName();
-            if (comp != null) {
-                String plain = PlainTextComponentSerializer.plainText().serialize(comp);
-                return plain.replaceAll("[^a-zA-Z0-9_]", "").trim();
-            }
-        }
-        return null;
     }
 }

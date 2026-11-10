@@ -14,11 +14,11 @@ public class PlotAuditLog {
     private final Instant timestamp;
 
     public PlotAuditLog(String id, String plotId, UUID operatorUuid, String operatorName, String action, String details, Instant timestamp) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.plotId = Objects.requireNonNull(plotId, "plotId cannot be null").toLowerCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.plot-audit-log.id-cannot-be-null"));
+        this.plotId = Objects.requireNonNull(plotId, pl.riftplots.config.Texts.raw("text.plot-audit-log.plotid-cannot-be-null")).toLowerCase();
         this.operatorUuid = operatorUuid;
-        this.operatorName = operatorName != null ? operatorName : "SYSTEM";
-        this.action = Objects.requireNonNull(action, "action cannot be null");
+        this.operatorName = operatorName != null ? operatorName : pl.riftplots.config.Texts.raw("text.plot-audit-log.system");
+        this.action = Objects.requireNonNull(action, pl.riftplots.config.Texts.raw("text.plot-audit-log.action-cannot-be-null"));
         this.details = details != null ? details : "";
         this.timestamp = timestamp != null ? timestamp : Instant.now();
     }

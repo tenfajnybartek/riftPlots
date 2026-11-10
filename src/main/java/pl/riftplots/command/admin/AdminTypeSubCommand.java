@@ -32,12 +32,12 @@ public class AdminTypeSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin type <list|set <działka> <typ>|info <typ>|apply-defaults <id> [confirm]>";
+        return pl.riftplots.config.Texts.raw("text.admin-type.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Zarządzanie typami nieruchomości i ich przypisaniem.";
+        return pl.riftplots.config.Texts.raw("text.admin-type.description");
     }
 
     @Override
@@ -45,53 +45,47 @@ public class AdminTypeSubCommand implements SubCommand {
         if (args.length >= 2 && args[0].equalsIgnoreCase("apply-defaults")) {
             Plot plot = plotManager.getPlot(args[1]).orElse(null);
             if (plot == null) {
-                sender.sendMessage("Działka nie istnieje.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.dziaka-nie-istnieje"));
                 return true;
             }
             var type = typeManager.getType(plot.getPropertyType());
             if (args.length != 3 || !args[2].equalsIgnoreCase("confirm")) {
                 var preview = plot.copy();
                 preview.applyTypeDefaults(type);
-                sender.sendMessage(net.kyori.adventure.text.Component.text("Cena bazowa: " + plot.getPrice() + " -> " + type.getDefaultPrice()
-                        + "; mnożnik cen dzielnicy: " + plotManager.getDistrictPriceMultiplier(plot)
-                        + "; cena z dzielnicą: " + plotManager.getPurchasePrice(preview) + "; podatek bazowy: " + plot.getBaseTax() + " -> " + type.getDefaultBaseTax()
-                        + "; tryb: " + plot.getTaxMode() + " -> " + type.getDefaultTaxMode()
-                        + "; mnożnik podatku: " + plot.getTaxMultiplier() + " -> " + type.getDefaultTaxMultiplier()
-                        + "; okres: " + plot.getBillingPeriodDays() + " -> " + type.getDefaultBillingPeriodDays() + "; zwrot: " + type.getRefundPercent() + "%; flagi: " + type.getDefaultFlags()
-                        + ". Zastąpi indywidualne ustawienia. Potwierdź: /plots admin type apply-defaults " + plot.getId() + " confirm"));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.cena-bazowa-mnoznik-cen-dzielnicy-cena-z", plot.getPrice(), type.getDefaultPrice(), plotManager.getDistrictPriceMultiplier(plot), plotManager.getPurchasePrice(preview), plot.getBaseTax(), type.getDefaultBaseTax(), plot.getTaxMode(), type.getDefaultTaxMode(), plot.getTaxMultiplier(), type.getDefaultTaxMultiplier(), plot.getBillingPeriodDays(), type.getDefaultBillingPeriodDays(), type.getRefundPercent(), type.getDefaultFlags(), plot.getId()));
                 return true;
             }
             try {
                 plotManager.applyTypeDefaults(plot);
-                sender.sendMessage("Zastosowano domyślne parametry typu. Aktywne umowy nie są zmieniane.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.zastosowano-domyslne-parametry-typu-aktywne-umowy-nie"));
             } catch (IllegalArgumentException e) {
                 sender.sendMessage(e.getMessage());
             }
             return true;
         }
         if (args.length == 0 || "list".equalsIgnoreCase(args[0])) {
-            AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== TYPY NIERUCHOMOŚCI ===</b></gradient>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.typy-nieruchomosci"));
             for (PropertyType t : typeManager.getAllTypes()) {
-                AdventureUtil.sendMessage(sender, "<yellow>" + t.getId() + "</yellow> - <gold>" + t.getDisplayName() + "</gold> <gray>(Cena bazowa: " + t.getDefaultPrice() + " $, Podatek: " + t.getDefaultBaseTax() + " $, Wynajem: " + t.isRentalAllowed() + ")</gray>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.cena-bazowa-podatek-wynajem", t.getId(), t.getDisplayName(), t.getDefaultPrice(), t.getDefaultBaseTax(), t.isRentalAllowed()));
             }
             return true;
         }
 
         if ("set".equalsIgnoreCase(args[0])) {
             if (args.length < 3) {
-                sender.sendMessage("§cUżycie: /plots admin type set <działka> <typ>");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.uzycie-plots-admin-type-set"));
                 return true;
             }
             String plotId = args[1].toLowerCase();
             String typeId = args[2].toUpperCase();
             if (!typeManager.exists(typeId)) {
-                sender.sendMessage("§cNieznany typ nieruchomości: " + typeId);
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.nieznany-typ-nieruchomosci", typeId));
                 return true;
             }
 
             Optional<Plot> opt = plotManager.getPlot(plotId);
             if (opt.isEmpty()) {
-                sender.sendMessage("§cDziałka nie istnieje.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.dziaka-nie-istnieje-da45d35"));
                 return true;
             }
 
@@ -100,32 +94,32 @@ public class AdminTypeSubCommand implements SubCommand {
             plot.setPropertyType(propType.getId());
             plotManager.savePlot(plot);
 
-            sender.sendMessage("§aUstawiono typ działki " + plotId + " na: " + propType.getDisplayName() + " (" + propType.getId() + ").");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.ustawiono-typ-dziaki-na", plotId, propType.getDisplayName(), propType.getId()));
             return true;
         }
 
         if ("info".equalsIgnoreCase(args[0])) {
             if (args.length < 2) {
-                sender.sendMessage("§cUżycie: /plots admin type info <typ>");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.uzycie-plots-admin-type-info"));
                 return true;
             }
             String typeId = args[1].toUpperCase();
             if (!typeManager.exists(typeId)) {
-                sender.sendMessage("§cNieznany typ nieruchomości: " + typeId);
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.nieznany-typ-nieruchomosci", typeId));
                 return true;
             }
             PropertyType t = typeManager.getType(typeId);
-            AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== INFORMACJE O TYPIE: " + t.getDisplayName() + " ===</b></gradient>");
-            AdventureUtil.sendMessage(sender, "<gray>ID: </gray><white>" + t.getId() + "</white>");
-            AdventureUtil.sendMessage(sender, "<gray>Opis: </gray><yellow>" + t.getDescription() + "</yellow>");
-            AdventureUtil.sendMessage(sender, "<gray>Domyślna cena: </gray><green>" + t.getDefaultPrice() + " $</green>");
-            AdventureUtil.sendMessage(sender, "<gray>Domyślny podatek: </gray><gold>" + t.getDefaultBaseTax() + " $ (Tryb: " + t.getDefaultTaxMode() + ")</gold>");
-            AdventureUtil.sendMessage(sender, "<gray>Limit członków: </gray><white>" + t.getMaxMembers() + "</white>");
-            AdventureUtil.sendMessage(sender, "<gray>Dozwolony wynajem: </gray><yellow>" + t.isRentalAllowed() + "</yellow> | <gray>Dozwolona sprzedaż: </gray><yellow>" + t.isSalesAllowed() + "</yellow>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.informacje-o-typie", t.getDisplayName()));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.id", t.getId()));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.opis", t.getDescription()));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.domyslna-cena", t.getDefaultPrice()));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.domyslny-podatek-tryb", t.getDefaultBaseTax(), t.getDefaultTaxMode()));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.limit-czonkow", t.getMaxMembers()));
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-type.dozwolony-wynajem-dozwolona-sprzedaz", t.isRentalAllowed(), t.isSalesAllowed()));
             return true;
         }
 
-        sender.sendMessage("§cUżycie: /" + getUsage());
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-type.uzycie", getUsage()));
         return true;
     }
 

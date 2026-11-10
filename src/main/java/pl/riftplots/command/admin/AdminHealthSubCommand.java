@@ -32,45 +32,45 @@ public final class AdminHealthSubCommand implements SubCommand {
     }
 
     public String getUsage() {
-        return "plots admin health [reset <id>]";
+        return pl.riftplots.config.Texts.raw("text.admin-health.usage");
     }
 
     public String getDescription() {
-        return "Odczytuje stan integracji, magazynu, regionów i schematów.";
+        return pl.riftplots.config.Texts.raw("text.admin-health.description");
     }
 
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
             var plot = plugin.getPlotManager().getPlot(args[1]).orElse(null);
             if (plot == null) {
-                sender.sendMessage("Działka nie istnieje.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.dziaka-nie-istnieje"));
                 return true;
             }
             plugin.getResetService().preview(plot, problem -> sender.sendMessage(Component.text(problem != null ? problem
-                    : "Schemat i świat są zgodne. Reset odbierze własność, zakończy najem i odtworzy " + plot.getBounds().getVolume() + " bloków. Nie uruchomiono resetu.")));
+                    : pl.riftplots.config.Texts.raw("text.admin-health.schemat-i-swiat-sa-zgodne-reset-odbierze", plot.getBounds().getVolume()))));
             return true;
         }
-        sender.sendMessage(Component.text("riftPlots | serwer: " + plugin.getServer().getVersion()));
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.riftplots-serwer", plugin.getServer().getVersion()));
         String configured;
         try {
             configured = pl.riftplots.storage.yaml.YamlDataFile.load(new java.io.File(plugin.getDataFolder(), "storage.yml")).getString("storage.type", "SQLITE");
         } catch (RuntimeException e) {
-            configured = "nieczytelny plik";
+            configured = pl.riftplots.config.Texts.raw("text.admin-health.nieczytelny-plik");
         }
-        sender.sendMessage(Component.text("Aktywny magazyn: " + (backend.getDatabaseManager() != null ? backend.getDatabaseManager().getStorageType() : "YAML") + "; storage.yml: " + configured));
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.aktywny-magazyn-storage-yml", (backend.getDatabaseManager() != null ? backend.getDatabaseManager().getStorageType() : "YAML"), configured));
         for (String name : List.of("WorldEdit", "WorldGuard", "Vault")) {
             var dependency = plugin.getServer().getPluginManager().getPlugin(name);
-            sender.sendMessage(Component.text(name + ": " + (dependency != null && dependency.isEnabled() ? dependency.getPluginMeta().getVersion() : "BRAK / WYŁĄCZONY")));
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.line", name, (dependency != null && dependency.isEnabled() ? dependency.getPluginMeta().getVersion() : pl.riftplots.config.Texts.raw("text.admin-health.brak-wyaczony"))));
         }
         try {
             if (backend.getDatabaseManager() != null)
                 try (var connection = backend.getDatabaseManager().getConnection()) {
-                    sender.sendMessage(Component.text("Baza odpowiada: " + connection.isValid(2)));
+                    sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.baza-odpowiada", connection.isValid(2)));
                 }
             if (backend.getDatabaseManager() != null)
-                sender.sendMessage("Wersja schematu danych: " + backend.getDatabaseManager().getSchemaVersion());
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.wersja-schematu-danych", backend.getDatabaseManager().getSchemaVersion()));
         } catch (Exception e) {
-            sender.sendMessage("Baza nie odpowiada; szczegóły sprawdź w logu serwera.");
+            sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.baza-nie-odpowiada-szczegoy-sprawdz-w-logu"));
         }
         int missingSchematics = 0, missingRegions = 0, inconsistentRegions = 0;
         for (var plot : plugin.getPlotManager().getAllPlots()) {
@@ -79,11 +79,10 @@ public final class AdminHealthSubCommand implements SubCommand {
             if (bounds == null) missingRegions++;
             else if (!bounds.equals(plot.getBounds())) inconsistentRegions++;
         }
-        sender.sendMessage(Component.text("Brakujące schematy: " + missingSchematics + "; brakujące regiony: " + missingRegions + "; inne granice regionów: " + inconsistentRegions));
-        sender.sendMessage(Component.text("Operacje do uzgodnienia: " + plugin.getOperationJournal().pending().size()
-                + "; oczekujące zwroty: " + plugin.getRefundService().list(null).stream().filter(r -> r.status() == pl.riftplots.service.transaction.RefundService.Status.PENDING || r.status() == pl.riftplots.service.transaction.RefundService.Status.REVIEW_REQUIRED).count()));
-        sender.sendMessage("Raport jest tylko do odczytu. Pełny odczyt schematu: /plots admin health reset <id>.");
-        sender.sendMessage("Tryb przełączenia magazynu: " + plugin.getMaintenance().isActive() + "; zadania I/O: " + plugin.getIoQueue().pending());
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.brakujace-schematy-brakujace-regiony-inne-granice-regionow", missingSchematics, missingRegions, inconsistentRegions));
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.operacje-do-uzgodnienia-oczekujace-zwroty", plugin.getOperationJournal().pending().size(), plugin.getRefundService().list(null).stream().filter(r -> r.status() == pl.riftplots.service.transaction.RefundService.Status.PENDING || r.status() == pl.riftplots.service.transaction.RefundService.Status.REVIEW_REQUIRED).count()));
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.raport-jest-tylko-do-odczytu-peny-odczyt"));
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-health.tryb-przeaczenia-magazynu-zadania-i-o", plugin.getMaintenance().isActive(), plugin.getIoQueue().pending()));
         return true;
     }
 

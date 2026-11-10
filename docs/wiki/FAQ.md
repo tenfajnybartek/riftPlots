@@ -32,7 +32,7 @@ Domyślnie odnowienie jest wyłączone. Najemca wybiera je w GUI lub przez `rent
 
 ## Czy `MONTH` oznacza miesiąc kalendarzowy?
 
-Nie. Oznacza 30 dni.
+Domyślnie oznacza 30 dni. Długość jednostki określa `config.yml` → `rental-period-seconds.MONTH`; nie jest to miesiąc kalendarzowy.
 
 ## Czy cena typu jest od razu ceną działki?
 

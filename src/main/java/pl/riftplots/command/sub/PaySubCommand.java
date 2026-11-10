@@ -35,12 +35,12 @@ public class PaySubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots pay [działka] [liczba_okresów]";
+        return pl.riftplots.config.Texts.raw("text.pay.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Opłaca podatek za działkę na bieżący lub kolejne okresy.";
+        return pl.riftplots.config.Texts.raw("text.pay.description");
     }
 
     @Override
@@ -67,7 +67,7 @@ public class PaySubCommand implements SubCommand {
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();
         } else if (args.length == 2) {
-            return List.of("1", "2", "3", "4");
+            return pl.riftplots.config.Settings.strings("tab-completion.payment-periods");
         }
         return Collections.emptyList();
     }

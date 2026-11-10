@@ -31,11 +31,11 @@ public class RentalAgreement {
                            Instant endDate,
                            boolean autoRenew,
                            RentalStatus status) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.plotId = Objects.requireNonNull(plotId, "plotId cannot be null").toLowerCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.rental-agreement.id-cannot-be-null"));
+        this.plotId = Objects.requireNonNull(plotId, pl.riftplots.config.Texts.raw("text.rental-agreement.plotid-cannot-be-null")).toLowerCase();
         this.ownerUuid = ownerUuid;
-        this.tenantUuid = Objects.requireNonNull(tenantUuid, "tenantUuid cannot be null");
-        this.tenantName = tenantName != null ? tenantName : "Unknown";
+        this.tenantUuid = Objects.requireNonNull(tenantUuid, pl.riftplots.config.Texts.raw("text.rental-agreement.tenantuuid-cannot-be-null"));
+        this.tenantName = tenantName != null ? tenantName : pl.riftplots.config.Texts.raw("text.rental-agreement.unknown");
         this.rentPrice = rentPrice != null ? rentPrice : BigDecimal.ZERO;
         this.periodUnit = periodUnit != null ? periodUnit : RentalPeriodUnit.DAY;
         this.deposit = deposit != null ? deposit : BigDecimal.ZERO;
@@ -124,7 +124,8 @@ public class RentalAgreement {
 
     public void restore(RentalAgreement state) {
         if (this == state) return;
-        if (!id.equals(state.id)) throw new IllegalArgumentException("Different agreement ID");
+        if (!id.equals(state.id))
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.rental-agreement.different-agreement-id"));
         endDate = state.endDate;
         autoRenew = state.autoRenew;
         status = state.status;

@@ -4,6 +4,17 @@
 
 Stan: **10 listopada 2026 r.**, riftPlots **1.0.0**, wdrożenie **P1–P2**. Punkty 1–12 zrealizowano lokalnie. Pierwotny plan poniżej zachowano jako zapis historyczny. Aktualne komendy i zasady opisuje [przewodnik P1–P2](docs/wiki/Nowosci-P1-P2.md).
 
+## Edytowalna prezentacja i polityki — kolejny etap
+
+Przejrzano 166 produkcyjnych plików Java. Wiadomości, pomoc, walidacja, diagnostyka i etykiety korzystają z **777 szablonów w lang.yml**. Nowy **gui.yml** opisuje wszystkie siedem ekranów, ich tytuły, rozmiary, sloty, materiały, lore, wypełnienie, modele i poświatę. Dodatkowe parametry liczbowe, dźwięki, tabliczki i formaty znajdują się w config.yml.
+
+- [Mapa ustawień i audyt pozostawionych stałych](docs/configuration-audit.md).
+- [Instrukcja GUI z przykładami](docs/wiki/Konfiguracja-GUI.md).
+- Kontrola: `python scripts/check_configuration.py`; pełny CSV literałów w `build/reports/configuration/`.
+- Weryfikacja tego etapu: **119 testów Java**, rzeczywiste MySQL, **6 testów backupu** i **54 sprawdzenia Paper** (24 + 11 + 19), także przesunięcie przycisku z zachowaniem wyceny i odrzucenie błędnego reloadu.
+
+Poniższe liczby 102 testów i 45 sprawdzeń opisują wcześniejszą weryfikację samego wdrożenia P1–P2.
+
 ## Wdrożenie P1–P2
 
 Zakres obejmuje punkty 1–12 oraz uwagi P1/P2. Punkt 13 (P3) pozostaje pomysłem na przyszłość. Kod i zaktualizowane źródła Wiki są lokalnie; nie wdrażano ich na produkcję. Licencję projektu nadal wybiera właściciel.

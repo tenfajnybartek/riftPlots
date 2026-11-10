@@ -20,7 +20,7 @@ public final class NotificationStore {
     public NotificationStore(File dataFolder, int retentionDays, int maxHistory) {
         directory = dataFolder != null ? new File(dataFolder, "data/notifications") : null;
         this.retentionDays = Math.max(1, retentionDays);
-        this.maxHistory = Math.max(10, maxHistory);
+        this.maxHistory = Math.max(1, maxHistory);
     }
 
     public synchronized void initialize() {
@@ -28,14 +28,14 @@ public final class NotificationStore {
         File[] files = directory.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files == null) {
             if (directory.exists() && !directory.isDirectory())
-                throw new IllegalStateException("Invalid notifications directory");
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.notification-store.invalid-notifications-directory"));
             return;
         }
         for (File file : files) {
             UUID player = UUID.fromString(file.getName().replace(".yml", ""));
             var yaml = YamlDataFile.load(file);
             if (yaml.getInt("format", 1) != 1)
-                throw new IllegalStateException("Unsupported notification format: " + file);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.notification-store.unsupported-notification-format", file));
             List<Notice> notices = new ArrayList<>();
             for (var row : yaml.getMapList("messages")) {
                 long delivered = Long.parseLong(row.get("delivered").toString());
@@ -61,7 +61,7 @@ public final class NotificationStore {
     public synchronized List<Notice> history(UUID player, int page) {
         var entries = new ArrayList<>(records.getOrDefault(player, List.of()));
         Collections.reverse(entries);
-        return entries.stream().skip((long) Math.max(0, page) * 10).limit(10).toList();
+        return entries.stream().skip((long) Math.max(0, page) * pl.riftplots.config.Settings.integer("paging.notifications")).limit(pl.riftplots.config.Settings.integer("paging.notifications")).toList();
     }
 
     public synchronized void delivered(UUID player, String id) {
@@ -89,7 +89,7 @@ public final class NotificationStore {
             try {
                 YamlDataFile.save(yaml, new File(directory, player + ".yml"));
             } catch (IOException e) {
-                throw new IllegalStateException("Cannot persist notification for " + player, e);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.notification-store.cannot-persist-notification-for", player), e);
             }
         }
         records.put(player, kept);

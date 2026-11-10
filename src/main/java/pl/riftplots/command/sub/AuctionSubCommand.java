@@ -31,12 +31,12 @@ public class AuctionSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots auction [list|bid <działka> <kwota>]";
+        return pl.riftplots.config.Texts.raw("text.auction.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Przeglądanie i udział w licytacjach nieruchomości miejskich.";
+        return pl.riftplots.config.Texts.raw("text.auction.description");
     }
 
     @Override
@@ -50,40 +50,40 @@ public class AuctionSubCommand implements SubCommand {
                 return true;
             }
             for (var bid : auctionService.getBidHistory(args[1], page))
-                sender.sendMessage(net.kyori.adventure.text.Component.text(bid.getBidderName() + " | " + bid.getAmount() + " | " + bid.getTimestamp()));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.auction.line", bid.getBidderName(), bid.getAmount(), bid.getTimestamp()));
             return true;
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("buy") && sender instanceof Player player) {
             var auction = auctionService.getAuction(args[1]).orElse(null);
             if (auction == null || auction.getBuyoutPrice() == null) {
-                sender.sendMessage("Brak aktywnej ceny kup teraz.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.auction.brak-aktywnej-ceny-kup-teraz"));
                 return true;
             }
             if (args.length != 3 || !args[2].equalsIgnoreCase("confirm"))
-                sender.sendMessage("Kup teraz: " + auction.getBuyoutPrice() + ". Potwierdź: /plots auction buy " + args[1] + " confirm");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.auction.kup-teraz-potwierdz-plots-auction-buy-confirm", auction.getBuyoutPrice(), args[1]));
             else auctionService.placeBid(player, args[1], auction.getBuyoutPrice());
             return true;
         }
         if (args.length == 0 || "list".equalsIgnoreCase(args[0])) {
             Collection<PlotAuction> list = auctionService.getActiveAuctions();
-            AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== AKTYWNE LICYTACJE DZIAŁEK ===</b></gradient>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.auction.aktywne-licytacje-dziaek"));
             if (list.isEmpty()) {
-                AdventureUtil.sendMessage(sender, "<gray>Brak aktywnych aukcji w tej chwili.</gray>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.auction.brak-aktywnych-aukcji-w-tej-chwili"));
                 return true;
             }
             for (PlotAuction a : list) {
-                AdventureUtil.sendMessage(sender, "<yellow>" + a.getPlotId() + "</yellow> - <gray>Aktualna oferta: </gray><gold>" + a.getCurrentBid() + " $</gold> <gray>(Lider: <aqua>" + (a.getCurrentBidderName() != null ? a.getCurrentBidderName() : "Brak") + "</aqua>, Koniec za: <white>" + TimeUtil.formatRemainingTime(a.getEndTime()) + "</white>)</gray>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.auction.aktualna-oferta-lider-koniec-za", a.getPlotId(), a.getCurrentBid(), (a.getCurrentBidderName() != null ? a.getCurrentBidderName() : pl.riftplots.config.Texts.raw("text.auction.brak")), TimeUtil.formatRemainingTime(a.getEndTime())));
             }
             return true;
         }
 
         if ("bid".equalsIgnoreCase(args[0])) {
             if (!(sender instanceof Player player)) {
-                sender.sendMessage("§cTa komenda jest dostępna tylko dla graczy.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.auction.ta-komenda-jest-dostepna-tylko-dla-graczy"));
                 return true;
             }
             if (args.length < 3) {
-                player.sendMessage("§cUżycie: /plots auction bid <działka> <kwota>");
+                player.sendMessage(pl.riftplots.config.Texts.component("text.auction.uzycie-plots-auction-bid"));
                 return true;
             }
             String plotId = args[1];
@@ -91,7 +91,7 @@ public class AuctionSubCommand implements SubCommand {
             try {
                 amount = pl.riftplots.util.Money.parse(args[2]);
             } catch (NumberFormatException e) {
-                player.sendMessage("§cPodana kwota jest nieprawidłowa!");
+                player.sendMessage(pl.riftplots.config.Texts.component("text.auction.podana-kwota-jest-nieprawidowa"));
                 return true;
             }
 
@@ -99,7 +99,7 @@ public class AuctionSubCommand implements SubCommand {
             return true;
         }
 
-        sender.sendMessage("§cUżycie: /" + getUsage());
+        sender.sendMessage(pl.riftplots.config.Texts.component("text.auction.uzycie", getUsage()));
         return true;
     }
 

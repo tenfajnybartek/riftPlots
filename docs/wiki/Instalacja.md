@@ -52,6 +52,7 @@ plugins/riftPlots/
 ├── config.yml
 ├── storage.yml
 ├── lang.yml
+├── gui.yml
 ├── plot-types.yml
 ├── districts.yml
 ├── data/

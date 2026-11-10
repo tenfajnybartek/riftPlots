@@ -80,64 +80,62 @@ public class PluginConfiguration {
     private String signDisabledAction;
 
     public void load(FileConfiguration config) {
-        this.prefix = config.getString("general.prefix", "<gradient:#00c6ff:#0072ff><b>riftPlots</b></gradient> <gray>»</gray> ");
-        this.currencySymbol = config.getString("general.currency-symbol", "$");
-        this.currencySymbolSuffix = config.getBoolean("general.currency-symbol-suffix", true);
+        config = ConfigurationFiles.merged("config.yml", config);
+        this.prefix = config.getString("general.prefix");
+        this.currencySymbol = config.getString("general.currency-symbol");
+        this.currencySymbolSuffix = config.getBoolean("general.currency-symbol-suffix");
 
-        this.defaultPrice = BigDecimal.valueOf(config.getDouble("economy.default-price", 25000.0));
-        this.defaultBaseTax = BigDecimal.valueOf(config.getDouble("economy.default-base-tax", 1500.0));
-        this.defaultTaxMode = TaxMode.parse(config.getString("economy.default-tax-mode", "FIXED"));
-        this.defaultTaxMultiplier = config.getDouble("economy.default-tax-multiplier", 1.0);
-        this.defaultBillingPeriodDays = Math.max(1, config.getInt("economy.default-billing-period-days", 7));
-        this.defaultGracePeriodHours = Math.max(0, config.getInt("economy.default-grace-period-hours", 6));
-        this.maxAdvancePeriods = Math.max(1, config.getInt("economy.max-advance-periods", 4));
-        this.defaultAbandonRefundPercent = Math.max(0.0, Math.min(100.0, config.getDouble("economy.default-abandon-refund-percent", 50.0)));
+        this.defaultPrice = BigDecimal.valueOf(config.getDouble("economy.default-price"));
+        this.defaultBaseTax = BigDecimal.valueOf(config.getDouble("economy.default-base-tax"));
+        this.defaultTaxMode = TaxMode.parse(config.getString("economy.default-tax-mode"));
+        this.defaultTaxMultiplier = config.getDouble("economy.default-tax-multiplier");
+        this.defaultBillingPeriodDays = Math.max(1, config.getInt("economy.default-billing-period-days"));
+        this.defaultGracePeriodHours = Math.max(0, config.getInt("economy.default-grace-period-hours"));
+        this.maxAdvancePeriods = Math.max(1, config.getInt("economy.max-advance-periods"));
+        this.defaultAbandonRefundPercent = Math.max(0.0, Math.min(100.0, config.getDouble("economy.default-abandon-refund-percent")));
 
-        this.schedulerCheckIntervalSeconds = Math.max(10, config.getInt("scheduler.check-interval-seconds", 60));
+        this.schedulerCheckIntervalSeconds = Math.max(10, config.getInt("scheduler.check-interval-seconds"));
         this.taxReminderHours = config.getLongList("scheduler.tax-reminder-hours");
-        if (this.taxReminderHours.isEmpty()) {
-            this.taxReminderHours = List.of(48L, 24L, 12L, 2L, 1L);
-        }
 
-        this.protectPistons = config.getBoolean("protection.prevent-piston-border-crossing", true);
-        this.protectFluids = config.getBoolean("protection.prevent-fluid-border-crossing", true);
-        this.protectExplosions = config.getBoolean("protection.prevent-explosions", true);
-        this.protectFireSpread = config.getBoolean("protection.prevent-fire-spread", true);
-        this.protectArmorStands = config.getBoolean("protection.protect-armor-stands", true);
-        this.protectItemFrames = config.getBoolean("protection.protect-item-frames", true);
+        this.protectPistons = config.getBoolean("protection.prevent-piston-border-crossing");
+        this.protectFluids = config.getBoolean("protection.prevent-fluid-border-crossing");
+        this.protectExplosions = config.getBoolean("protection.prevent-explosions");
+        this.protectFireSpread = config.getBoolean("protection.prevent-fire-spread");
+        this.protectArmorStands = config.getBoolean("protection.protect-armor-stands");
+        this.protectItemFrames = config.getBoolean("protection.protect-item-frames");
 
-        this.autoResetOnExpire = config.getBoolean("reset.auto-reset-on-expire", true);
-        this.resetBlockBatchSize = Math.max(100, config.getInt("reset.block-batch-size", 2500));
-        this.resetTickDelay = Math.max(1, config.getInt("reset.tick-delay", 1));
+        this.autoResetOnExpire = config.getBoolean("reset.auto-reset-on-expire");
+        this.resetBlockBatchSize = Math.max(100, config.getInt("reset.block-batch-size"));
+        this.resetTickDelay = Math.max(1, config.getInt("reset.tick-delay"));
 
-        this.signsEnabled = config.getBoolean("signs.enabled", true);
-        this.signAutoUpdate = config.getBoolean("signs.auto-update", true);
+        this.signsEnabled = config.getBoolean("signs.enabled");
+        this.signAutoUpdate = config.getBoolean("signs.auto-update");
 
-        this.signHeader = config.getString("signs.formats.header", "<gradient:#00c6ff:#0072ff><b>[DZIAŁKA]</b></gradient>");
-        this.signRenewHeader = config.getString("signs.formats.renew-header", "<gradient:#ff9900:#ff5500><b>[OPŁAĆ PODATEK]</b></gradient>");
-        this.signForSaleAction = config.getString("signs.formats.for-sale-action", "<green><b>KUP TERAZ</b></green>");
-        this.signSoldAction = config.getString("signs.formats.sold-action", "<red><b>SPRZEDANA</b></red>");
-        this.signRenewAction = config.getString("signs.formats.renew-action", "<aqua><b>PRZEDŁUŻ</b></aqua>");
-        this.signResettingAction = config.getString("signs.formats.resetting-action", "<red><b>NIEDOSTĘPNA</b></red>");
-        this.signDisabledAction = config.getString("signs.formats.disabled-action", "<dark_red><b>BLOKADA</b></dark_red>");
+        this.signHeader = config.getString("signs.formats.header");
+        this.signRenewHeader = config.getString("signs.formats.renew-header");
+        this.signForSaleAction = config.getString("signs.formats.for-sale-action");
+        this.signSoldAction = config.getString("signs.formats.sold-action");
+        this.signRenewAction = config.getString("signs.formats.renew-action");
+        this.signResettingAction = config.getString("signs.formats.resetting-action");
+        this.signDisabledAction = config.getString("signs.formats.disabled-action");
 
-        this.transferFeePercent = Math.clamp(config.getDouble("market.transfer-fee-percent", 5.0), 0.0, 100.0);
-        this.transferOfferDurationSeconds = Math.max(10, config.getInt("market.transfer-offer-duration-seconds", 300));
+        this.transferFeePercent = Math.clamp(config.getDouble("market.transfer-fee-percent"), 0.0, 100.0);
+        this.transferOfferDurationSeconds = Math.max(10, config.getInt("market.transfer-offer-duration-seconds"));
 
-        this.auctionCityFeePercent = Math.clamp(config.getDouble("auction.city-fee-percent", 5.0), 0.0, 100.0);
-        this.auctionAntiSnipeSeconds = Math.max(0, config.getInt("auction.anti-snipe-extension-seconds", 120));
-        this.auctionDefaultMinBidIncrement = BigDecimal.valueOf(Math.max(0.01, config.getDouble("auction.default-min-bid-increment", 100.0)));
-        this.auctionDefaultDurationMinutes = Math.max(1, config.getInt("auction.default-duration-minutes", 30));
+        this.auctionCityFeePercent = Math.clamp(config.getDouble("auction.city-fee-percent"), 0.0, 100.0);
+        this.auctionAntiSnipeSeconds = Math.max(0, config.getInt("auction.anti-snipe-extension-seconds"));
+        this.auctionDefaultMinBidIncrement = BigDecimal.valueOf(Math.max(0.01, config.getDouble("auction.default-min-bid-increment")));
+        this.auctionDefaultDurationMinutes = Math.max(1, config.getInt("auction.default-duration-minutes"));
 
-        this.teleportEnabled = config.getBoolean("teleport.enabled", true);
-        this.teleportCost = BigDecimal.valueOf(Math.max(0.0, config.getDouble("teleport.cost", 50.0)));
-        this.teleportCooldownSeconds = Math.max(0, config.getInt("teleport.cooldown-seconds", 10));
+        this.teleportEnabled = config.getBoolean("teleport.enabled");
+        this.teleportCost = BigDecimal.valueOf(Math.max(0.0, config.getDouble("teleport.cost")));
+        this.teleportCooldownSeconds = Math.max(0, config.getInt("teleport.cooldown-seconds"));
 
-        this.cityBudgetInitialBalance = BigDecimal.valueOf(config.getDouble("city-budget.initial-balance", 100000.0));
-        this.graceWarningIntervalSeconds = Math.max(60, config.getInt("scheduler.grace-warning-interval-seconds", 300));
-        this.publicHistory = config.getBoolean("privacy.public-history", false);
-        this.maxRentalPeriods = Math.clamp(config.getInt("rental.max-periods", 365), 1, 3650);
-        this.auctionEscrowEnabled = config.getBoolean("auction.escrow-enabled", false);
+        this.cityBudgetInitialBalance = BigDecimal.valueOf(config.getDouble("city-budget.initial-balance"));
+        this.graceWarningIntervalSeconds = Math.max(60, config.getInt("scheduler.grace-warning-interval-seconds"));
+        this.publicHistory = config.getBoolean("privacy.public-history");
+        this.maxRentalPeriods = Math.clamp(config.getInt("rental.max-periods"), 1, 3650);
+        this.auctionEscrowEnabled = config.getBoolean("auction.escrow-enabled");
     }
 
     public String getPrefix() {
@@ -156,11 +154,17 @@ public class PluginConfiguration {
         if (amount == null) {
             amount = BigDecimal.ZERO;
         }
-        String formatted = String.format("%,.2f", amount.doubleValue());
+        var locale = java.util.Locale.forLanguageTag(Settings.string("formatting.money-locale"));
+        var formatter = java.text.NumberFormat.getNumberInstance(locale);
+        formatter.setGroupingUsed(Settings.flag("formatting.money-grouping"));
+        formatter.setMinimumFractionDigits(Settings.integer("economy.decimal-places"));
+        formatter.setMaximumFractionDigits(Settings.integer("economy.decimal-places"));
+        formatter.setRoundingMode(Settings.rounding());
+        String formatted = formatter.format(amount);
         if (currencySymbolSuffix) {
-            return formatted + " " + currencySymbol;
+            return Texts.raw("format.money.suffix", formatted, currencySymbol);
         } else {
-            return currencySymbol + formatted;
+            return Texts.raw("format.money.prefix", formatted, currencySymbol);
         }
     }
 

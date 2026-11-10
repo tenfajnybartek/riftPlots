@@ -40,12 +40,12 @@ public class InfoSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots info [działka]";
+        return pl.riftplots.config.Texts.raw("text.info.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla szczegółowe informacje o wybranej działce.";
+        return pl.riftplots.config.Texts.raw("text.info.description");
     }
 
     @Override
@@ -73,29 +73,29 @@ public class InfoSubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            AdventureUtil.sendMessage(sender, "<red>Musisz podać identyfikator działki lub stać na jej terenie!</red>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.musisz-podac-identyfikator-dziaki-lub-stac-na"));
             return true;
         }
 
         BigDecimal tax = taxCalculator.calculateTax(targetPlot);
 
-        AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== INFORMACJE O DZIAŁCE ===</b></gradient>");
-        AdventureUtil.sendMessage(sender, "<gray>ID:</gray> <white>" + targetPlot.getId() + "</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Nazwa:</gray> <gold>" + targetPlot.getName() + "</gold>");
-        AdventureUtil.sendMessage(sender, "<gray>Kategoria:</gray> <yellow>" + targetPlot.getCategory() + "</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Status:</gray> <aqua>" + targetPlot.getStatus() + "</aqua>");
-        AdventureUtil.sendMessage(sender, "<gray>Świat:</gray> <white>" + targetPlot.getBounds().getWorldName() + "</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Powierzchnia:</gray> <white>" + targetPlot.getBounds().getHorizontalArea() + " m² (" + targetPlot.getBounds().getWidthX() + "x" + targetPlot.getBounds().getLengthZ() + ")</white>");
-        AdventureUtil.sendMessage(sender, "<gray>Właściciel:</gray> <yellow>" + (targetPlot.getOwnerName() != null ? targetPlot.getOwnerName() : "Brak (Do kupienia)") + "</yellow>");
-        AdventureUtil.sendMessage(sender, "<gray>Cena zakupu:</gray> <green>" + config.formatMoney(plotManager.getPurchasePrice(targetPlot)) + "</green>");
-        AdventureUtil.sendMessage(sender, "<gray>Podatek cykliczny:</gray> <gold>" + config.formatMoney(tax) + " / " + targetPlot.getBillingPeriodDays() + " dni (Tryb: " + targetPlot.getTaxMode() + ")</gold>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.informacje-o-dziace"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.id", targetPlot.getId()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.nazwa", targetPlot.getName()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.kategoria", targetPlot.getCategory()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.status", targetPlot.getStatus()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.swiat", targetPlot.getBounds().getWorldName()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.powierzchnia-m2-x", targetPlot.getBounds().getHorizontalArea(), targetPlot.getBounds().getWidthX(), targetPlot.getBounds().getLengthZ()));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.wasciciel", (targetPlot.getOwnerName() != null ? targetPlot.getOwnerName() : pl.riftplots.config.Texts.raw("text.info.brak-do-kupienia"))));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.cena-zakupu", config.formatMoney(plotManager.getPurchasePrice(targetPlot))));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.podatek-cykliczny-dni-tryb", config.formatMoney(tax), targetPlot.getBillingPeriodDays(), targetPlot.getTaxMode()));
 
         if (targetPlot.getOwnerUuid() != null) {
-            AdventureUtil.sendMessage(sender, "<gray>Termin następnej płatności:</gray> <yellow>" + TimeUtil.formatInstant(targetPlot.getNextTaxPayment()) + " (pozostało: " + TimeUtil.formatRemainingTime(targetPlot.getNextTaxPayment()) + ")</yellow>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.termin-nastepnej-patnosci-pozostao", TimeUtil.formatInstant(targetPlot.getNextTaxPayment()), TimeUtil.formatRemainingTime(targetPlot.getNextTaxPayment())));
             if (targetPlot.getGracePeriodExpiry() != null) {
-                AdventureUtil.sendMessage(sender, "<red>Karencja upływa za:</red> <gold>" + TimeUtil.formatRemainingTime(targetPlot.getGracePeriodExpiry()) + "</gold>");
+                AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.karencja-upywa-za", TimeUtil.formatRemainingTime(targetPlot.getGracePeriodExpiry())));
             }
-            AdventureUtil.sendMessage(sender, "<gray>Współużytkownicy:</gray> <white>" + targetPlot.getMembers().size() + "</white>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.info.wspouzytkownicy", targetPlot.getMembers().size()));
         }
 
         return true;

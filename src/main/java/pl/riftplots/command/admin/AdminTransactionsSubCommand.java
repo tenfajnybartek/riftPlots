@@ -25,37 +25,37 @@ public final class AdminTransactionsSubCommand implements SubCommand {
     }
 
     public String getUsage() {
-        return "plots admin transactions pending|inspect <id>|refunds|retry <refund_id>|resolve <id> COMPLETED|CANCELLED confirm <powód>|refund-resolve <id> PAID|PENDING|CANCELLED confirm <powód>";
+        return pl.riftplots.config.Texts.raw("text.admin-transactions.usage");
     }
 
     public String getDescription() {
-        return "Pokazuje i uzgadnia trwałe operacje finansowe.";
+        return pl.riftplots.config.Texts.raw("text.admin-transactions.description");
     }
 
     public boolean execute(CommandSender sender, String[] args) {
         try {
             if (args.length == 0 || args[0].equalsIgnoreCase("pending")) {
-                sender.sendMessage(Component.text("Operacje wymagające sprawdzenia: " + journal.pending().size()));
-                journal.pending().stream().limit(30).forEach(e -> sender.sendMessage(Component.text(e.id() + " | " + e.kind() + " | " + e.plotId() + " | " + e.status())));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.operacje-wymagajace-sprawdzenia", journal.pending().size()));
+                journal.pending().stream().limit(pl.riftplots.config.Settings.integer("paging.pending-transactions")).forEach(e -> sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.line", e.id(), e.kind(), e.plotId(), e.status())));
             } else if (args[0].equalsIgnoreCase("inspect") && args.length == 2) {
-                var entry = journal.find(args[1]).orElseThrow(() -> new IllegalArgumentException("Nie ma takiej operacji."));
-                sender.sendMessage(Component.text(entry.id() + " | " + entry.kind() + " | " + entry.status() + " | " + entry.amount()));
-                sender.sendMessage(Component.text("Działka: " + entry.plotId() + "; utworzono: " + entry.created() + "; " + entry.error()));
-                entry.steps().forEach(s -> sender.sendMessage(Component.text(s.action() + " " + s.player() + " " + s.amount() + " " + s.state())));
+                var entry = journal.find(args[1]).orElseThrow(() -> new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.admin-transactions.nie-ma-takiej-operacji")));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.line", entry.id(), entry.kind(), entry.status(), entry.amount()));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.dziaka-utworzono", entry.plotId(), entry.created(), entry.error()));
+                entry.steps().forEach(s -> sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.line-66ed3c0", s.action(), s.player(), s.amount(), s.state())));
             } else if (args[0].equalsIgnoreCase("refunds")) {
                 refunds.list(null).stream().filter(r -> r.status() != RefundService.Status.PAID && r.status() != RefundService.Status.CANCELLED)
-                        .limit(30).forEach(r -> sender.sendMessage(Component.text(r.id() + " | " + r.player() + " | " + r.amount() + " | " + r.status() + " | " + r.reason())));
+                        .limit(pl.riftplots.config.Settings.integer("paging.pending-refunds")).forEach(r -> sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.line-31563b0", r.id(), r.player(), r.amount(), r.status(), r.reason())));
             } else if (args[0].equalsIgnoreCase("retry") && args.length == 2) {
-                sender.sendMessage(Component.text(refunds.retry(args[1]) ? "Zwrot rozliczony." : "Zwrot oczekuje lub wymaga uzgodnienia. Sprawdź inspect."));
+                sender.sendMessage(Component.text(refunds.retry(args[1]) ? pl.riftplots.config.Texts.raw("text.admin-transactions.zwrot-rozliczony") : pl.riftplots.config.Texts.raw("text.admin-transactions.zwrot-oczekuje-lub-wymaga-uzgodnienia-sprawdz-inspect")));
             } else if (args[0].equalsIgnoreCase("resolve") && args.length >= 5 && args[3].equalsIgnoreCase("confirm")) {
                 journal.resolve(args[1], OperationJournal.Status.valueOf(args[2].toUpperCase(Locale.ROOT)), sender.getName(), String.join(" ", Arrays.copyOfRange(args, 4, args.length)));
                 refunds.retryPending();
-                sender.sendMessage(Component.text("Zapisano ręczne uzgodnienie. Żadna płatność z operacji nie została powtórzona."));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.zapisano-reczne-uzgodnienie-zadna-patnosc-z-operacji"));
             } else if (args[0].equalsIgnoreCase("refund-resolve") && args.length >= 5 && args[3].equalsIgnoreCase("confirm")) {
                 refunds.resolve(args[1], RefundService.Status.valueOf(args[2].toUpperCase(Locale.ROOT)), sender.getName(), String.join(" ", Arrays.copyOfRange(args, 4, args.length)));
-                sender.sendMessage(Component.text("Zapisano uzgodnienie zwrotu. PENDING zezwala na kolejną próbę; ta komenda nie wypłaca pieniędzy."));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.zapisano-uzgodnienie-zwrotu-pending-zezwala-na-kolejna"));
             } else
-                sender.sendMessage(Component.text("Użycie: /" + getUsage() + ". Przed resolve sprawdź portfele i własność."));
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-transactions.uzycie-przed-resolve-sprawdz-portfele-i-wasnosc", getUsage()));
         } catch (IllegalArgumentException e) {
             sender.sendMessage(Component.text(e.getMessage()));
         }

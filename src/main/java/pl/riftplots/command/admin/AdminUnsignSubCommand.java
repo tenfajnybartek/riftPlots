@@ -34,12 +34,12 @@ public class AdminUnsignSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots admin unsign";
+        return pl.riftplots.config.Texts.raw("text.admin-unsign.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Usuwa powiązanie tabliczki, na którą patrzysz.";
+        return pl.riftplots.config.Texts.raw("text.admin-unsign.description");
     }
 
     @Override
@@ -49,9 +49,9 @@ public class AdminUnsignSubCommand implements SubCommand {
             return true;
         }
 
-        Block targetBlock = player.getTargetBlockExact(5);
+        Block targetBlock = player.getTargetBlockExact(pl.riftplots.config.Settings.integer("interaction.sign-target-distance"));
         if (targetBlock == null || !(targetBlock.getState() instanceof Sign)) {
-            AdventureUtil.sendMessage(player, "<red>Musisz patrzeć bezpośrednio na tabliczkę!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.admin-unsign.musisz-patrzec-bezposrednio-na-tabliczke"));
             return true;
         }
 
@@ -61,7 +61,7 @@ public class AdminUnsignSubCommand implements SubCommand {
         );
 
         if (optSign.isEmpty()) {
-            AdventureUtil.sendMessage(player, "<red>Ta tabliczka nie jest powiązana z żadną działką!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.admin-unsign.ta-tabliczka-nie-jest-powiazana-z-zadna"));
             return true;
         }
 

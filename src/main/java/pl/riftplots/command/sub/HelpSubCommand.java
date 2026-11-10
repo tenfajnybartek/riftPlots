@@ -19,35 +19,35 @@ public class HelpSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots help";
+        return pl.riftplots.config.Texts.raw("text.help.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Wyświetla listę dostępnych komend systemu działek.";
+        return pl.riftplots.config.Texts.raw("text.help.description");
     }
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
-        AdventureUtil.sendMessage(sender, "<gradient:#00c6ff:#0072ff><b>=== SYSTEM DZIAŁEK RIFTPLOTS ===</b></gradient>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots list</yellow> <gray>- Twoje działki oraz nieruchomości na sprzedaż</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots info <działka></yellow> <gray>- Szczegółowe informacje o działce</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots buy <działka></yellow> <gray>- Zakup przygotowanej nieruchomości</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots pay <działka> [okresy]</yellow> <gray>- Opłać podatek za działkę</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots extend <działka> [okresy]</yellow> <gray>- Przedłuż ważność działki z góry</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots history <działka></yellow> <gray>- Historia opłat i transakcji</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots trust <gracz> <działka></yellow> <gray>- Dodaj współużytkownika do działki</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots untrust <gracz> <działka></yellow> <gray>- Usuń współużytkownika</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots members <działka></yellow> <gray>- Lista członków nieruchomości</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots abandon <działka></yellow> <gray>- Porzuć działkę i odbierz częściowy zwrot</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots gui</yellow> <gray>- Otwórz panel graficzny działek</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots border [działka]</yellow> <gray>- Pokaż granice 3D przez krótki czas</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots rent info <działka></yellow> <gray>- Umowa, kaucja i automatyczne odnowienie</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots auction history <działka></yellow> <gray>- Historia licytacji</gray>");
-        AdventureUtil.sendMessage(sender, "<yellow>/plots notifications [strona]</yellow> <gray>- Zapisane powiadomienia</gray>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.system-dziaek-riftplots"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-list-twoje-dziaki-oraz-nieruchomosci-na"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-info-szczegoowe-informacje-o-dziace"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-buy-zakup-przygotowanej-nieruchomosci"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-pay-okresy-opac-podatek-za-dziake"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-extend-okresy-przeduz-waznosc-dziaki-z"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-history-historia-opat-i-transakcji"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-trust-dodaj-wspouzytkownika-do-dziaki"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-untrust-usun-wspouzytkownika"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-members-lista-czonkow-nieruchomosci"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-abandon-porzuc-dziake-i-odbierz-czesciowy"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-gui-otworz-panel-graficzny-dziaek"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-border-dziaka-pokaz-granice-3d-przez"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-rent-info-umowa-kaucja-i-automatyczne"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-auction-history-historia-licytacji"));
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-notifications-strona-zapisane-powiadomienia"));
 
         if (sender.hasPermission(PermissionConfiguration.ADMIN_BASE)) {
-            AdventureUtil.sendMessage(sender, "<red>/plots admin</red> <gray>- Zaawansowane komendy administracyjne</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.help.plots-admin-zaawansowane-komendy-administracyjne"));
         }
         return true;
     }

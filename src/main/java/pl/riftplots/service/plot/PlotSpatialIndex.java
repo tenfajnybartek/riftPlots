@@ -29,7 +29,7 @@ public final class PlotSpatialIndex {
         bounds.put(id, area);
         long count = ((long) (area.getMaxX() >> 4) - (area.getMinX() >> 4) + 1)
                 * ((long) (area.getMaxZ() >> 4) - (area.getMinZ() >> 4) + 1);
-        if (count > 4096) {
+        if (count > pl.riftplots.config.Settings.integer("performance.spatial-index-max-chunks-per-plot")) {
             large.add(id);
             return;
         }

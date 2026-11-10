@@ -50,7 +50,7 @@ Wygaśnięcie lub zakończenie umowy odbiera prawa najemcy niezależnie od tego,
 
 ## Rynek, członkowie i granice
 
-`/plots` otwiera rynek z zakładkami **Moje**, **Dostępne**, **Wynajem** i **Aukcje**. Strona mieści 45 nieruchomości. Dolny pasek zawiera zmianę strony, sortowanie po ID, cenie lub podatku oraz filtry dzielnicy i typu. Przyciski wskazują działki przez dane przedmiotu; zmiana wyświetlanej nazwy nie zmienia celu działania.
+`/plots` otwiera rynek z zakładkami **Moje**, **Dostępne**, **Wynajem** i **Aukcje**. Domyślnie strona mieści 45 nieruchomości; rozmiar strony i układ zmienia [gui.yml](Konfiguracja-GUI.md). Dolny pasek zawiera zmianę strony, sortowanie po ID, cenie lub podatku oraz filtry dzielnicy i typu. Przyciski wskazują działki przez dane przedmiotu; zmiana wyświetlanej nazwy nie zmienia celu działania.
 
 Potwierdzenie zakupu pokazuje cenę, podatek, okres i dodatkową prowizję kupującego. Zmiana ceny wymaga ponownego potwierdzenia. Przycisk granic zamyka okno, aby można było obejrzeć lokal w świecie.
 

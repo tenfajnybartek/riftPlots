@@ -35,12 +35,12 @@ public class BuySubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots buy [działka]";
+        return pl.riftplots.config.Texts.raw("text.buy.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Kupuje przygotowaną działkę miejską.";
+        return pl.riftplots.config.Texts.raw("text.buy.description");
     }
 
     @Override
@@ -72,7 +72,7 @@ public class BuySubCommand implements SubCommand {
         }
 
         if (targetPlot == null) {
-            AdventureUtil.sendMessage(player, "<red>Podaj identyfikator działki lub stań na jej terenie, aby dokonać zakupu!</red>");
+            AdventureUtil.sendMessage(player, pl.riftplots.config.Texts.markup("text.buy.podaj-identyfikator-dziaki-lub-stan-na-jej"));
             return true;
         }
 

@@ -114,7 +114,7 @@ public class AdminCommandDispatcher {
         if (!readOnly && subArgs.length > 0) {
             String id = Set.of("type", "district", "rent", "auction").contains(subName) && subArgs.length > 1 ? subArgs[1] : subArgs[0];
             if (plotManagerGuard.test(id)) {
-                sender.sendMessage("Działka ma trwający reset lub operację wymagającą uzgodnienia. Sprawdź /plots admin health i transactions.");
+                sender.sendMessage(pl.riftplots.config.Texts.component("text.admin-command-dispatcher.dziaka-ma-trwajacy-reset-lub-operacje-wymagajaca"));
                 return true;
             }
         }
@@ -144,9 +144,9 @@ public class AdminCommandDispatcher {
     }
 
     private void sendAdminHelp(CommandSender sender) {
-        AdventureUtil.sendMessage(sender, "<gradient:#ff9900:#ff5500><b>=== PANEL ADMINISTRACYJNY RIFTPLOTS ===</b></gradient>");
+        AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-command-dispatcher.panel-administracyjny-riftplots"));
         for (SubCommand sub : subCommands.values()) {
-            AdventureUtil.sendMessage(sender, "<yellow>/" + sub.getUsage() + "</yellow> <gray>- " + sub.getDescription() + "</gray>");
+            AdventureUtil.sendMessage(sender, pl.riftplots.config.Texts.markup("text.admin-command-dispatcher.line", sub.getUsage(), sub.getDescription()));
         }
     }
 }

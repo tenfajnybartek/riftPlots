@@ -53,12 +53,13 @@ public final class OperationJournal {
         File[] files = directory.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files == null) {
             if (directory.exists() && !directory.isDirectory())
-                throw new IllegalStateException("Invalid journal directory");
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.operation-journal.invalid-journal-directory"));
             return;
         }
         for (File file : files) {
             YamlConfiguration yaml = YamlDataFile.load(file);
-            if (yaml.getInt("format", 1) != 1) throw new IllegalStateException("Unsupported journal format: " + file);
+            if (yaml.getInt("format", 1) != 1)
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.operation-journal.unsupported-journal-format", file));
             List<Step> steps = new ArrayList<>();
             for (Map<?, ?> row : yaml.getMapList("steps")) {
                 steps.add(new Step(row.get("action").toString(), UUID.fromString(row.get("player").toString()),
@@ -71,11 +72,11 @@ public final class OperationJournal {
                     Instant.ofEpochMilli(yaml.getLong("updated")), Status.valueOf(yaml.getString("status")),
                     yaml.getString("error", ""), yaml.getBoolean("blocks-plot", true), steps);
             if (!file.getName().equals(entry.id() + ".yml"))
-                throw new IllegalStateException("Invalid journal ID: " + file);
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.operation-journal.invalid-journal-id", file));
             entries.put(entry.id(), entry);
             lastCreated = Math.max(lastCreated, entry.created().toEpochMilli());
             if (entry.status() == Status.RUNNING) {
-                update(entry, Status.REVIEW_REQUIRED, "Operacja przerwana restartem; sprawdź zapisane etapy przed uzgodnieniem.", steps);
+                update(entry, Status.REVIEW_REQUIRED, pl.riftplots.config.Texts.raw("text.operation-journal.operacja-przerwana-restartem-sprawdz-zapisane-etapy-przed"), steps);
             }
         }
     }
@@ -89,7 +90,8 @@ public final class OperationJournal {
     }
 
     public synchronized void deferCurrent() {
-        if (!isRunning()) throw new IllegalStateException("No active operation");
+        if (!isRunning())
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.operation-journal.no-active-operation"));
         deferred.add(currentId());
     }
 
@@ -97,7 +99,7 @@ public final class OperationJournal {
         Entry entry = entries.get(id);
         if (entry == null || entry.status() != Status.RUNNING) return;
         deferred.remove(id);
-        update(entry, success ? Status.COMPLETED : Status.CANCELLED, success ? "" : "Operacja asynchroniczna odrzucona.", entry.steps());
+        update(entry, success ? Status.COMPLETED : Status.CANCELLED, success ? "" : pl.riftplots.config.Texts.raw("text.operation-journal.operacja-asynchroniczna-odrzucona"), entry.steps());
     }
 
     public synchronized Optional<Entry> find(String id) {
@@ -133,7 +135,8 @@ public final class OperationJournal {
 
     public synchronized void setCurrentAmount(BigDecimal amount) {
         if (!isRunning()) return;
-        if (!pl.riftplots.util.Money.isSafe(amount)) throw new IllegalArgumentException("Nieprawidłowa kwota końcowa");
+        if (!pl.riftplots.util.Money.isSafe(amount))
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.operation-journal.nieprawidowa-kwota-koncowa"));
         Entry old = entries.get(currentId());
         Entry updated = new Entry(old.id(), old.key(), old.kind(), old.plotId(), old.actor(), amount, old.created(), Instant.now(), old.status(), old.error(), old.blocksPlot(), old.steps());
         persist(updated);
@@ -168,7 +171,7 @@ public final class OperationJournal {
             boolean unresolved = latest.steps().stream().anyMatch(s -> s.state().equals("IN_FLIGHT"));
             Status status = result && !unresolved ? Status.COMPLETED
                     : !unresolved && isBalanced(latest.steps()) ? Status.CANCELLED : Status.REVIEW_REQUIRED;
-            update(latest, status, status == Status.REVIEW_REQUIRED ? "Operacja nie zakończyła się; uzgodnij płatności i stan działki." : "", latest.steps());
+            update(latest, status, status == Status.REVIEW_REQUIRED ? pl.riftplots.config.Texts.raw("text.operation-journal.operacja-nie-zakonczya-sie-uzgodnij-patnosci-i") : "", latest.steps());
             return result && status == Status.COMPLETED;
         } catch (RuntimeException | Error failure) {
             deferred.remove(id);
@@ -201,9 +204,9 @@ public final class OperationJournal {
         Entry entry = entries.get(id);
         if (entry == null || entry.status() != Status.REVIEW_REQUIRED
                 || (status != Status.COMPLETED && status != Status.CANCELLED) || reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("Wymagane: operacja do uzgodnienia, stan końcowy i powód.");
+            throw new IllegalArgumentException(pl.riftplots.config.Texts.raw("text.operation-journal.wymagane-operacja-do-uzgodnienia-stan-koncowy-i"));
         }
-        update(entry, status, "Uzgodniono ręcznie przez " + operator + ": " + reason, entry.steps());
+        update(entry, status, pl.riftplots.config.Texts.raw("text.operation-journal.uzgodniono-recznie-przez", operator, reason), entry.steps());
     }
 
     public static String idFor(String key) {
@@ -246,7 +249,7 @@ public final class OperationJournal {
         try {
             YamlDataFile.save(yaml, new File(directory, entry.id() + ".yml"));
         } catch (IOException e) {
-            throw new IllegalStateException("Nie można zapisać dziennika operacji " + entry.id(), e);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.operation-journal.nie-mozna-zapisac-dziennika-operacji", entry.id()), e);
         }
     }
 }

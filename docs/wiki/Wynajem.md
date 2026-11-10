@@ -32,7 +32,9 @@ Właściciel z jawnie nadanym `riftplots.rent.offer` może użyć `/plots rent o
 | `HOUR` | 1 godzina |
 | `DAY` | 24 godziny |
 | `WEEK` | 7 dni |
-| `MONTH` | 30 dni, nie miesiąc kalendarzowy |
+| `MONTH` | Domyślnie 30 dni, nie miesiąc kalendarzowy |
+
+Długości jednostek określa `config.yml` → `rental-period-seconds`; zapisany koniec istniejącej umowy pozostaje datą. Domyślne okresy i auto-odnowienie ustalają `rental.default-periods` oraz `rental.default-auto-renew`.
 
 ## Podpisanie umowy przez gracza
 

@@ -114,15 +114,14 @@ final class ServiceDataMigration {
             yaml.set("balance", section.getString(latest + ".balanceAfter"));
             return;
         }
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(new File(dataFolder, "config.yml"));
-        String balance = yaml.getString("balance", String.valueOf(config.getDouble("city-budget.initial-balance", 100000)));
+        String balance = yaml.getString("balance", String.valueOf(pl.riftplots.config.Settings.decimal("city-budget.initial-balance")));
         yaml.set("balance", balance);
         String path = "transactions." + UUID.randomUUID();
         yaml.set(path + ".type", "ADMIN_ADJUSTMENT");
         yaml.set(path + ".amount", "0");
         yaml.set(path + ".balanceAfter", balance);
         yaml.set(path + ".timestamp", System.currentTimeMillis());
-        yaml.set(path + ".description", "Saldo przeniesione podczas migracji");
+        yaml.set(path + ".description", pl.riftplots.config.Texts.raw("text.service-data-migration.saldo-przeniesione-podczas-migracji"));
     }
 
     private void write(StorageBackend backend, Dataset dataset, YamlConfiguration yaml) throws Exception {

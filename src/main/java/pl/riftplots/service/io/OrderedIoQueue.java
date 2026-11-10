@@ -49,8 +49,8 @@ public final class OrderedIoQueue implements AutoCloseable {
     public void close() {
         worker.shutdown();
         try {
-            if (!worker.awaitTermination(30, TimeUnit.SECONDS))
-                throw new IllegalStateException("Storage queue did not finish before shutdown");
+            if (!worker.awaitTermination(pl.riftplots.config.Settings.longValue("performance.io-shutdown-timeout-seconds"), TimeUnit.SECONDS))
+                throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.ordered-io-queue.storage-queue-did-not-finish-before-shutdown"));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);

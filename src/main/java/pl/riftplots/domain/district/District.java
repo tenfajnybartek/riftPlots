@@ -23,7 +23,7 @@ public class District {
                     int maxPlotsPerPlayer,
                     boolean salesEnabled,
                     boolean rentalEnabled) {
-        this.id = Objects.requireNonNull(id, "id cannot be null").toLowerCase();
+        this.id = Objects.requireNonNull(id, pl.riftplots.config.Texts.raw("text.district.id-cannot-be-null")).toLowerCase();
         this.name = name != null ? name : id;
         this.description = description != null ? description : "";
         this.priceMultiplier = priceMultiplier > 0 ? priceMultiplier : 1.0;

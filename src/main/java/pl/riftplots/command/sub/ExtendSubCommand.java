@@ -37,12 +37,12 @@ public class ExtendSubCommand implements SubCommand {
 
     @Override
     public String getUsage() {
-        return "plots extend [działka] [liczba_okresów]";
+        return pl.riftplots.config.Texts.raw("text.extend.usage");
     }
 
     @Override
     public String getDescription() {
-        return "Przedłuża ważność opłat działki z góry.";
+        return pl.riftplots.config.Texts.raw("text.extend.description");
     }
 
     @Override
@@ -69,7 +69,7 @@ public class ExtendSubCommand implements SubCommand {
                     .filter(id -> id.toLowerCase().startsWith(args[0].toLowerCase()))
                     .toList();
         } else if (args.length == 2) {
-            return List.of("1", "2", "3", "4");
+            return pl.riftplots.config.Settings.strings("tab-completion.payment-periods");
         }
         return Collections.emptyList();
     }

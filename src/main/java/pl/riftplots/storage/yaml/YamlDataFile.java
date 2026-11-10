@@ -24,7 +24,7 @@ public final class YamlDataFile {
             yaml.load(file);
             return yaml;
         } catch (IOException | InvalidConfigurationException exception) {
-            throw new IllegalStateException("Nie można odczytać danych: " + file, exception);
+            throw new IllegalStateException(pl.riftplots.config.Texts.raw("text.yaml-data-file.nie-mozna-odczytac-danych", file), exception);
         }
     }
 

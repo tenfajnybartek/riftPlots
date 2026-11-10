@@ -119,7 +119,8 @@ class P2FeatureTest {
         when(item.getItemMeta()).thenReturn(meta);
         PersistentDataContainer data = mock(PersistentDataContainer.class);
         when(meta.getPersistentDataContainer()).thenReturn(data);
-        when(data.get(any(), eq(PersistentDataType.STRING))).thenReturn("999");
+        when(data.get(any(), eq(PersistentDataType.STRING))).thenAnswer(call ->
+                ((org.bukkit.NamespacedKey) call.getArgument(0)).getKey().equals("action") ? "confirm" : "999");
         InventoryClickEvent event = mock(InventoryClickEvent.class);
         when(event.getInventory()).thenReturn(inventory);
         when(event.getView()).thenReturn(view);
@@ -161,7 +162,11 @@ class P2FeatureTest {
         var data = mock(PersistentDataContainer.class);
         when(meta.getPersistentDataContainer()).thenReturn(data);
         when(data.get(any(), eq(PersistentDataType.STRING))).thenAnswer(call ->
-                ((org.bukkit.NamespacedKey) call.getArgument(0)).getKey().equals("quote") ? "100" : "previous");
+                switch (((org.bukkit.NamespacedKey) call.getArgument(0)).getKey()) {
+                    case "action" -> "buyout";
+                    case "quote" -> "100";
+                    default -> "previous";
+                });
         var event = mock(InventoryClickEvent.class);
         when(event.getWhoClicked()).thenReturn(player);
         when(event.getInventory()).thenReturn(inventory);

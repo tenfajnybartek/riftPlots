@@ -50,7 +50,7 @@ public class PlotSessionListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         if (!writeAllowed.getAsBoolean()) {
-            player.kick(net.kyori.adventure.text.Component.text("Trwa migracja danych miasta. Spróbuj po restarcie serwera."));
+            player.kick(pl.riftplots.config.Texts.component("text.plot-session-listener.trwa-migracja-danych-miasta-sprobuj-po-restarcie"));
             return;
         }
         UUID uuid = player.getUniqueId();
@@ -79,7 +79,7 @@ public class PlotSessionListener implements Listener {
                 player.sendMessage(messageConfig.get("tax.reminder", Map.of(
                         "name", plot.getName(),
                         "plot_id", plot.getId(),
-                        "time_left", "0s (termin nadszedł)",
+                        "time_left", pl.riftplots.config.Texts.raw("text.plot-session-listener.0s-termin-nadszed"),
                         "tax", config.formatMoney(tax)
                 )));
             }
